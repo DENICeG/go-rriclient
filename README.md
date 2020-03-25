@@ -7,8 +7,8 @@ Send requests to RRI v3.0 and read response via CLI.
 Install and build from repository:
 
 ```
-go get -u github.com/DENICeG/go-rri-client
-go install github.com/DENICeG/go-rri-client
+go get -u github.com/DENICeG/go-rriclient
+go install github.com/DENICeG/go-rriclient
 ```
 
 ## Usage
@@ -20,25 +20,25 @@ The RRI address is defined by `host:port`. There are three ways to setup a conne
 1. **Server address only**. Will open an unauthenticated RRI session:
 
 ```
-rri-client localhost:51131
+go-rriclient localhost:51131
 ```
 
 2. **Server address and credentials**. Only pass user to interactively ask for password:
 
 ```
-rri-client localhost:51131 -u DENIC-1000001-RRI -p secret
+go-rriclient localhost:51131 -u DENIC-1000001-RRI -p secret
 ```
 
 3. **Environment**. Will interactively prompt for address and credentials on first call:
 
 ```
-rri-client -e {name}
+go-rriclient -e {name}
 ```
 
 4. **Interactively select environment**:
 
 ```
-rri-client
+go-rriclient
 ```
 
 The environment files are stored in `~/.rri-client`.
@@ -50,10 +50,10 @@ You can interact with the rri-client in two modes. All modes can be combined wit
 1. **File source mode**
 
 ```
-rri-client localhost:51131 -f examples/login_logout.txt
-rri-client localhost:51131 -u DENIC-1000001-RRI -p secret -f examples/login_logout.txt
-rri-client -e {name} -f examples/login_logout.txt
-rri-client -f examples/login_logout.txt
+go-rriclient localhost:51131 -f examples/login_logout.txt
+go-rriclient localhost:51131 -u DENIC-1000001-RRI -p secret -f examples/login_logout.txt
+go-rriclient -e {name} -f examples/login_logout.txt
+go-rriclient -f examples/login_logout.txt
 ```
 
 This mode will execute all RRI commands contained in the specified file. Commands are separated by a line starting with `=-=`. When using an unauthenticated session, the file must also contain a login command to open an authenticated session.
@@ -61,10 +61,10 @@ This mode will execute all RRI commands contained in the specified file. Command
 2. **Interactive mode**
 
 ```
-rri-client localhost:51131
-rri-client localhost:51131 -u DENIC-1000001-RRI -p secret
-rri-client -e {name}
-rri-client
+go-rriclient localhost:51131
+go-rriclient localhost:51131 -u DENIC-1000001-RRI -p secret
+go-rriclient -e {name}
+go-rriclient
 ```
 
 Will open a bash-like interactive CLI with command completion for convenient RRI access. See section *Interactive Commands* for a detailed explanation.

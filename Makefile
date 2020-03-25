@@ -1,7 +1,7 @@
 .ONESHELL:
 .DEFAULT_GOAL := run
 
-APPNAME := go-rri-client
+APPNAME := go-rriclient
 PKG := github.com/DENICeG/$(APPNAME)
 TEST_PKG_LIST = internal/env pkg/rri
 
@@ -17,6 +17,9 @@ LDFLAGS_WINDOWS := '-extldflags "-static" -s -w $(GITCOMMIT) $(BUILDTIME)'
 clean:
 	@echo "Cleaning up"
 	rm -rf bin
+	rm -f checktest.out
+	rm -f coverage.out
+	rm -f cover.out
 
 dep:
 	@go get -v -d ./...

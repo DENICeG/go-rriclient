@@ -294,8 +294,8 @@ func NewChangeProviderQuery(idnDomain, authInfo string, holderHandles, abuseCont
 	return NewQuery(LatestVersion, ActionChangeProvider, fields)
 }
 
-// ParseQuery parses a single query from a string.
-func ParseQuery(str string) (*Query, error) {
+// ParseQueryKV parses a single key-value encoded query.
+func ParseQueryKV(str string) (*Query, error) {
 	lines := strings.Split(str, "\n")
 	fields := make(map[QueryFieldName][]string)
 	for _, line := range lines {
@@ -336,6 +336,11 @@ func ParseQuery(str string) (*Query, error) {
 	delete(fields, FieldNameAction)
 
 	return &Query{Version(versionValues[0]), QueryAction(actionValues[0]), fields}, nil
+}
+
+// ParseQuery parses a single query from a string.
+func ParseQuery(str string) (*Query, error) {
+	return ParseQueryKV(str)
 }
 
 // ParseQueries parses multiple queries separated by a =-= line from a string.

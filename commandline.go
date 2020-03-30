@@ -81,16 +81,35 @@ func prepareCLE(client *rri.Client) *commandline.Environment {
 	cle.RegisterCommand(commandline.NewCustomCommand("login", nil, newCommandWrapper(client, cmdLogin)))
 	cle.RegisterCommand(commandline.NewCustomCommand("logout", nil, newCommandWrapper(client, cmdLogout)))
 
-	cle.RegisterCommand(commandline.NewCustomCommand("check-hdl", nil, newHandleCommandWrapper(client, rri.NewCheckHandleQuery)))
+	cle.RegisterCommand(commandline.NewCustomCommand("create",
+		commandline.NewFixedArgCompletion(commandline.NewOneOfArgCompletion("domain")),
+		newCommandMultiplexer(client, []subCommand{
+			subCommand{"domain", cmdCreateDomain},
+		})))
 
-	cle.RegisterCommand(commandline.NewCustomCommand("create", nil, newCommandWrapper(client, cmdCreate)))
-	cle.RegisterCommand(commandline.NewCustomCommand("check", nil, newDomainCommandWrapper(client, rri.NewCheckDomainQuery)))
-	cle.RegisterCommand(commandline.NewCustomCommand("info", nil, newDomainCommandWrapper(client, rri.NewInfoDomainQuery)))
-	cle.RegisterCommand(commandline.NewCustomCommand("update", nil, newCommandWrapper(client, cmdUpdate)))
-	cle.RegisterCommand(commandline.NewCustomCommand("delete", nil, newDomainCommandWrapper(client, rri.NewDeleteDomainQuery)))
-	cle.RegisterCommand(commandline.NewCustomCommand("restore", nil, newDomainCommandWrapper(client, rri.NewRestoreDomainQuery)))
-	cle.RegisterCommand(commandline.NewCustomCommand("authinfo1", nil, newCommandWrapper(client, cmdCreateAuthInfo1)))
-	cle.RegisterCommand(commandline.NewCustomCommand("authinfo2", nil, newDomainCommandWrapper(client, rri.NewCreateAuthInfo2Query)))
+	cle.RegisterCommand(commandline.NewCustomCommand("check",
+		commandline.NewFixedArgCompletion(commandline.NewOneOfArgCompletion("domain")),
+		newCommandMultiplexer(client, []subCommand{
+			subCommand{"domain", newDomainQueryCommand(rri.NewCheckDomainQuery)},
+		})))
+
+	cle.RegisterCommand(commandline.NewCustomCommand("info", nil, newCommandWrapper(client, newDomainQueryCommand(rri.NewInfoDomainQuery))))
+
+	cle.RegisterCommand(commandline.NewCustomCommand("update",
+		commandline.NewFixedArgCompletion(commandline.NewOneOfArgCompletion("domain")),
+		newCommandMultiplexer(client, []subCommand{
+			subCommand{"domain", cmdUpdateDomain},
+		})))
+
+	cle.RegisterCommand(commandline.NewCustomCommand("delete",
+		commandline.NewFixedArgCompletion(commandline.NewOneOfArgCompletion("domain")),
+		newCommandMultiplexer(client, []subCommand{
+			subCommand{"domain", newDomainQueryCommand(rri.NewDeleteDomainQuery)},
+		})))
+
+	cle.RegisterCommand(commandline.NewCustomCommand("restore", nil, newCommandWrapper(client, newDomainQueryCommand(rri.NewRestoreDomainQuery))))
+	//cle.RegisterCommand(commandline.NewCustomCommand("authinfo1", nil, newCommandWrapper(client, cmdCreateAuthInfo1)))
+	//cle.RegisterCommand(commandline.NewCustomCommand("authinfo2", nil, newDomainCommandWrapper(client, rri.NewCreateAuthInfo2Query)))
 	cle.RegisterCommand(commandline.NewCustomCommand("chprov", nil, newCommandWrapper(client, cmdChProv)))
 
 	cle.RegisterCommand(commandline.NewCustomCommand("raw", nil, newCommandWrapper(client, cmdRaw)))
@@ -104,28 +123,28 @@ func prepareCLE(client *rri.Client) *commandline.Environment {
 
 func cmdHelp(args []string) error {
 	console.Println("Available commands:")
-	console.Println("  exit                              -  exit application")
-	console.Println("  help                              -  show this help")
+	console.Println("  exit                                -  exit application")
+	console.Println("  help                                -  show this help")
 	console.Println()
-	console.Println("  login {user} {password}           -  log in to a RRI account")
-	console.Println("  logout                            -  log out from the current RRI account")
+	console.Println("  login {user} {password}             -  log in to a RRI account")
+	console.Println("  logout                              -  log out from the current RRI account")
 	console.Println()
 	//contact-create
 	//contact-request
 	//contact-check
 	//contact-update
 	//contact-info
-	console.Println("  create {domain}                   -  send a CREATE command for a new domain")
-	console.Println("  check {domain}                    -  send a CHECK command for a specific domain")
-	console.Println("  info {domain}                     -  send an INFO command for a specific domain")
-	console.Println("  update {domain}                   -  send an UPDATE command for a specific domain")
+	console.Println("  create domain {domain}              -  send a CREATE command for a new domain")
+	console.Println("  check domain {domain}               -  send a CHECK command for a specific domain")
+	console.Println("  info {domain}                       -  send an INFO command for a specific domain")
+	console.Println("  update domain {domain}              -  send an UPDATE command for a specific domain")
 	//chholder
-	console.Println("  delete {domain}                   -  send a DELETE command for a specific domain")
-	console.Println("  restore {domain}                  -  send a RESTORE command for a specific domain")
-	console.Println("  authinfo1 {domain} {secret}       -  send a CREATE-AUTHINFO1 command for a specific domain")
-	console.Println("  authinfo2 {domain}                -  send a CREATE-AUTHINFO2 command for a specific domain")
+	console.Println("  delete domain {domain}              -  send a DELETE command for a specific domain")
+	console.Println("  restore {domain}                    -  send a RESTORE command for a specific domain")
+	console.Println("  create authinfo1 {domain} {secret}  -  send a CREATE-AUTHINFO1 command for a specific domain")
+	console.Println("  create authinfo2 {domain}           -  send a CREATE-AUTHINFO2 command for a specific domain")
 	//delete-authinfo1
-	console.Println("  chprov {domain} {secret}          -  send a CHPROV command for a specific domain with auth info secret")
+	console.Println("  chprov {domain} {secret}            -  send a CHPROV command for a specific domain with auth info secret")
 	//transit
 	//
 	//queue-read
@@ -133,31 +152,52 @@ func cmdHelp(args []string) error {
 	//
 	//regacc-info
 	console.Println()
-	console.Println("  raw                               -  enter a raw query and send it")
-	console.Println("  file {path}                       -  process a query file as accepted by flag --file")
+	console.Println("  raw                                 -  enter a raw query and send it")
+	console.Println("  file {path}                         -  process a query file as accepted by flag --file")
 	console.Println()
-	console.Println("  xml                               -  toggle XML mode")
-	console.Println("  verbose                           -  toggle verbose mode")
-	console.Println("  dry                               -  toggle dry mode to only print out raw queries")
+	console.Println("  xml                                 -  toggle XML mode")
+	console.Println("  verbose                             -  toggle verbose mode")
+	console.Println("  dry                                 -  toggle dry mode to only print out raw queries")
 	return nil
 }
 
-func newCommandWrapper(client *rri.Client, f func(client *rri.Client, args []string) error) commandline.ExecCommandHandler {
+type clientCommand func(client *rri.Client, args []string) error
+
+func newCommandWrapper(client *rri.Client, f clientCommand) commandline.ExecCommandHandler {
 	return func(args []string) error {
 		return f(client, args)
 	}
 }
 
-func newDomainCommandWrapper(client *rri.Client, f func(domain string) *rri.Query) commandline.ExecCommandHandler {
-	return newSingleArgCommandWrapper(client, "missing domain name", f)
+type subCommand struct {
+	Cmd     string
+	Handler clientCommand
 }
 
-func newHandleCommandWrapper(client *rri.Client, f func(handle string) *rri.Query) commandline.ExecCommandHandler {
-	return newSingleArgCommandWrapper(client, "missing handle", f)
-}
+func newCommandMultiplexer(client *rri.Client, subCommands []subCommand) commandline.ExecCommandHandler {
+	subMap := make(map[string]clientCommand)
+	for _, c := range subCommands {
+		subMap[strings.ToLower(c.Cmd)] = c.Handler
+	}
 
-func newSingleArgCommandWrapper(client *rri.Client, missingMsg string, f func(arg string) *rri.Query) commandline.ExecCommandHandler {
 	return func(args []string) error {
+		if len(args) == 0 {
+			return fmt.Errorf("missing command type")
+		}
+
+		if handler, ok := subMap[strings.ToLower(args[0])]; ok {
+			return handler(client, args[1:])
+		}
+		return fmt.Errorf("unknown command type")
+	}
+}
+
+func newDomainQueryCommand(f func(domain string) *rri.Query) clientCommand {
+	return newSingleArgQueryCommand("missing domain name", f)
+}
+
+func newSingleArgQueryCommand(missingMsg string, f func(arg string) *rri.Query) clientCommand {
+	return func(client *rri.Client, args []string) error {
 		if len(args) < 1 {
 			return fmt.Errorf(missingMsg)
 		}
@@ -195,7 +235,7 @@ func cmdLogout(client *rri.Client, args []string) error {
 	return client.Logout()
 }
 
-func cmdCreate(client *rri.Client, args []string) error {
+func cmdCreateDomain(client *rri.Client, args []string) error {
 	domainName, handles, nameServers, err := readDomainData(args, 1)
 	if err != nil {
 		return err
@@ -205,7 +245,7 @@ func cmdCreate(client *rri.Client, args []string) error {
 	return err
 }
 
-func cmdUpdate(client *rri.Client, args []string) error {
+func cmdUpdateDomain(client *rri.Client, args []string) error {
 	domainName, handles, nameServers, err := readDomainData(args, 1)
 	if err != nil {
 		return err
@@ -340,7 +380,6 @@ func cmdDry(client *rri.Client, args []string) error {
 }
 
 func rawQueryPrinter(msg string, isOutgoing bool) {
-	//TODO print colored
 	if isOutgoing {
 		console.Printlnf("<-- %s%q%s", colorSendRaw, msg, colorEnd)
 	} else {

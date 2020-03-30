@@ -1,6 +1,6 @@
 # RRI 3.0 Client
 
-Send requests to RRI v3.0 and read response via CLI.
+Send requests to RRI v3.0 and read response via interactive CLI.
 
 ## Installation
 
@@ -89,15 +89,14 @@ When running in interactive mode, you can use the following commands:
 | --------------------- | ----------- |
 | `login {user} {pass}` | Log in to a RRI account. |
 | `logout` | Log out from the current RRI account. |
-| `check-hdl {handle}` | Send a CHECK command for a specific handle. |
-| `create {domain} {...}` | Send a CREATE command for a new domain. |
-| `check {domain}` | Send a CHECK command for a specific domain. |
+| `create domain {domain} {...}` | Send a CREATE command for a new domain. |
+| `check domain {domain}` | Send a CHECK command for a specific domain. |
 | `info {domain}` | Send an INFO command for a specific domain. |
-| `update {domain} {...}` | Send an UPDATE command for a new domain. |
-| `delete {domain}` | Send a DELETE command for a specific domain. |
+| `update domain {domain} {...}` | Send an UPDATE command for a new domain. |
+| `delete domain {domain}` | Send a DELETE command for a specific domain. |
 | `restore {domain}` | Send a RESTORE command for a specific domain. |
-| `authinfo1 {domain} {secret}` | Send a CREATE-AUTHINFO1 command for a specific domain with auth info secret. |
-| `authinfo2 {domain}` | Send a CREATE-AUTHINFO2 command for a specific domain. |
+| `create authinfo1 {domain} {secret}` | Send a CREATE-AUTHINFO1 command for a specific domain with auth info secret. |
+| `create authinfo2 {domain}` | Send a CREATE-AUTHINFO2 command for a specific domain. |
 | `chprov {domain} {secret} {...}` | Send a CHPROV command for a specific domain with auth info secret. |
 | `file {path}` | Process a query file as accepted by flag `--file`. |
 | `xml` | Toggle xml mode. |
@@ -109,7 +108,7 @@ When running in interactive mode, you can use the following commands:
 The full `create` command accepts the following parameters:
 
 ```
-create {domain} {holder} {abuse-contact} {general-request} {nserver-1} {nserver-2} ...
+create domain {domain} {holder} {abuse-contact} {general-request} {nserver-1} {nserver-2} ...
 ```
 
 The parameters `holder`, `abuse-contact`, `general-request` are handles. You can pass an arbitrary number of name servers at the end. An interactive prompt will be opened for all missing parameters.

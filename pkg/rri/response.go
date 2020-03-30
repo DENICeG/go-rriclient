@@ -56,6 +56,15 @@ func (r *Response) ErrorMsg() string {
 	return r.errorMsg
 }
 
+// EncodeKV returns the Key-Value representation as used for RRI communication.
+func (r *Response) EncodeKV() string {
+	var sb strings.Builder
+	sb.WriteString(string(FieldNameResult))
+	sb.WriteString(": ")
+	sb.WriteString(string(r.result))
+	return sb.String()
+}
+
 // Fields returns all additional response fields.
 func (r *Response) Fields() map[ResponseFieldName][]string {
 	return r.fields

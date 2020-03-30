@@ -54,6 +54,8 @@ github.com/pmezard/go-difflib v1.0.0 h1:4DBwDE0NGyQoBHbLQYPwSUPoCMWR5BEzIk/f1lZb
 github.com/pmezard/go-difflib v1.0.0/go.mod h1:iKH77koFhYxTK1pcRnkKkqfTogsbg7gZNVY4sRDYZ/4=
 github.com/sbreitf1/go-console v0.10.1 h1:cU459PcdqRjY7yVKy14hsgTWMb8TK5hwypGMR3pBo6U=
 github.com/sbreitf1/go-console v0.10.1/go.mod h1:sKBSTwvguzfe5FtWMYITKrFrMIH3Tib8Eu+NgRsnq6c=
+github.com/sbreitf1/go-console v0.10.2 h1:BQfLhVkVnFyksvm3cI4xusVm5+QW9NwIH54dRhPnWD4=
+github.com/sbreitf1/go-console v0.10.2/go.mod h1:sKBSTwvguzfe5FtWMYITKrFrMIH3Tib8Eu+NgRsnq6c=
 github.com/sbreitf1/go-jcrypt v0.1.0 h1:50GF7DbEe8fRQj5ALBYiLhWsKsvLpHRx2TsWUE+OSYM=
 github.com/sbreitf1/go-jcrypt v0.1.0/go.mod h1:MRBDXafctAiDBsnu3kbObbx0yL4irWP2kf0flUeS7XY=
 github.com/stretchr/objx v0.1.0/go.mod h1:HFkY916IF+rwdDfMAkV7OtwuqBVzrE8GR6GFx+wExME=

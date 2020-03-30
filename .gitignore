@@ -1,6 +1,6 @@
 # build artifacts
 *debug*
-rri-client
+go-rriclient
 bin
 
 # test results

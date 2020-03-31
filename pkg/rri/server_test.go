@@ -16,7 +16,7 @@ func TestServer(t *testing.T) {
 		queryCount := 0
 		var lastQuery *Query
 
-		server.Handler = func(q *Query) (*Response, error) {
+		server.Handler = func(s *Session, q *Query) (*Response, error) {
 			queryCount++
 			lastQuery = q
 			return &Response{result: ResultSuccess}, nil
@@ -52,6 +52,49 @@ func TestServer(t *testing.T) {
 					if assert.NoError(t, err) {
 						assert.Equal(t, ResultSuccess, response.Result())
 					}
+				}
+			}
+		}
+	}
+}
+
+func TestServerSession(t *testing.T) {
+	port := 31298
+	server, err := NewServer(port, NewMockTLSConfig())
+	if assert.NoError(t, err) {
+		expectedUser := "captain-kirk"
+		loginQueryCount := 0
+		logoutQueryCount := 0
+
+		server.Handler = func(s *Session, q *Query) (*Response, error) {
+
+			if q.Action() == ActionLogin {
+				loginQueryCount++
+				_, ok := s.GetString("user")
+				assert.False(t, ok)
+				s.Set("user", q.FirstField(FieldNameUser))
+
+			} else {
+				logoutQueryCount++
+				user, ok := s.GetString("user")
+				assert.True(t, ok)
+				assert.Equal(t, expectedUser, user)
+			}
+
+			return &Response{result: ResultSuccess}, nil
+		}
+
+		go func() {
+			assert.NoError(t, server.Run())
+		}()
+		defer server.Close()
+
+		client, err := NewClient(fmt.Sprintf("localhost:%d", port))
+		if assert.NoError(t, err) {
+			if assert.NoError(t, client.Login(expectedUser, "secret")) {
+				if assert.NoError(t, client.Logout()) {
+					assert.Equal(t, 1, loginQueryCount)
+					assert.Equal(t, 1, logoutQueryCount)
 				}
 			}
 		}

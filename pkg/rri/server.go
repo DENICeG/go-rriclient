@@ -13,6 +13,11 @@ import (
 	"time"
 )
 
+var (
+	// ErrCloseConnection can be returned by QueryHandler to gracefully close the connection to the client.
+	ErrCloseConnection = fmt.Errorf("gracefully shutdown connection to client")
+)
+
 // NewMockTLSConfig returns a new, random TLS key and certificate pair for mock services.
 //
 // DO NOT USE IN PRODUCTION!
@@ -59,7 +64,53 @@ func NewMockTLSConfig() *tls.Config {
 
 // QueryHandler is called for incoming RRI queryies by the server and expects a result as return value.
 // If an error is returned instead, it is written to log and the connection is closed immmediately.
-type QueryHandler func(*Query) (*Response, error)
+type QueryHandler func(*Session, *Query) (*Response, error)
+
+// Session is used to keep the state of an RRI connection.
+type Session struct {
+	values map[string]interface{}
+}
+
+// Set sets a value for the current session across multiple queries.
+func (s *Session) Set(key string, value interface{}) {
+	s.values[key] = value
+}
+
+// Get returns a value previously set for the current session.
+func (s *Session) Get(key string) (interface{}, bool) {
+	value, ok := s.values[key]
+	return value, ok
+}
+
+// GetString returns a string value previously set for the current session.
+func (s *Session) GetString(key string) (string, bool) {
+	if value, ok := s.values[key]; ok {
+		if strVal, ok := value.(string); ok {
+			return strVal, true
+		}
+	}
+	return "", false
+}
+
+// GetInt returns an integer value previously set for the current session.
+func (s *Session) GetInt(key string) (int, bool) {
+	if value, ok := s.values[key]; ok {
+		if intVal, ok := value.(int); ok {
+			return intVal, true
+		}
+	}
+	return 0, false
+}
+
+// GetBool returns a boolean value previously set for the current session.
+func (s *Session) GetBool(key string) (bool, bool) {
+	if value, ok := s.values[key]; ok {
+		if boolVal, ok := value.(bool); ok {
+			return boolVal, true
+		}
+	}
+	return false, false
+}
 
 // Server represents a basic RRI client to receive RRI queries and send responses.
 type Server struct {
@@ -95,36 +146,40 @@ func (srv *Server) Run() error {
 			return err
 		}
 
-		if err := func() error {
-			for {
-				msg, err := readMessage(conn)
-				if err != nil {
-					return err
-				}
+		go func() {
+			session := &Session{make(map[string]interface{})}
 
-				if srv.Handler != nil {
-					query, err := ParseQuery(string(msg))
+			if err := func() error {
+				for {
+					msg, err := readMessage(conn)
 					if err != nil {
 						return err
 					}
 
-					response, err := srv.Handler(query)
-					if err != nil {
-						return err
-					}
+					if srv.Handler != nil {
+						query, err := ParseQuery(string(msg))
+						if err != nil {
+							return err
+						}
 
-					responseMsg := prepareMessage(response.EncodeKV())
-					if _, err := conn.Write([]byte(responseMsg)); err != nil {
-						return err
+						response, err := srv.Handler(session, query)
+						if err != nil {
+							return err
+						}
+
+						responseMsg := prepareMessage(response.EncodeKV())
+						if _, err := conn.Write([]byte(responseMsg)); err != nil {
+							return err
+						}
+					} else {
+						return fmt.Errorf("no RRI query handler defined")
 					}
-				} else {
-					return fmt.Errorf("no RRI query handler defined")
 				}
+			}(); err != nil {
+				//TODO handle error
 			}
-		}(); err != nil {
-			//TODO handle error
-		}
 
-		conn.Close()
+			conn.Close()
+		}()
 	}
 }

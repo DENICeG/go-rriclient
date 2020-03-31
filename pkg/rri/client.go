@@ -2,7 +2,6 @@ package rri
 
 import (
 	"crypto/tls"
-	"encoding/binary"
 	"fmt"
 	"io"
 )
@@ -172,11 +171,7 @@ func (client *Client) SendRaw(msg string) (string, error) {
 		return "", err
 	}
 
-	// prepare data packet: 4 byte message length + actual message
-	data := []byte(msg)
-	buffer := make([]byte, 4+len(data))
-	binary.BigEndian.PutUint32(buffer[0:4], uint32(len(data)))
-	copy(buffer[4:], data)
+	buffer := prepareMessage(msg)
 
 	response, err := client.sendAndReceive(buffer)
 	if err != nil {
@@ -216,45 +211,5 @@ func (client *Client) sendAndReceive(msg []byte) (string, error) {
 	if n != len(msg) {
 		return "", fmt.Errorf("failed to send %d bytes", len(msg))
 	}
-	return client.readResponse()
-}
-
-func (client *Client) readResponse() (string, error) {
-	lenBuffer, err := client.readBytes(4)
-	if err != nil {
-		return "", err
-	}
-	len := binary.BigEndian.Uint32(lenBuffer)
-	if len == 0 {
-		return "", fmt.Errorf("server response is empty")
-	}
-	if len > 65536 {
-		return "", fmt.Errorf("server response too large")
-	}
-
-	buffer, err := client.readBytes(int(len))
-	if err != nil {
-		return "", err
-	}
-
-	return string(buffer), nil
-}
-
-func (client *Client) readBytes(count int) ([]byte, error) {
-	buffer := make([]byte, count)
-	received := 0
-
-	for received < count {
-		len, err := client.connection.Read(buffer[received:])
-		if err != nil {
-			return nil, err
-		}
-		if len == 0 {
-			return nil, fmt.Errorf("failed to read %d bytes from connection", count)
-		}
-
-		received += len
-	}
-
-	return buffer, nil
+	return readMessage(client.connection)
 }

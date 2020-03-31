@@ -6,10 +6,8 @@ import (
 	"crypto/tls"
 	"crypto/x509"
 	"crypto/x509/pkix"
-	"encoding/binary"
 	"encoding/pem"
 	"fmt"
-	"io"
 	"math/big"
 	"net"
 	"time"
@@ -99,19 +97,13 @@ func (srv *Server) Run() error {
 
 		if err := func() error {
 			for {
-				lenBuffer, err := readBuffer(conn, 4)
-				if err != nil {
-					return err
-				}
-				len := binary.BigEndian.Uint32(lenBuffer)
-
-				buffer, err := readBuffer(conn, int(len))
+				msg, err := readMessage(conn)
 				if err != nil {
 					return err
 				}
 
 				if srv.Handler != nil {
-					query, err := ParseQuery(string(buffer))
+					query, err := ParseQuery(string(msg))
 					if err != nil {
 						return err
 					}
@@ -121,7 +113,8 @@ func (srv *Server) Run() error {
 						return err
 					}
 
-					if err := sendRRI(response.EncodeKV(), conn); err != nil {
+					responseMsg := prepareMessage(response.EncodeKV())
+					if _, err := conn.Write([]byte(responseMsg)); err != nil {
 						return err
 					}
 				} else {
@@ -134,23 +127,4 @@ func (srv *Server) Run() error {
 
 		conn.Close()
 	}
-}
-
-func readBuffer(r io.Reader, len int) ([]byte, error) {
-	buffer := make([]byte, len)
-	_, err := r.Read(buffer)
-	if err != nil {
-		return nil, err
-	}
-	return buffer, nil
-}
-
-func sendRRI(msg string, w io.Writer) error {
-	// prepare data packet: 4 byte message length + actual message
-	data := []byte(msg)
-	buffer := make([]byte, 4+len(data))
-	binary.BigEndian.PutUint32(buffer[0:4], uint32(len(data)))
-	copy(buffer[4:], data)
-	_, err := w.Write(buffer)
-	return err
 }

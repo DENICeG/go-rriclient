@@ -64,6 +64,10 @@ const (
 	ActionCreateAuthInfo2 QueryAction = "CREATE-AUTHINFO2"
 )
 
+var (
+	handleFields = []QueryFieldName{FieldNameHolder, FieldNameAbuseContact, FieldNameGeneralRequest, FieldNameHandle}
+)
+
 // Version represents the RRI protocol version.
 type Version string
 

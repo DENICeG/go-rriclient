@@ -19,22 +19,27 @@ type Client struct {
 	tlsConfig          *tls.Config
 	currentUser        string
 	lastUser, lastPass string
-	Processor          QueryProcessor
-	RawQueryPrinter    RawQueryPrinter
-	XMLMode            bool
+	// Processor is called for all queries before they are sent.
+	Processor QueryProcessor
+	// RawQueryPrinter is called for the raw messages sent and received by the client.
+	RawQueryPrinter RawQueryPrinter
+	// XMLMode controls whether the queries are sent in KeyValue or XML encoding.
+	XMLMode bool
+	// AutoNormalizeHandles controls whether the handles of sent queries are automatically normalized to match the "DENIC-{RegAccID}-{HANDLE}" syntax.
+	AutoNormalizeHandles bool
 }
 
 // NewClient returns a new Client object for the given RRI Server.
 func NewClient(address string) (*Client, error) {
 	client := &Client{
 		address: address,
-	}
-
-	// taken from https://github.com/sebidude/go-rri
-	client.tlsConfig = &tls.Config{
-		MinVersion:         tls.VersionSSL30,
-		CipherSuites:       []uint16{tls.TLS_RSA_WITH_AES_128_CBC_SHA},
-		InsecureSkipVerify: true,
+		tlsConfig: &tls.Config{
+			MinVersion:         tls.VersionSSL30,
+			CipherSuites:       []uint16{tls.TLS_RSA_WITH_AES_128_CBC_SHA},
+			InsecureSkipVerify: true,
+		},
+		XMLMode:              false,
+		AutoNormalizeHandles: true,
 	}
 
 	if err := client.setupConnection(); err != nil {
@@ -77,6 +82,23 @@ func (client *Client) Close() error {
 	return nil
 }
 
+// NormalizeHandle appends "DENIC-" and/or "{RegAccID}-" to the given handle.
+func (client *Client) NormalizeHandle(hdl string) string {
+	//TODO normalize handle
+	return hdl
+}
+
+// NormalizeQueryHandles normalizes all handles in the given query.
+func (client *Client) NormalizeQueryHandles(q *Query) {
+	for _, f := range handleFields {
+		if values, ok := q.fields[f]; ok {
+			for i := range values {
+				values[i] = client.NormalizeHandle(values[i])
+			}
+		}
+	}
+}
+
 // Login sends a login request to the server and checks for a success result.
 func (client *Client) Login(username, password string) error {
 	r, err := client.SendQuery(NewLoginQuery(username, password))
@@ -103,6 +125,10 @@ func (client *Client) Logout() error {
 func (client *Client) SendQuery(query *Query) (*Response, error) {
 	if client.XMLMode {
 		return nil, fmt.Errorf("XML mode not yet supported")
+	}
+
+	if client.AutoNormalizeHandles {
+		client.NormalizeQueryHandles(query)
 	}
 
 	if client.Processor != nil {
@@ -160,7 +186,7 @@ func (client *Client) SendQuery(query *Query) (*Response, error) {
 
 // SendRaw sends a raw message to RRI and reads the returns the raw response.
 //
-// This method should be used with caution as it does not update the client login state.
+// This method should be used with caution as it does not update the client login state and ignores the AutoNormalizeHandles option.
 func (client *Client) SendRaw(msg string) (string, error) {
 	if client.RawQueryPrinter != nil {
 		client.RawQueryPrinter(msg, true)

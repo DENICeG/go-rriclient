@@ -33,6 +33,7 @@ func TestParseQueriesCasing(t *testing.T) {
 	if assert.NoError(t, err) {
 		assert.Equal(t, LatestVersion, query.Version())
 		assert.Equal(t, ActionLogin, query.Action())
+		assert.Len(t, query.Fields(), 2)
 		assert.Equal(t, query.Field("uSeR"), []string{"DENIC-1000042-TEST"})
 		assert.Equal(t, query.Field(FieldNamePassword), []string{"very-secure"})
 	}
@@ -43,6 +44,7 @@ func TestParseQueriesWhitespaces(t *testing.T) {
 	if assert.NoError(t, err) {
 		assert.Equal(t, LatestVersion, query.Version())
 		assert.Equal(t, ActionLogin, query.Action())
+		assert.Len(t, query.Fields(), 2)
 		assert.Equal(t, query.Field(FieldNameUser), []string{"DENIC-1000042-TEST"})
 		assert.Equal(t, query.Field(FieldNamePassword), []string{"very-secure"})
 	}

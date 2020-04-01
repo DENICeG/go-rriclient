@@ -1,66 +1,15 @@
 package rri
 
 import (
-	"crypto/rand"
-	"crypto/rsa"
 	"crypto/tls"
-	"crypto/x509"
-	"crypto/x509/pkix"
-	"encoding/pem"
 	"fmt"
-	"math/big"
 	"net"
-	"time"
 )
 
 var (
 	// ErrCloseConnection can be returned by QueryHandler to gracefully close the connection to the client.
 	ErrCloseConnection = fmt.Errorf("gracefully shutdown connection to client")
 )
-
-// NewMockTLSConfig returns a new, random TLS key and certificate pair for mock services.
-//
-// DO NOT USE IN PRODUCTION!
-func NewMockTLSConfig() *tls.Config {
-	privKey, err := rsa.GenerateKey(rand.Reader, 4096)
-	if err != nil {
-		panic(fmt.Sprintf("failed to generate RSA key: %s", err))
-	}
-
-	keyData, err := x509.MarshalPKCS8PrivateKey(privKey)
-	if err != nil {
-		panic(fmt.Sprintf("failed to marshal private key: %s", err))
-	}
-	pemKeyData := pem.EncodeToMemory(&pem.Block{Type: "PRIVATE KEY", Bytes: keyData})
-
-	serialNumber, err := rand.Int(rand.Reader, big.NewInt(128))
-	if err != nil {
-		panic(fmt.Sprintf("failed to generate serial number: %s", err))
-	}
-
-	template := x509.Certificate{
-		SerialNumber:          serialNumber,
-		Subject:               pkix.Name{Organization: []string{"DENIC eG"}},
-		NotBefore:             time.Now(),
-		NotAfter:              time.Now().Add(100 * 365 * 24 * time.Hour),
-		KeyUsage:              x509.KeyUsageKeyEncipherment | x509.KeyUsageDigitalSignature,
-		ExtKeyUsage:           []x509.ExtKeyUsage{x509.ExtKeyUsageServerAuth},
-		BasicConstraintsValid: true,
-	}
-
-	certData, err := x509.CreateCertificate(rand.Reader, &template, &template, &privKey.PublicKey, privKey)
-	if err != nil {
-		panic(fmt.Sprintf("failed to create certificate: %s", err))
-	}
-	pemCertData := pem.EncodeToMemory(&pem.Block{Type: "CERTIFICATE", Bytes: certData})
-
-	tlsCert, err := tls.X509KeyPair(pemCertData, pemKeyData)
-	if err != nil {
-		panic(fmt.Sprintf("failed to load key pair: %s", err))
-	}
-
-	return &tls.Config{Certificates: []tls.Certificate{tlsCert}}
-}
 
 // QueryHandler is called for incoming RRI queryies by the server and expects a result as return value.
 // If an error is returned instead, it is written to log and the connection is closed immmediately.

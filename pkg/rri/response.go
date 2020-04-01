@@ -33,8 +33,18 @@ type Response struct {
 // Result represents the result of a query response.
 type Result string
 
+// Normalize returns the normalized representation of the given Result.
+func (r Result) Normalize() Result {
+	return Result(strings.ToLower(string(r)))
+}
+
 // ResponseFieldName represents the field name of a query response.
 type ResponseFieldName string
+
+// Normalize returns the normalized representation of the given ResponseFieldName.
+func (r ResponseFieldName) Normalize() ResponseFieldName {
+	return ResponseFieldName(strings.ToUpper(string(r)))
+}
 
 // IsSuccessful returns whether the response is successfull.
 func (r *Response) IsSuccessful() bool {
@@ -72,7 +82,7 @@ func (r *Response) Fields() map[ResponseFieldName][]string {
 
 // Field returns all values defined for a field name.
 func (r *Response) Field(fieldName ResponseFieldName) []string {
-	fieldValues, ok := r.fields[fieldName]
+	fieldValues, ok := r.fields[fieldName.Normalize()]
 	if !ok {
 		return []string{}
 	}
@@ -81,7 +91,7 @@ func (r *Response) Field(fieldName ResponseFieldName) []string {
 
 // FirstField returns the first field value or an empty string for a field name.
 func (r *Response) FirstField(fieldName ResponseFieldName) string {
-	fieldValues, ok := r.fields[fieldName]
+	fieldValues, ok := r.fields[fieldName.Normalize()]
 	if !ok || len(fieldValues) == 0 {
 		return ""
 	}
@@ -105,14 +115,14 @@ func ParseResponseKV(msg string) (*Response, error) {
 			key := strings.TrimSpace(parts[0])
 			value := strings.TrimSpace(parts[1])
 
-			fieldValues, ok := fields[ResponseFieldName(key)]
+			fieldValues, ok := fields[ResponseFieldName(key).Normalize()]
 			if !ok {
 				fieldValues = []string{value}
 			} else {
 				fieldValues = append(fieldValues, value)
 			}
 
-			fields[ResponseFieldName(key)] = fieldValues
+			fields[ResponseFieldName(key).Normalize()] = fieldValues
 		}
 	}
 
@@ -152,5 +162,5 @@ func ParseResponseKV(msg string) (*Response, error) {
 		delete(fields, FieldNameErrorMsg)
 	}
 
-	return &Response{Result(resultValues[0]), stid, infoMsg, errorMsg, fields}, nil
+	return &Response{Result(resultValues[0]).Normalize(), stid, infoMsg, errorMsg, fields}, nil
 }

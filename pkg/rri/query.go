@@ -67,11 +67,26 @@ const (
 // Version represents the RRI protocol version.
 type Version string
 
+// Normalize returns the normalized representation of the given Version.
+func (v Version) Normalize() Version {
+	return v
+}
+
 // QueryAction represents the action of a RRI query.
 type QueryAction string
 
+// Normalize returns the normalized representation of the given QueryAction.
+func (q QueryAction) Normalize() QueryAction {
+	return QueryAction(strings.ToUpper(string(q)))
+}
+
 // QueryFieldName represents a single data field of a query.
 type QueryFieldName string
+
+// Normalize returns the normalized representation of the given QueryFieldName.
+func (q QueryFieldName) Normalize() QueryFieldName {
+	return QueryFieldName(strings.ToLower(string(q)))
+}
 
 // Query represents a RRI request.
 type Query struct {
@@ -90,7 +105,7 @@ func (q *Query) Action() QueryAction {
 	return q.action
 }
 
-// String returns a human-readable representation of the query.
+// String returns a shortened, human-readable representation of the query.
 func (q *Query) String() string {
 	var sb strings.Builder
 	for key, values := range q.fields {
@@ -139,7 +154,7 @@ func (q *Query) Fields() map[QueryFieldName][]string {
 
 // Field returns all values defined for a field name.
 func (q *Query) Field(fieldName QueryFieldName) []string {
-	fieldValues, ok := q.fields[fieldName]
+	fieldValues, ok := q.fields[fieldName.Normalize()]
 	if !ok {
 		return []string{}
 	}
@@ -148,7 +163,7 @@ func (q *Query) Field(fieldName QueryFieldName) []string {
 
 // FirstField returns the first field value or an empty string for a field name.
 func (q *Query) FirstField(fieldName QueryFieldName) string {
-	fieldValues, ok := q.fields[fieldName]
+	fieldValues, ok := q.fields[fieldName.Normalize()]
 	if !ok || len(fieldValues) == 0 {
 		return ""
 	}
@@ -157,10 +172,13 @@ func (q *Query) FirstField(fieldName QueryFieldName) string {
 
 // NewQuery returns a query with the given parameters.
 func NewQuery(version Version, action QueryAction, fields map[QueryFieldName][]string) *Query {
-	if fields == nil {
-		fields = make(map[QueryFieldName][]string)
+	newFields := make(map[QueryFieldName][]string)
+	if fields != nil {
+		for key, value := range fields {
+			newFields[key.Normalize()] = value
+		}
 	}
-	return &Query{version, action, fields}
+	return &Query{version, action, newFields}
 }
 
 // NewLoginQuery returns a login query for the given credentials.
@@ -299,6 +317,12 @@ func ParseQueryKV(str string) (*Query, error) {
 	lines := strings.Split(str, "\n")
 	fields := make(map[QueryFieldName][]string)
 	for _, line := range lines {
+		// trim spaces and ignore empty lines
+		line = strings.TrimSpace(line)
+		if len(line) == 0 {
+			continue
+		}
+
 		parts := strings.SplitN(line, ":", 2)
 		if len(parts) != 2 {
 			return nil, fmt.Errorf("query line must be key-value separated by ':'")
@@ -307,14 +331,14 @@ func ParseQueryKV(str string) (*Query, error) {
 		key := strings.TrimSpace(parts[0])
 		value := strings.TrimSpace(parts[1])
 
-		fieldValues, ok := fields[QueryFieldName(key)]
+		fieldValues, ok := fields[QueryFieldName(key).Normalize()]
 		if !ok {
 			fieldValues = []string{value}
 		} else {
 			fieldValues = append(fieldValues, value)
 		}
 
-		fields[QueryFieldName(key)] = fieldValues
+		fields[QueryFieldName(key).Normalize()] = fieldValues
 	}
 
 	versionValues, ok := fields[FieldNameVersion]
@@ -335,7 +359,7 @@ func ParseQueryKV(str string) (*Query, error) {
 	}
 	delete(fields, FieldNameAction)
 
-	return &Query{Version(versionValues[0]), QueryAction(actionValues[0]), fields}, nil
+	return &Query{Version(versionValues[0]).Normalize(), QueryAction(actionValues[0]).Normalize(), fields}, nil
 }
 
 // ParseQuery parses a single query from a string.
@@ -347,6 +371,7 @@ func ParseQuery(str string) (*Query, error) {
 func ParseQueries(str string) ([]*Query, error) {
 	lines := strings.Split(str, "\n")
 
+	// each string in queryStrings contains a single, unparsed query
 	queryStrings := make([]string, 0)
 	appendQueryString := func(str string) {
 		str = strings.TrimSpace(str)

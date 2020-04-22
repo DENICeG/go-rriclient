@@ -1,11 +1,14 @@
 package env
 
 import (
+	"encoding/json"
 	"fmt"
 	"io/ioutil"
+	"math"
 	"os"
 	"os/user"
 	"path/filepath"
+	"sort"
 	"strings"
 
 	"github.com/manifoldco/promptui"
@@ -13,7 +16,14 @@ import (
 	"github.com/sbreitf1/go-jcrypt"
 )
 
-//TODO save env ordering (latest used)
+const (
+	envOrderFileName = "env-order"
+)
+
+type envOrder struct {
+	Fixed bool     `json:"fixed"`
+	Order []string `json:"order"`
+}
 
 // GetKeyHandler returns the encryption key for encryption or decryption.
 type GetKeyHandler jcrypt.KeySource
@@ -87,6 +97,7 @@ func (e *Reader) createOrReadEnvironment(envName string, env interface{}, enterE
 				}
 			}
 
+			e.envOrderBringToFront(envName)
 			return nil
 		}
 		return fmt.Errorf("environment %q not found", envName)
@@ -97,10 +108,11 @@ func (e *Reader) createOrReadEnvironment(envName string, env interface{}, enterE
 	}); err != nil {
 		return err
 	}
+	e.envOrderBringToFront(envName)
 	return nil
 }
 
-// SelectEnvironment displays all configured environments and prompts the user.
+// SelectEnvironment displays all configured environments in specified order and prompts the user.
 func (e *Reader) SelectEnvironment(env interface{}) error {
 	envFiles, err := e.GetEnvironmentFiles()
 	if err != nil {
@@ -133,7 +145,7 @@ func (e *Reader) SelectEnvironment(env interface{}) error {
 	return e.createOrReadEnvironment(fileName[:len(fileName)-5], env, nil)
 }
 
-// GetEnvironmentFiles returns all files that contain environments.
+// GetEnvironmentFiles returns an ordered list of files that contain environments.
 func (e *Reader) GetEnvironmentFiles() ([]os.FileInfo, error) {
 	files, err := ioutil.ReadDir(e.dir)
 	if err != nil {
@@ -145,11 +157,82 @@ func (e *Reader) GetEnvironmentFiles() ([]os.FileInfo, error) {
 
 	envFiles := make([]os.FileInfo, 0)
 	for _, fi := range files {
-		if !fi.IsDir() && strings.HasSuffix(fi.Name(), ".json") {
+		if !fi.IsDir() && strings.HasSuffix(fi.Name(), ".json") && fi.Name() != envOrderFileName {
 			envFiles = append(envFiles, fi)
 		}
 	}
+
+	order, _ := e.readEnvOrder()
+	if order.Order != nil && len(order.Order) > 0 {
+		orderMap := make(map[string]int)
+		for i, name := range order.Order {
+			orderMap[name] = i
+		}
+		sort.SliceStable(envFiles, func(i, j int) bool {
+			iVal, iOk := orderMap[envFiles[i].Name()]
+			jVal, jOk := orderMap[envFiles[j].Name()]
+			if !iOk {
+				iVal = math.MaxInt32
+			}
+			if !jOk {
+				jVal = math.MaxInt32
+			}
+			return iVal < jVal
+		})
+	}
+
 	return envFiles, nil
+}
+
+func (e *Reader) readEnvOrder() (envOrder, error) {
+	orderData, err := ioutil.ReadFile(filepath.Join(e.dir, envOrderFileName))
+	if err != nil {
+		return envOrder{false, []string{}}, nil
+	}
+
+	var order envOrder
+	if err := json.Unmarshal(orderData, &order); err != nil {
+		return envOrder{false, []string{}}, nil
+	}
+
+	return order, nil
+}
+
+func (e *Reader) writeEnvOrder(order envOrder) error {
+	orderData, err := json.Marshal(&order)
+	if err != nil {
+		return err
+	}
+
+	return ioutil.WriteFile(filepath.Join(e.dir, envOrderFileName), orderData, os.ModePerm)
+}
+
+func (e *Reader) envOrderBringToFront(name string) error {
+	order, err := e.readEnvOrder()
+	if err != nil {
+		return err
+	}
+
+	if order.Fixed {
+		return nil
+	}
+
+	if !strings.HasSuffix(name, ".json") {
+		name += ".json"
+	}
+	if order.Order == nil {
+		order.Order = []string{name}
+	} else {
+		newOrder := []string{name}
+		for _, env := range order.Order {
+			if env != name {
+				newOrder = append(newOrder, env)
+			}
+		}
+		order.Order = newOrder
+	}
+
+	return e.writeEnvOrder(order)
 }
 
 func getConfigDir() (string, error) {

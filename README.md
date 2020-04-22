@@ -125,7 +125,7 @@ The full `chprov` command is similar to the `create` command. It accepts the fol
 chprov {domain} {secret} {holder} {abuse-contact} {general-request} {nserver-1} {nserver-2} ...
 ```
 
-It behaves exactly like the `create` command for missing parameters. You need to supply the same secret as passed to `authinfo1` to successfully take control over the domain.
+It behaves exactly like the `create domain` command for missing parameters. You need to supply the same secret as passed to `authinfo1` to successfully take control over the domain.
 
 ## Thanks
 

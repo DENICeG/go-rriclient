@@ -96,7 +96,7 @@ func (q QueryFieldName) Normalize() QueryFieldName {
 type Query struct {
 	version Version
 	action  QueryAction
-	fields  map[QueryFieldName][]string
+	fields  QueryFieldList
 }
 
 // Version returns the query version.
@@ -112,15 +112,13 @@ func (q *Query) Action() QueryAction {
 // String returns a shortened, human-readable representation of the query.
 func (q *Query) String() string {
 	var sb strings.Builder
-	for key, values := range q.fields {
-		for _, value := range values {
-			if sb.Len() > 0 {
-				sb.WriteString("; ")
-			}
-			sb.WriteString(string(key))
-			sb.WriteString("=")
-			sb.WriteString(value)
+	for _, f := range q.fields {
+		if sb.Len() > 0 {
+			sb.WriteString("; ")
 		}
+		sb.WriteString(string(f.Name))
+		sb.WriteString("=")
+		sb.WriteString(f.Value)
 	}
 	return fmt.Sprintf("%sv%s{%s}", q.action, q.version, sb.String())
 }
@@ -140,46 +138,38 @@ func (q *Query) EncodeKV() string {
 	sb.WriteString(string(FieldNameAction))
 	sb.WriteString(": ")
 	sb.WriteString(string(q.action))
-	for key, values := range q.fields {
-		for _, value := range values {
-			sb.WriteString("\n")
-			sb.WriteString(string(key))
-			sb.WriteString(": ")
-			sb.WriteString(value)
-		}
+	for _, f := range q.fields {
+		sb.WriteString("\n")
+		sb.WriteString(string(f.Name))
+		sb.WriteString(": ")
+		sb.WriteString(f.Value)
 	}
 	return sb.String()
 }
 
 // Fields returns all additional response fields.
-func (q *Query) Fields() map[QueryFieldName][]string {
+func (q *Query) Fields() QueryFieldList {
 	return q.fields
 }
 
 // Field returns all values defined for a field name.
 func (q *Query) Field(fieldName QueryFieldName) []string {
-	fieldValues, ok := q.fields[fieldName.Normalize()]
-	if !ok {
-		return []string{}
-	}
-	return fieldValues
+	return q.fields.Values(fieldName)
 }
 
 // FirstField returns the first field value or an empty string for a field name.
 func (q *Query) FirstField(fieldName QueryFieldName) string {
-	fieldValues, ok := q.fields[fieldName.Normalize()]
-	if !ok || len(fieldValues) == 0 {
-		return ""
-	}
-	return fieldValues[0]
+	return q.fields.FirstValue(fieldName)
 }
 
 // NewQuery returns a query with the given parameters.
 func NewQuery(version Version, action QueryAction, fields map[QueryFieldName][]string) *Query {
-	newFields := make(map[QueryFieldName][]string)
+	newFields := newQueryFieldList()
 	if fields != nil {
-		for key, value := range fields {
-			newFields[key.Normalize()] = value
+		for key, values := range fields {
+			for _, value := range values {
+				newFields.Add(key, value)
+			}
 		}
 	}
 	return &Query{version, action, newFields}
@@ -319,7 +309,7 @@ func NewChangeProviderQuery(idnDomain, authInfo string, holderHandles, abuseCont
 // ParseQueryKV parses a single key-value encoded query.
 func ParseQueryKV(str string) (*Query, error) {
 	lines := strings.Split(str, "\n")
-	fields := make(map[QueryFieldName][]string)
+	fields := newQueryFieldList()
 	for _, line := range lines {
 		// trim spaces and ignore empty lines
 		line = strings.TrimSpace(line)
@@ -335,33 +325,26 @@ func ParseQueryKV(str string) (*Query, error) {
 		key := strings.TrimSpace(parts[0])
 		value := strings.TrimSpace(parts[1])
 
-		fieldValues, ok := fields[QueryFieldName(key).Normalize()]
-		if !ok {
-			fieldValues = []string{value}
-		} else {
-			fieldValues = append(fieldValues, value)
-		}
-
-		fields[QueryFieldName(key).Normalize()] = fieldValues
+		fields.Add(QueryFieldName(key), value)
 	}
 
-	versionValues, ok := fields[FieldNameVersion]
-	if !ok || len(versionValues) == 0 {
+	versionValues := fields.Values(FieldNameVersion)
+	if len(versionValues) == 0 {
 		return nil, fmt.Errorf("%s key is missing", FieldNameVersion)
 	}
 	if len(versionValues) > 1 {
 		return nil, fmt.Errorf("multiple %s values", FieldNameVersion)
 	}
-	delete(fields, FieldNameVersion)
+	fields.RemoveAll(FieldNameVersion)
 
-	actionValues, ok := fields[FieldNameAction]
-	if !ok || len(actionValues) == 0 {
+	actionValues := fields.Values(FieldNameAction)
+	if len(actionValues) == 0 {
 		return nil, fmt.Errorf("%s key is missing", FieldNameAction)
 	}
 	if len(actionValues) > 1 {
 		return nil, fmt.Errorf("multiple %s values", FieldNameAction)
 	}
-	delete(fields, FieldNameAction)
+	fields.RemoveAll(FieldNameAction)
 
 	return &Query{Version(versionValues[0]).Normalize(), QueryAction(actionValues[0]).Normalize(), fields}, nil
 }

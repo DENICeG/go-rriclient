@@ -90,10 +90,10 @@ func (client *Client) NormalizeHandle(hdl string) string {
 
 // NormalizeQueryHandles normalizes all handles in the given query.
 func (client *Client) NormalizeQueryHandles(q *Query) {
-	for _, f := range handleFields {
-		if values, ok := q.fields[f]; ok {
-			for i := range values {
-				values[i] = client.NormalizeHandle(values[i])
+	for _, hf := range handleFields {
+		for i, f := range q.fields {
+			if f.Name == hf {
+				q.fields[i].Value = client.NormalizeHandle(f.Value)
 			}
 		}
 	}

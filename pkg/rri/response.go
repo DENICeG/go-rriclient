@@ -19,16 +19,10 @@ const (
 	FieldNameInfoMsg ResponseFieldName = "INFO"
 	// FieldNameErrorMsg denotes the response field name for error message.
 	FieldNameErrorMsg ResponseFieldName = "ERROR"
-)
 
-// Response represents an RRI response.
-type Response struct {
-	result   Result
-	stid     string
-	infoMsg  string
-	errorMsg string
-	fields   map[ResponseFieldName][]string
-}
+	// EntityNameHolder denotes the entity name of a holder.
+	EntityNameHolder ResponseEntityName = "holder"
+)
 
 // Result represents the result of a query response.
 type Result string
@@ -44,6 +38,29 @@ type ResponseFieldName string
 // Normalize returns the normalized representation of the given ResponseFieldName.
 func (r ResponseFieldName) Normalize() ResponseFieldName {
 	return ResponseFieldName(strings.ToUpper(string(r)))
+}
+
+// ResponseEntityName represents a response entity name.
+type ResponseEntityName string
+
+// Normalize returns the normalized representation of the given ResponseEntityName.
+func (r ResponseEntityName) Normalize() ResponseEntityName {
+	return ResponseEntityName(strings.ToLower(string(r)))
+}
+
+type responseEntity struct {
+	Name   ResponseEntityName
+	Fields ResponseFieldList
+}
+
+// Response represents an RRI response.
+type Response struct {
+	result   Result
+	stid     string
+	infoMsg  string
+	errorMsg string
+	fields   ResponseFieldList
+	entities []responseEntity
 }
 
 // IsSuccessful returns whether the response is successfull.
@@ -76,91 +93,98 @@ func (r *Response) EncodeKV() string {
 }
 
 // Fields returns all additional response fields.
-func (r *Response) Fields() map[ResponseFieldName][]string {
+func (r *Response) Fields() ResponseFieldList {
 	return r.fields
 }
 
 // Field returns all values defined for a field name.
 func (r *Response) Field(fieldName ResponseFieldName) []string {
-	fieldValues, ok := r.fields[fieldName.Normalize()]
-	if !ok {
-		return []string{}
-	}
-	return fieldValues
+	return r.fields.Values(fieldName)
 }
 
 // FirstField returns the first field value or an empty string for a field name.
 func (r *Response) FirstField(fieldName ResponseFieldName) string {
-	fieldValues, ok := r.fields[fieldName.Normalize()]
-	if !ok || len(fieldValues) == 0 {
-		return ""
+	return r.fields.FirstValue(fieldName)
+}
+
+// EntityNames returns a list of entity names contained in this response.
+func (r *Response) EntityNames() []ResponseEntityName {
+	names := make([]ResponseEntityName, len(r.entities))
+	for i, e := range r.entities {
+		names[i] = e.Name
 	}
-	return fieldValues[0]
+	return names
+}
+
+// Entity returns the named entity of this response or nil.
+func (r *Response) Entity(entityName ResponseEntityName) ResponseFieldList {
+	entityName = entityName.Normalize()
+	for _, e := range r.entities {
+		if e.Name == entityName {
+			return e.Fields
+		}
+	}
+	return nil
 }
 
 // ParseResponseKV parses a response object from the given key-value response string.
 func ParseResponseKV(msg string) (*Response, error) {
 	lines := strings.Split(msg, "\n")
-	fields := make(map[ResponseFieldName][]string)
-	for _, line := range lines {
+	fields := newResponseFieldList()
+	entities := make([]responseEntity, 0)
+	for i, line := range lines {
+		line = strings.TrimSpace(line)
 		if len(line) > 0 {
 			parts := strings.SplitN(line, ":", 2)
+			if len(parts) == 1 && strings.HasPrefix(parts[0], "[") && strings.HasSuffix(parts[0], "]") {
+				// begin of new entity
+				entities = append(entities, responseEntity{ResponseEntityName(parts[0][1 : len(parts[0])-1]).Normalize(), newResponseFieldList()})
+				continue
+			}
 			if len(parts) != 2 {
-				// additional information follows here -> abort parsing
-				break
-				//fmt.Println(line)
-				//return nil, fmt.Errorf("response line must be key-value separated by ':'")
+				return nil, fmt.Errorf("malformed query in line %d", i)
 			}
 
 			key := strings.TrimSpace(parts[0])
 			value := strings.TrimSpace(parts[1])
 
-			fieldValues, ok := fields[ResponseFieldName(key).Normalize()]
-			if !ok {
-				fieldValues = []string{value}
+			if len(entities) > 0 {
+				entities[len(entities)-1].Fields.Add(ResponseFieldName(key), value)
 			} else {
-				fieldValues = append(fieldValues, value)
+				fields.Add(ResponseFieldName(key), value)
 			}
-
-			fields[ResponseFieldName(key).Normalize()] = fieldValues
 		}
 	}
 
-	resultValues, ok := fields[FieldNameResult]
-	if !ok || len(resultValues) == 0 {
+	resultValues := fields.Values(FieldNameResult)
+	if len(resultValues) == 0 {
 		return nil, fmt.Errorf("%s key is missing", FieldNameResult)
 	}
 	if len(resultValues) > 1 {
 		return nil, fmt.Errorf("multiple %s values", FieldNameResult)
 	}
-	delete(fields, FieldNameResult)
+	fields.RemoveAll(FieldNameResult)
 
 	stid := ""
-	stidValues, ok := fields[FieldNameSTID]
-	if ok {
-		if len(stidValues) > 0 {
-			stid = stidValues[0]
-		}
-		delete(fields, FieldNameSTID)
+	stidValues := fields.Values(FieldNameSTID)
+	if len(stidValues) > 0 {
+		stid = stidValues[0]
 	}
+	fields.RemoveAll(FieldNameSTID)
 
 	infoMsg := ""
-	infoMsgValues, ok := fields[FieldNameInfoMsg]
-	if ok {
-		if len(infoMsgValues) > 0 {
-			infoMsg = infoMsgValues[0]
-		}
-		delete(fields, FieldNameInfoMsg)
+	infoMsgValues := fields.Values(FieldNameInfoMsg)
+	if len(infoMsgValues) > 0 {
+		infoMsg = infoMsgValues[0]
 	}
+	fields.RemoveAll(FieldNameInfoMsg)
 
 	errorMsg := ""
-	errorMsgValues, ok := fields[FieldNameErrorMsg]
-	if ok {
-		if len(errorMsgValues) > 0 {
-			errorMsg = errorMsgValues[0]
-		}
-		delete(fields, FieldNameErrorMsg)
+	errorMsgValues := fields.Values(FieldNameErrorMsg)
+	if len(errorMsgValues) > 0 {
+		errorMsg = errorMsgValues[0]
 	}
+	fields.RemoveAll(FieldNameErrorMsg)
 
-	return &Response{Result(resultValues[0]).Normalize(), stid, infoMsg, errorMsg, fields}, nil
+	return &Response{Result(resultValues[0]).Normalize(), stid, infoMsg, errorMsg, fields, entities}, nil
 }

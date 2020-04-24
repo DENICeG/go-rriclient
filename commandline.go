@@ -404,9 +404,15 @@ func processQuery(client *rri.Client, query *rri.Query) (bool, error) {
 
 	if response.IsSuccessful() {
 		console.Print(colorSuccessResponse)
-		for key, values := range response.Fields() {
-			for _, value := range values {
-				console.Printlnf("  %s: %s", key, value)
+		for _, field := range response.Fields() {
+			console.Printlnf("  %s: %s", field.Name, field.Value)
+		}
+		for _, entityName := range response.EntityNames() {
+			console.Println()
+			console.Printlnf("[%s]", entityName)
+			entity := response.Entity(entityName)
+			for _, field := range entity {
+				console.Printlnf("  %s: %s", field.Name, field.Value)
 			}
 		}
 		console.Print(colorEnd)

@@ -51,7 +51,7 @@ go-rriclient
 
 the RRI client will start with the picklist.
 
-##RRI Client Modes
+## RRI Client Modes
 
 You can interact with the RRI client in two modes. All modes can be combined with any of the previously described connection types. See sections *CLI Arguments*, *RRI Commands* and *RRI Request Examples* for a detailed explanation of CLI arguments and RRI commands/arguments.
 

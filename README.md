@@ -76,7 +76,7 @@ go-rriclient -e {alias name}
 go-rriclient
 ```
 
-##CLI Arguments
+## CLI Arguments
 
 | Flag | Short | Description |
 | ---- | ----- | ----------- |
@@ -108,7 +108,7 @@ You can use the following commands in file mode and interactive mode:
 | `verbose` | Toggle verbose mode. |
 | `dry` | Toggle dry mode to only print out raw queries. |
 
-##RRI Request Examples
+## RRI Request Examples
 
 **Create Domain**
 

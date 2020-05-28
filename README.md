@@ -110,7 +110,7 @@ You can use the following commands in file mode and interactive mode:
 
 ## RRI Request Examples
 
-**Create Domain**
+**Create Domain/Update Domain**
 
 The full `create domain` command accepts the following parameters:
 
@@ -119,10 +119,6 @@ create domain {domain} {holder} {abuse-contact} {general-request} {nserver-1} {n
 ```
 
 The parameters `holder`, `abuse-contact` and `general-request` are handles. You specify an arbitrary number of name servers at the end. An interactive prompt will be opened for all missing parameters.
-
-**Update Domain**
-
-Behaves the same as `create domain`.
 
 **Chprov**
 

@@ -1,6 +1,6 @@
 # RRI 3.0 Client
 
-This application is a client for the RRI with an interactive CLI developed by [DENIC eG] (https://denic.de), to send requests and info commands to and receive responses from the DENIC registry server.
+This application is a client for the RRI with an interactive CLI developed by [DENIC eG](https://denic.de), to send requests and info commands to and receive responses from the DENIC registry server.
 
 ## Installation
 

@@ -90,7 +90,7 @@ go-rriclient
 
 You can use the following commands in file mode and interactive mode:
 
-| Commands and Parameters | Description |
+| Command and Parameter | Description |
 | --------------------- | ----------- |
 | `login {username} {password}` | Log in to a RRI account. |
 | `logout` | Log out from the current RRI account. |

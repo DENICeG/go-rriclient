@@ -118,7 +118,7 @@ The full `create domain` command accepts the following parameters:
 create domain {domain} {holder} {abuse-contact} {general-request} {nserver-1} {nserver-2} ...
 ```
 
-The parameters `holder`, `abuse-contact` and `general-request` are handles. You give an arbitrary number of name servers at the end. An interactive prompt will be opened for all missing parameters.
+The parameters `holder`, `abuse-contact` and `general-request` are handles. You specify an arbitrary number of name servers at the end. An interactive prompt will be opened for all missing parameters.
 
 **Update Domain**
 

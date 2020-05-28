@@ -126,7 +126,7 @@ Behaves the same as `create domain`.
 
 **Chprov**
 
-The `chprov` command is like the `create domain` command. It behaves exactly like the create domain command and accepts the following parameters:
+The `chprov` command is like the `create domain` command. It behaves exactly like the `create domain` command and accepts the following parameters:
 
 ```
 chprov {domain} {secret} {holder} {abuse-contact} {general-request} {nserver-1} {nserver-2} ...

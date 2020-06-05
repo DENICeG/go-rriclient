@@ -240,7 +240,7 @@ func cmdLogout(client *rri.Client, args []string) error {
 }
 
 func cmdCreateDomain(client *rri.Client, args []string) error {
-	domainName, handles, nameServers, err := readDomainData(args, 0)
+	domainName, handles, nameServers, err := readDomainData(args, 1)
 	if err != nil {
 		return err
 	}
@@ -250,7 +250,7 @@ func cmdCreateDomain(client *rri.Client, args []string) error {
 }
 
 func cmdUpdateDomain(client *rri.Client, args []string) error {
-	domainName, handles, nameServers, err := readDomainData(args, 0)
+	domainName, handles, nameServers, err := readDomainData(args, 1)
 	if err != nil {
 		return err
 	}
@@ -281,7 +281,7 @@ func cmdChProv(client *rri.Client, args []string) error {
 		return fmt.Errorf("missing auth info secret")
 	}
 
-	domainName, handles, nameServers, err := readDomainData(args, 1)
+	domainName, handles, nameServers, err := readDomainData(args, 2)
 	if err != nil {
 		return err
 	}
@@ -436,7 +436,7 @@ func readDomainData(args []string, dataOffset int) (domainName string, handles [
 		return "", nil, nil, fmt.Errorf("domain name must end with .de")
 	}
 
-	handleNames := []string{"Holder", "AbuseContact", "GeneralRequest"}
+	handleNames := []string{"Holder", "GeneralRequest", "AbuseContact"}
 	handles = make([][]string, len(handleNames))
 	for i := 0; i < len(handleNames); i++ {
 		if len(args) >= (i + dataOffset + 1) {
@@ -451,8 +451,8 @@ func readDomainData(args []string, dataOffset int) (domainName string, handles [
 		}
 	}
 
-	if len(args) >= (dataOffset + len(handleNames) + 1) {
-		nameServers = args[dataOffset+len(handleNames)+1:]
+	if len(args) >= (dataOffset + len(handleNames)) {
+		nameServers = args[dataOffset+len(handleNames):]
 	} else {
 		for {
 			console.Printf("NameServer> ")

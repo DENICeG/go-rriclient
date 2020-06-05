@@ -27,10 +27,10 @@ const (
 	FieldNameDomainACE QueryFieldName = "domain-ace"
 	// FieldNameHolder denotes the query field name for holder handle.
 	FieldNameHolder QueryFieldName = "holder"
-	// FieldNameAbuseContact denotes the query field name for abuse contact handle.
-	FieldNameAbuseContact QueryFieldName = "abusecontact"
 	// FieldNameGeneralRequest denotes the query field name for general request handle.
 	FieldNameGeneralRequest QueryFieldName = "generalrequest"
+	// FieldNameAbuseContact denotes the query field name for abuse contact handle.
+	FieldNameAbuseContact QueryFieldName = "abusecontact"
 	// FieldNameNameServer denotes the query field name for name servers.
 	FieldNameNameServer QueryFieldName = "nserver"
 	// FieldNameHandle denotes the query field name for denic handles.
@@ -65,7 +65,7 @@ const (
 )
 
 var (
-	handleFields = []QueryFieldName{FieldNameHolder, FieldNameAbuseContact, FieldNameGeneralRequest, FieldNameHandle}
+	handleFields = []QueryFieldName{FieldNameHolder, FieldNameGeneralRequest, FieldNameAbuseContact, FieldNameHandle}
 )
 
 // Version represents the RRI protocol version.
@@ -196,15 +196,15 @@ func NewCheckHandleQuery(handle string) *Query {
 }
 
 // NewCreateDomainQuery returns a query to create a domain.
-func NewCreateDomainQuery(idnDomain string, holderHandles, abuseContactHandles, generalRequestHandles []string, nameServers ...string) *Query {
+func NewCreateDomainQuery(idnDomain string, holderHandles, generalRequestHandles, abuseContactHandles []string, nameServers ...string) *Query {
 	fields := make(map[QueryFieldName][]string)
 	fields[FieldNameDomainIDN] = []string{idnDomain}
 	if ace, err := idna.ToASCII(idnDomain); err == nil {
 		fields[FieldNameDomainACE] = []string{ace}
 	}
 	fields[FieldNameHolder] = holderHandles
-	fields[FieldNameAbuseContact] = abuseContactHandles
 	fields[FieldNameGeneralRequest] = generalRequestHandles
+	fields[FieldNameAbuseContact] = abuseContactHandles
 	fields[FieldNameNameServer] = nameServers
 	return NewQuery(LatestVersion, ActionCreate, fields)
 }
@@ -230,15 +230,15 @@ func NewInfoDomainQuery(idnDomain string) *Query {
 }
 
 // NewUpdateDomainQuery returns a query to update a domain.
-func NewUpdateDomainQuery(idnDomain string, holderHandles, abuseContactHandles, generalRequestHandles []string, nameServers ...string) *Query {
+func NewUpdateDomainQuery(idnDomain string, holderHandles, generalRequestHandles, abuseContactHandles []string, nameServers ...string) *Query {
 	fields := make(map[QueryFieldName][]string)
 	fields[FieldNameDomainIDN] = []string{idnDomain}
 	if ace, err := idna.ToASCII(idnDomain); err == nil {
 		fields[FieldNameDomainACE] = []string{ace}
 	}
 	fields[FieldNameHolder] = holderHandles
-	fields[FieldNameAbuseContact] = abuseContactHandles
 	fields[FieldNameGeneralRequest] = generalRequestHandles
+	fields[FieldNameAbuseContact] = abuseContactHandles
 	fields[FieldNameNameServer] = nameServers
 	return NewQuery(LatestVersion, ActionUpdate, fields)
 }
@@ -292,15 +292,15 @@ func NewCreateAuthInfo2Query(idnDomain string) *Query {
 }
 
 // NewChangeProviderQuery returns a query to create a domain.
-func NewChangeProviderQuery(idnDomain, authInfo string, holderHandles, abuseContactHandles, generalRequestHandles []string, nameServers ...string) *Query {
+func NewChangeProviderQuery(idnDomain, authInfo string, holderHandles, generalRequestHandles, abuseContactHandles []string, nameServers ...string) *Query {
 	fields := make(map[QueryFieldName][]string)
 	fields[FieldNameDomainIDN] = []string{idnDomain}
 	if ace, err := idna.ToASCII(idnDomain); err == nil {
 		fields[FieldNameDomainACE] = []string{ace}
 	}
 	fields[FieldNameHolder] = holderHandles
-	fields[FieldNameAbuseContact] = abuseContactHandles
 	fields[FieldNameGeneralRequest] = generalRequestHandles
+	fields[FieldNameAbuseContact] = abuseContactHandles
 	fields[FieldNameNameServer] = nameServers
 	fields[FieldNameAuthInfo] = []string{authInfo}
 	return NewQuery(LatestVersion, ActionChangeProvider, fields)

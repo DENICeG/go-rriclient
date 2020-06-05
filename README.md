@@ -112,20 +112,20 @@ You can use the following commands in file mode and interactive mode:
 
 **Create Domain/Update Domain**
 
-The full `create domain` command accepts the following parameters:
+The full `create domain` and `update domain` commands accept the following parameters:
 
 ```
-create domain {domain} {holder} {abuse-contact} {general-request} {nserver-1} {nserver-2} ...
+create domain {domain} {holder} {general-request} {abuse-contact} {nserver-1} {nserver-2} ...
 ```
 
-The parameters `holder`, `abuse-contact` and `general-request` are handles. You specify an arbitrary number of name servers at the end. An interactive prompt will be opened for all missing parameters.
+The parameters `holder`, `general-request` and `abuse-contact` are handles. You specify an arbitrary number of name servers at the end. An interactive prompt will be opened for all missing parameters.
 
 **Chprov**
 
 The `chprov` command is like the `create domain` command. It behaves exactly like the `create domain` command and accepts the following parameters:
 
 ```
-chprov {domain} {secret} {holder} {abuse-contact} {general-request} {nserver-1} {nserver-2} ...
+chprov {domain} {secret} {holder} {general-request} {abuse-contact} {nserver-1} {nserver-2} ...
 ```
 
 ## Thanks

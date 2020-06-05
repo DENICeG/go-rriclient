@@ -96,7 +96,7 @@ You can use the following commands in file mode and interactive mode:
 | `logout` | Log out from the current RRI account. |
 | `create domain {domain} {...}` | Send a CREATE command for a new domain. |
 | `check domain {domain}` | Send a CHECK command for a specific domain. |
-| `info {domain}` | Send an INFO command for a specific domain. |
+| `info domain {domain}` | Send an INFO command for a specific domain. |
 | `update domain {domain} {...}` | Send an UPDATE command for a new domain. |
 | `delete domain {domain}` | Send a DELETE command for a specific domain. |
 | `restore {domain}` | Send a RESTORE command for a specific domain. |

@@ -93,7 +93,11 @@ func prepareCLE(client *rri.Client) *commandline.Environment {
 			subCommand{"domain", newDomainQueryCommand(rri.NewCheckDomainQuery)},
 		})))
 
-	cle.RegisterCommand(commandline.NewCustomCommand("info", nil, newCommandWrapper(client, newDomainQueryCommand(rri.NewInfoDomainQuery))))
+	cle.RegisterCommand(commandline.NewCustomCommand("info",
+		commandline.NewFixedArgCompletion(commandline.NewOneOfArgCompletion("domain")),
+		newCommandMultiplexer(client, []subCommand{
+			subCommand{"domain", newDomainQueryCommand(rri.NewInfoDomainQuery)},
+		})))
 
 	cle.RegisterCommand(commandline.NewCustomCommand("update",
 		commandline.NewFixedArgCompletion(commandline.NewOneOfArgCompletion("domain")),
@@ -136,7 +140,7 @@ func cmdHelp(args []string) error {
 	//contact-info
 	console.Println("  create domain {domain}              -  send a CREATE command for a new domain")
 	console.Println("  check domain {domain}               -  send a CHECK command for a specific domain")
-	console.Println("  info {domain}                       -  send an INFO command for a specific domain")
+	console.Println("  info domain {domain}                -  send an INFO command for a specific domain")
 	console.Println("  update domain {domain}              -  send an UPDATE command for a specific domain")
 	//chholder
 	console.Println("  delete domain {domain}              -  send a DELETE command for a specific domain")
@@ -236,7 +240,7 @@ func cmdLogout(client *rri.Client, args []string) error {
 }
 
 func cmdCreateDomain(client *rri.Client, args []string) error {
-	domainName, handles, nameServers, err := readDomainData(args, 1)
+	domainName, handles, nameServers, err := readDomainData(args, 0)
 	if err != nil {
 		return err
 	}
@@ -246,7 +250,7 @@ func cmdCreateDomain(client *rri.Client, args []string) error {
 }
 
 func cmdUpdateDomain(client *rri.Client, args []string) error {
-	domainName, handles, nameServers, err := readDomainData(args, 1)
+	domainName, handles, nameServers, err := readDomainData(args, 0)
 	if err != nil {
 		return err
 	}
@@ -277,7 +281,7 @@ func cmdChProv(client *rri.Client, args []string) error {
 		return fmt.Errorf("missing auth info secret")
 	}
 
-	domainName, handles, nameServers, err := readDomainData(args, 2)
+	domainName, handles, nameServers, err := readDomainData(args, 1)
 	if err != nil {
 		return err
 	}

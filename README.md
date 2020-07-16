@@ -1,10 +1,10 @@
-# DENIC-RRI-Client
+# DENIC RRI Client
 
 This application is a client for the RRI with an interactive CLI developed by [DENIC eG](https://denic.de), to send requests and info commands to and receive responses from the DENIC registry server.
 
 ## Installation
 
-The client is developed in GO and can be installed and built from the repository:
+The DENIC RRI client is developed in GO and can be installed and built from the repository:
 
 ```
 go get -u github.com/DENICeG/go-rriclient
@@ -41,7 +41,7 @@ If you have access to one or more RRI environments with different sets of server
 go-rriclient -e {alias name}
 ```
 
-The RRI client will ask you for host, port, username and password that you would like to store with the alias. The information is stored in an environment file in `~/.rri-client`.
+The DENIC RRI client will ask you for host, port, username and password that you would like to store with the alias. The information is stored in an environment file in `~/.rri-client`.
 
 When you type in:
 
@@ -49,11 +49,11 @@ When you type in:
 go-rriclient
 ```
 
-the RRI client will start with the picklist.
+the DENIC RRI client will start with the picklist.
 
-## RRI Client Modes
+## DENIC RRI Client Modes
 
-You can interact with the RRI client in two modes. All modes can be combined with any of the previously described connection types. See sections *CLI Arguments*, *RRI Commands* and *RRI Request Examples* for a detailed explanation of CLI arguments and RRI commands/parameters.
+You can interact with the DENIC RRI client in two modes. All modes can be combined with any of the previously described connection types. See sections *CLI Arguments*, *RRI Commands* and *RRI Request Examples* for a detailed explanation of CLI arguments and RRI commands/parameters.
 
 1. **File Source Mode**
 

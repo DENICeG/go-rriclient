@@ -36,8 +36,7 @@ func TestServer(t *testing.T) {
 
 	client := &Client{address: fmt.Sprintf("localhost:%d", port)}
 	client.tlsConfig = &tls.Config{
-		MinVersion:         tls.VersionSSL30,
-		CipherSuites:       []uint16{tls.TLS_RSA_WITH_AES_128_CBC_SHA},
+		MinVersion:         tls.VersionTLS13,
 		InsecureSkipVerify: true,
 	}
 

@@ -31,12 +31,14 @@ type Client struct {
 
 // NewClient returns a new Client object for the given RRI Server.
 func NewClient(address string) (*Client, error) {
+
+	isMockEnv := (address == "localhost:31298")
+
 	client := &Client{
 		address: address,
 		tlsConfig: &tls.Config{
-			MinVersion:         tls.VersionSSL30,
-			CipherSuites:       []uint16{tls.TLS_RSA_WITH_AES_128_CBC_SHA},
-			InsecureSkipVerify: true,
+			MinVersion:         tls.VersionTLS13,
+			InsecureSkipVerify: isMockEnv,
 		},
 		XMLMode:              false,
 		AutoNormalizeHandles: true,

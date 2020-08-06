@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"io/ioutil"
 	"os"
+	"strings"
 
 	"github.com/DENICeG/go-rriclient/internal/env"
 	"github.com/DENICeG/go-rriclient/pkg/rri"
@@ -26,6 +27,8 @@ var (
 	argUser        = app.Flag("user", "RRI user to use for login").Short('u').String()
 	argPassword    = app.Flag("pass", "RRI password to use for login. Will be asked for if only user is set").Short('p').String()
 	argEnvironment = app.Flag("env", "Named environment to use or create").Short('e').String()
+	argInsecure    = app.Flag("insecure", "Disable SSL Certificate checks").Bool()
+	argVersion     = app.Flag("version", "Display application version and exit").Bool()
 )
 
 type environment struct {
@@ -41,6 +44,16 @@ func (e environment) HasCredentials() bool {
 func main() {
 	kingpin.MustParse(app.Parse(os.Args[1:]))
 
+	if *argVersion {
+		console.Println("Standalone RRI Client")
+		if len(buildTime) == 0 || len(gitCommit) == 0 {
+			console.Println("  no build information available")
+		} else {
+			console.Printlnf("  built at %s from commit %s", buildTime, gitCommit)
+		}
+		return
+	}
+
 	if err := func() error {
 		env, err := retrieveEnvironment()
 		if err != nil {
@@ -51,8 +64,11 @@ func main() {
 			return fmt.Errorf("missing RRI server address")
 		}
 
-		client, err := rri.NewClient(env.Address)
+		client, err := rri.NewClient(env.Address, &rri.ClientConfig{Insecure: *argInsecure})
 		if err != nil {
+			if !*argInsecure && strings.Contains(err.Error(), "x509") {
+				console.Println("HINT: try the '--insecure' flag if you have trouble with self signed certificates")
+			}
 			return err
 		}
 		defer client.Close()

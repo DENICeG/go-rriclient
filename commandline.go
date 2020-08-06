@@ -24,6 +24,10 @@ var (
 	colorErrorResponseMessage  = "\033[0;91m"
 	colorTechnicalErrorMessage = "\033[1;91m"
 	colorEnd                   = "\033[0m"
+
+	cleRRIClient *rri.Client
+	histDomains  *domainHistory
+	histHandles  *handleHistory
 )
 
 func disableColors() {
@@ -41,11 +45,20 @@ func disableColors() {
 }
 
 func runCLE(client *rri.Client) error {
+	cleRRIClient = client
+	histDomains = &domainHistory{make([]string, 0)}
+	histHandles = &handleHistory{make([]string, 0)}
+
 	if !console.SupportsColors() {
 		disableColors()
 	}
 
-	cle := prepareCLE(client)
+	cle := prepareCLE()
+
+	console.Println("Interactive RRI Command Line")
+	console.Println("  type 'help' to see a list of available commands")
+	console.Println("  use tab for auto-completion and arrow keys for history")
+
 	err := cle.Run()
 	if err != nil {
 		if commandline.IsErrCtrlC(err) {
@@ -57,16 +70,16 @@ func runCLE(client *rri.Client) error {
 	return nil
 }
 
-func prepareCLE(client *rri.Client) *commandline.Environment {
+func prepareCLE() *commandline.Environment {
 	cle := commandline.NewEnvironment()
 	cle.Prompt = func() string {
 		var prefix, user, host, suffix string
 		prefix = fmt.Sprintf("%sRRI%s", colorPromptRRI, colorEnd)
-		if client.IsLoggedIn() {
-			user = fmt.Sprintf("%s%s%s@", colorPromptUser, client.CurrentUser(), colorEnd)
+		if cleRRIClient.IsLoggedIn() {
+			user = fmt.Sprintf("%s%s%s@", colorPromptUser, cleRRIClient.CurrentUser(), colorEnd)
 		}
-		host = fmt.Sprintf("%s%s%s", colorPromptHost, client.RemoteAddress(), colorEnd)
-		if client.Processor != nil {
+		host = fmt.Sprintf("%s%s%s", colorPromptHost, cleRRIClient.RemoteAddress(), colorEnd)
+		if cleRRIClient.Processor != nil {
 			suffix = fmt.Sprintf("%sDRY%s", colorPromptDry, colorEnd)
 		}
 		return fmt.Sprintf("%s{%s%s}%s", prefix, user, host, suffix)
@@ -78,50 +91,26 @@ func prepareCLE(client *rri.Client) *commandline.Environment {
 	cle.RegisterCommand(commandline.NewExitCommand("exit"))
 	cle.RegisterCommand(commandline.NewCustomCommand("help", nil, cmdHelp))
 
-	cle.RegisterCommand(commandline.NewCustomCommand("login", nil, newCommandWrapper(client, cmdLogin)))
-	cle.RegisterCommand(commandline.NewCustomCommand("logout", nil, newCommandWrapper(client, cmdLogout)))
+	cle.RegisterCommand(commandline.NewCustomCommand("login", nil, cmdLogin))
+	cle.RegisterCommand(commandline.NewCustomCommand("logout", nil, cmdLogout))
 
-	cle.RegisterCommand(commandline.NewCustomCommand("create",
-		commandline.NewFixedArgCompletion(commandline.NewOneOfArgCompletion("domain")),
-		newCommandMultiplexer(client, []subCommand{
-			subCommand{"domain", cmdCreateDomain},
-		})))
+	registerDomainOrHandleSwitchCommand(cle, "create", cmdCreateDomain, nil)
+	registerDomainOrHandleSwitchCommand(cle, "check", newDomainQueryCommand(rri.NewCheckDomainQuery), newHandleQueryCommand(rri.NewCheckHandleQuery))
+	registerDomainOrHandleSwitchCommand(cle, "info", newDomainQueryCommand(rri.NewInfoDomainQuery), newHandleQueryCommand(rri.NewInfoHandleQuery))
+	registerDomainOrHandleSwitchCommand(cle, "update", cmdUpdateDomain, nil)
 
-	cle.RegisterCommand(commandline.NewCustomCommand("check",
-		commandline.NewFixedArgCompletion(commandline.NewOneOfArgCompletion("domain")),
-		newCommandMultiplexer(client, []subCommand{
-			subCommand{"domain", newDomainQueryCommand(rri.NewCheckDomainQuery)},
-		})))
+	registerDomainCommand(cle, "delete", newDomainQueryCommand(rri.NewDeleteDomainQuery))
+	registerDomainCommand(cle, "restore", newDomainQueryCommand(rri.NewRestoreDomainQuery))
+	//TODO authinfo1
+	//TODO authinfo2
+	registerDomainCommand(cle, "chprov", cmdChProv)
 
-	cle.RegisterCommand(commandline.NewCustomCommand("info",
-		commandline.NewFixedArgCompletion(commandline.NewOneOfArgCompletion("domain")),
-		newCommandMultiplexer(client, []subCommand{
-			subCommand{"domain", newDomainQueryCommand(rri.NewInfoDomainQuery)},
-		})))
+	cle.RegisterCommand(commandline.NewCustomCommand("raw", nil, cmdRaw))
+	cle.RegisterCommand(commandline.NewCustomCommand("file", commandline.NewFixedArgCompletion(commandline.NewLocalFileSystemArgCompletion(true)), cmdFile))
 
-	cle.RegisterCommand(commandline.NewCustomCommand("update",
-		commandline.NewFixedArgCompletion(commandline.NewOneOfArgCompletion("domain")),
-		newCommandMultiplexer(client, []subCommand{
-			subCommand{"domain", cmdUpdateDomain},
-		})))
-
-	cle.RegisterCommand(commandline.NewCustomCommand("delete",
-		commandline.NewFixedArgCompletion(commandline.NewOneOfArgCompletion("domain")),
-		newCommandMultiplexer(client, []subCommand{
-			subCommand{"domain", newDomainQueryCommand(rri.NewDeleteDomainQuery)},
-		})))
-
-	cle.RegisterCommand(commandline.NewCustomCommand("restore", nil, newCommandWrapper(client, newDomainQueryCommand(rri.NewRestoreDomainQuery))))
-	//cle.RegisterCommand(commandline.NewCustomCommand("authinfo1", nil, newCommandWrapper(client, cmdCreateAuthInfo1)))
-	//cle.RegisterCommand(commandline.NewCustomCommand("authinfo2", nil, newDomainCommandWrapper(client, rri.NewCreateAuthInfo2Query)))
-	cle.RegisterCommand(commandline.NewCustomCommand("chprov", nil, newCommandWrapper(client, cmdChProv)))
-
-	cle.RegisterCommand(commandline.NewCustomCommand("raw", nil, newCommandWrapper(client, cmdRaw)))
-	cle.RegisterCommand(commandline.NewCustomCommand("file", commandline.NewFixedArgCompletion(commandline.NewLocalFileSystemArgCompletion(true)), newCommandWrapper(client, cmdFile)))
-
-	cle.RegisterCommand(commandline.NewCustomCommand("xml", nil, newCommandWrapper(client, cmdXML)))
-	cle.RegisterCommand(commandline.NewCustomCommand("verbose", nil, newCommandWrapper(client, cmdVerbose)))
-	cle.RegisterCommand(commandline.NewCustomCommand("dry", nil, newCommandWrapper(client, cmdDry)))
+	cle.RegisterCommand(commandline.NewCustomCommand("xml", nil, cmdXML))
+	cle.RegisterCommand(commandline.NewCustomCommand("verbose", nil, cmdVerbose))
+	cle.RegisterCommand(commandline.NewCustomCommand("dry", nil, cmdDry))
 	return cle
 }
 
@@ -134,19 +123,19 @@ func cmdHelp(args []string) error {
 	console.Println("  logout                              -  log out from the current RRI account")
 	console.Println()
 	//contact-create
-	//contact-request
-	//contact-check
+	console.Println("  check handle {domain}               -  send a CHECK command for a specific handle")
+	console.Println("  info handle {domain}                -  send a CHECK command for a specific handle")
 	//contact-update
-	//contact-info
+	console.Println()
 	console.Println("  create domain {domain}              -  send a CREATE command for a new domain")
 	console.Println("  check domain {domain}               -  send a CHECK command for a specific domain")
 	console.Println("  info domain {domain}                -  send an INFO command for a specific domain")
 	console.Println("  update domain {domain}              -  send an UPDATE command for a specific domain")
 	//chholder
-	console.Println("  delete domain {domain}              -  send a DELETE command for a specific domain")
+	console.Println("  delete {domain}                     -  send a DELETE command for a specific domain")
 	console.Println("  restore {domain}                    -  send a RESTORE command for a specific domain")
-	console.Println("  create authinfo1 {domain} {secret}  -  send a CREATE-AUTHINFO1 command for a specific domain")
-	console.Println("  create authinfo2 {domain}           -  send a CREATE-AUTHINFO2 command for a specific domain")
+	//console.Println("  create authinfo1 {domain} {secret}  -  send a CREATE-AUTHINFO1 command for a specific domain")
+	//console.Println("  create authinfo2 {domain}           -  send a CREATE-AUTHINFO2 command for a specific domain")
 	//delete-authinfo1
 	console.Println("  chprov {domain} {secret}            -  send a CHPROV command for a specific domain with auth info secret")
 	//transit
@@ -165,53 +154,147 @@ func cmdHelp(args []string) error {
 	return nil
 }
 
-type clientCommand func(client *rri.Client, args []string) error
-
-func newCommandWrapper(client *rri.Client, f clientCommand) commandline.ExecCommandHandler {
-	return func(args []string) error {
-		return f(client, args)
-	}
+type history interface {
+	Put(str string)
 }
 
-type subCommand struct {
-	Cmd     string
-	Handler clientCommand
+func addToListRemoveDouble(list []string, new ...string) []string {
+	newList := make([]string, 0)
+	for _, str := range list {
+		// filter out all values equal to one in new (ignore case)
+		found := false
+		for _, newStr := range new {
+			if strings.ToLower(str) == strings.ToLower(newStr) {
+				found = true
+				break
+			}
+		}
+		if !found {
+			newList = append(newList, str)
+		}
+	}
+	return append(list, new...)
 }
 
-func newCommandMultiplexer(client *rri.Client, subCommands []subCommand) commandline.ExecCommandHandler {
-	subMap := make(map[string]clientCommand)
-	for _, c := range subCommands {
-		subMap[strings.ToLower(c.Cmd)] = c.Handler
-	}
+type domainHistory struct {
+	list []string
+}
 
-	return func(args []string) error {
-		if len(args) == 0 {
-			return fmt.Errorf("missing command type")
+func (h *domainHistory) Put(domain string) {
+	h.list = addToListRemoveDouble(h.list, domain)
+}
+
+func (h *domainHistory) GetCompletionOptions(currentCommand []string, entryIndex int) []commandline.CompletionOption {
+	return commandline.PrepareCompletionOptions(h.list, false)
+}
+
+type handleHistory struct {
+	list []string
+}
+
+func (h *handleHistory) Put(handle string) {
+	h.list = addToListRemoveDouble(h.list, handle)
+}
+
+func (h *handleHistory) GetCompletionOptions(currentCommand []string, entryIndex int) []commandline.CompletionOption {
+	options := commandline.PrepareCompletionOptions(h.list, false)
+	regAccID, err := cleRRIClient.CurrentRegAccID()
+	if err == nil {
+		return append(options, commandline.PrepareCompletionOptions([]string{fmt.Sprintf("DENIC-%d-", regAccID)}, true)...)
+	}
+	return options
+}
+
+func (h *handleHistory) GetHistoryEntry(index int) (string, bool) {
+	if index >= len(h.list) {
+		return "", false
+	}
+	return h.list[index], true
+}
+
+type domainOrHandleCompletion struct{}
+
+func (domainOrHandleCompletion) GetCompletionOptions(currentCommand []string, entryIndex int) []commandline.CompletionOption {
+	if len(currentCommand) >= 2 && entryIndex == 2 {
+		if currentCommand[1] == "domain" {
+			return histDomains.GetCompletionOptions(currentCommand, entryIndex)
 		}
 
-		if handler, ok := subMap[strings.ToLower(args[0])]; ok {
-			return handler(client, args[1:])
+		if currentCommand[1] == "handle" {
+			return histHandles.GetCompletionOptions(currentCommand, entryIndex)
 		}
-		return fmt.Errorf("unknown command type")
 	}
+	return nil
 }
 
-func newDomainQueryCommand(f func(domain string) *rri.Query) clientCommand {
-	return newSingleArgQueryCommand("missing domain name", f)
+func registerDomainOrHandleSwitchCommand(cle *commandline.Environment, name string, domainCommandHandler, handleCommandHandler commandline.ExecCommandHandler) {
+	cle.RegisterCommand(commandline.NewCustomCommand(name,
+		commandline.NewFixedArgCompletion(
+			commandline.NewOneOfArgCompletion("domain", "handle"),
+			domainOrHandleCompletion{},
+		),
+		func(args []string) error {
+			if len(args) == 0 {
+				return fmt.Errorf("missing command type")
+			}
+
+			// explicit type is given
+			if args[0] == "domain" {
+				// remove type parameter
+				return domainCommandHandler(args[1:])
+			}
+			if args[0] == "handle" {
+				// remove type parameter
+				return handleCommandHandler(args[1:])
+			}
+
+			// try to guess type from first parameter
+			if isDomainName(args[0]) {
+				return domainCommandHandler(args)
+			}
+			if isHandle(args[0]) {
+				return handleCommandHandler(args)
+			}
+
+			return fmt.Errorf("unknown command type. expect 'domain' or 'handle'")
+		}))
 }
 
-func newSingleArgQueryCommand(missingMsg string, f func(arg string) *rri.Query) clientCommand {
-	return func(client *rri.Client, args []string) error {
+func isDomainName(str string) bool {
+	return strings.HasSuffix(str, ".de")
+}
+
+func isHandle(str string) bool {
+	return strings.HasPrefix(str, "DENIC-")
+}
+
+func registerDomainCommand(cle *commandline.Environment, name string, commandHandler commandline.ExecCommandHandler) {
+	cle.RegisterCommand(commandline.NewCustomCommand(name, commandline.NewFixedArgCompletion(histDomains), commandHandler))
+}
+
+func newDomainQueryCommand(f func(domain string) *rri.Query) commandline.ExecCommandHandler {
+	return newSingleArgQueryCommand("missing domain name", histDomains, f)
+}
+
+func newHandleQueryCommand(f func(domain string) *rri.Query) commandline.ExecCommandHandler {
+	return newSingleArgQueryCommand("missing handle", histHandles, f)
+}
+
+func newSingleArgQueryCommand(missingMsg string, hist history, f func(arg string) *rri.Query) commandline.ExecCommandHandler {
+	return func(args []string) error {
 		if len(args) < 1 {
 			return fmt.Errorf(missingMsg)
 		}
 
-		_, err := processQuery(client, f(args[0]))
+		_, err := processQuery(f(args[0]))
+		if hist != nil {
+			hist.Put(args[0])
+		}
 		return err
 	}
 }
 
-func cmdLogin(client *rri.Client, args []string) error {
+func cmdLogin(args []string) error {
 	var pass string
 	if len(args) < 1 {
 		return fmt.Errorf("missing RRI username and password")
@@ -227,41 +310,43 @@ func cmdLogin(client *rri.Client, args []string) error {
 		pass = args[1]
 	}
 
-	if client.IsLoggedIn() {
+	if cleRRIClient.IsLoggedIn() {
 		console.Println("Exiting current session")
-		client.Logout()
+		cleRRIClient.Logout()
 	}
 
-	return client.Login(args[0], pass)
+	return cleRRIClient.Login(args[0], pass)
 }
 
-func cmdLogout(client *rri.Client, args []string) error {
-	return client.Logout()
+func cmdLogout(args []string) error {
+	return cleRRIClient.Logout()
 }
 
-func cmdCreateDomain(client *rri.Client, args []string) error {
+func cmdCreateDomain(args []string) error {
 	domainName, handles, nameServers, err := readDomainData(args, 1)
 	if err != nil {
 		return err
 	}
 
-	_, err = processQuery(client, rri.NewCreateDomainQuery(domainName, handles[0], handles[1], handles[2], nameServers...))
+	_, err = processQuery(rri.NewCreateDomainQuery(domainName, handles[0], handles[1], handles[2], nameServers...))
+	histDomains.Put(domainName)
 	return err
 }
 
-func cmdUpdateDomain(client *rri.Client, args []string) error {
+func cmdUpdateDomain(args []string) error {
 	domainName, handles, nameServers, err := readDomainData(args, 1)
 	if err != nil {
 		return err
 	}
 
-	//TODO use old values for empty fields
+	//TODO use old domain values for empty fields -> only change explicitly entered data
 
-	_, err = processQuery(client, rri.NewUpdateDomainQuery(domainName, handles[0], handles[1], handles[2], nameServers...))
+	_, err = processQuery(rri.NewUpdateDomainQuery(domainName, handles[0], handles[1], handles[2], nameServers...))
+	histDomains.Put(domainName)
 	return err
 }
 
-func cmdCreateAuthInfo1(client *rri.Client, args []string) error {
+func cmdCreateAuthInfo1(args []string) error {
 	if len(args) < 1 {
 		return fmt.Errorf("missing domain name")
 	}
@@ -269,11 +354,11 @@ func cmdCreateAuthInfo1(client *rri.Client, args []string) error {
 		return fmt.Errorf("missing auth info secret")
 	}
 
-	_, err := processQuery(client, rri.NewCreateAuthInfo1Query(args[0], args[1]))
+	_, err := processQuery(rri.NewCreateAuthInfo1Query(args[0], args[1]))
 	return err
 }
 
-func cmdChProv(client *rri.Client, args []string) error {
+func cmdChProv(args []string) error {
 	if len(args) < 1 {
 		return fmt.Errorf("missing domain name")
 	}
@@ -286,18 +371,19 @@ func cmdChProv(client *rri.Client, args []string) error {
 		return err
 	}
 
-	_, err = processQuery(client, rri.NewChangeProviderQuery(domainName, args[1], handles[0], handles[1], handles[2], nameServers...))
+	_, err = processQuery(rri.NewChangeProviderQuery(domainName, args[1], handles[0], handles[1], handles[2], nameServers...))
+	histDomains.Put(domainName)
 	return err
 }
 
-func cmdRaw(client *rri.Client, args []string) error {
+func cmdRaw(args []string) error {
 	raw, ok, err := input.Text("")
 	if err != nil {
 		return err
 	}
 
 	if ok {
-		response, err := client.SendRaw(raw)
+		response, err := cleRRIClient.SendRaw(raw)
 		if err != nil {
 			return err
 		}
@@ -307,7 +393,7 @@ func cmdRaw(client *rri.Client, args []string) error {
 	return nil
 }
 
-func cmdFile(client *rri.Client, args []string) error {
+func cmdFile(args []string) error {
 	if len(args) < 1 {
 		return fmt.Errorf("missing query file")
 	}
@@ -322,7 +408,7 @@ func cmdFile(client *rri.Client, args []string) error {
 		return err
 	}
 
-	skipAuthQueries := client.IsLoggedIn()
+	skipAuthQueries := cleRRIClient.IsLoggedIn()
 	if skipAuthQueries {
 		console.Println("Currently logged in. Auth queries will be skipped")
 	}
@@ -339,7 +425,7 @@ func cmdFile(client *rri.Client, args []string) error {
 		//TODO better visibility during dry mode
 
 		console.Println("Exec query", query)
-		success, err := processQuery(client, query)
+		success, err := processQuery(query)
 		if err != nil {
 			return err
 		}
@@ -351,9 +437,9 @@ func cmdFile(client *rri.Client, args []string) error {
 	return nil
 }
 
-func cmdXML(client *rri.Client, args []string) error {
-	client.XMLMode = !client.XMLMode
-	if client.XMLMode {
+func cmdXML(args []string) error {
+	cleRRIClient.XMLMode = !cleRRIClient.XMLMode
+	if cleRRIClient.XMLMode {
 		console.Println("XML mode on")
 	} else {
 		console.Println("XML mode off")
@@ -361,23 +447,23 @@ func cmdXML(client *rri.Client, args []string) error {
 	return nil
 }
 
-func cmdVerbose(client *rri.Client, args []string) error {
-	if client.RawQueryPrinter == nil {
-		client.RawQueryPrinter = rawQueryPrinter
+func cmdVerbose(args []string) error {
+	if cleRRIClient.RawQueryPrinter == nil {
+		cleRRIClient.RawQueryPrinter = rawQueryPrinter
 		console.Println("Verbose mode on")
 	} else {
-		client.RawQueryPrinter = nil
+		cleRRIClient.RawQueryPrinter = nil
 		console.Println("Verbose mode off")
 	}
 	return nil
 }
 
-func cmdDry(client *rri.Client, args []string) error {
-	if client.Processor == nil {
-		client.Processor = dryProcessor
+func cmdDry(args []string) error {
+	if cleRRIClient.Processor == nil {
+		cleRRIClient.Processor = dryProcessor
 		console.Println("Dry mode on")
 	} else {
-		client.Processor = nil
+		cleRRIClient.Processor = nil
 		console.Println("Dry mode off")
 	}
 	return nil
@@ -396,8 +482,8 @@ func dryProcessor(query *rri.Query) *rri.Query {
 	return nil
 }
 
-func processQuery(client *rri.Client, query *rri.Query) (bool, error) {
-	response, err := client.SendQuery(query)
+func processQuery(query *rri.Query) (bool, error) {
+	response, err := cleRRIClient.SendQuery(query)
 	if err != nil {
 		return false, err
 	}
@@ -443,7 +529,7 @@ func readDomainData(args []string, dataOffset int) (domainName string, handles [
 			handles[i] = []string{args[i+dataOffset]}
 		} else {
 			console.Printf("%s Handle> ", handleNames[i])
-			str, err := console.ReadLine()
+			str, err := commandline.ReadLineWithHistory(histHandles)
 			if err != nil {
 				return "", nil, nil, err
 			}

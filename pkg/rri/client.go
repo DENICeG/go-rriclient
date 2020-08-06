@@ -4,6 +4,8 @@ import (
 	"crypto/tls"
 	"fmt"
 	"io"
+	"strconv"
+	"strings"
 )
 
 // QueryProcessor is used to process a query directly before sending. The returned query is sent to RRI server. Return nil to abort processing.
@@ -25,23 +27,28 @@ type Client struct {
 	RawQueryPrinter RawQueryPrinter
 	// XMLMode controls whether the queries are sent in KeyValue or XML encoding.
 	XMLMode bool
-	// AutoNormalizeHandles controls whether the handles of sent queries are automatically normalized to match the "DENIC-{RegAccID}-{HANDLE}" syntax.
-	AutoNormalizeHandles bool
+}
+
+// ClientConfig can be used to further configure the RRI client.
+type ClientConfig struct {
+	Insecure bool
 }
 
 // NewClient returns a new Client object for the given RRI Server.
-func NewClient(address string) (*Client, error) {
+func NewClient(address string, conf *ClientConfig) (*Client, error) {
 
-	isMockEnv := (address == "localhost:31298")
+	if conf == nil {
+		// instantiate default config
+		conf = &ClientConfig{}
+	}
 
 	client := &Client{
 		address: address,
 		tlsConfig: &tls.Config{
 			MinVersion:         tls.VersionTLS13,
-			InsecureSkipVerify: isMockEnv,
+			InsecureSkipVerify: conf.Insecure,
 		},
-		XMLMode:              false,
-		AutoNormalizeHandles: true,
+		XMLMode: false,
 	}
 
 	if err := client.setupConnection(); err != nil {
@@ -76,29 +83,25 @@ func (client *Client) CurrentUser() string {
 	return client.currentUser
 }
 
+// CurrentRegAccID tries to parse the RegAccID from CurrentUser.
+func (client *Client) CurrentRegAccID() (int, error) {
+	parts := strings.Split(client.currentUser, "-")
+	if len(parts) < 2 {
+		return 0, fmt.Errorf("malformed login name")
+	}
+	regAccID, err := strconv.Atoi(parts[1])
+	if err != nil {
+		return 0, fmt.Errorf("malformed login name")
+	}
+	return regAccID, nil
+}
+
 // Close closes the underlying connection.
 func (client *Client) Close() error {
 	if client.connection != nil {
 		return client.connection.Close()
 	}
 	return nil
-}
-
-// NormalizeHandle appends "DENIC-" and/or "{RegAccID}-" to the given handle.
-func (client *Client) NormalizeHandle(hdl string) string {
-	//TODO normalize handle
-	return hdl
-}
-
-// NormalizeQueryHandles normalizes all handles in the given query.
-func (client *Client) NormalizeQueryHandles(q *Query) {
-	for _, hf := range handleFields {
-		for i, f := range q.fields {
-			if f.Name == hf {
-				q.fields[i].Value = client.NormalizeHandle(f.Value)
-			}
-		}
-	}
 }
 
 // Login sends a login request to the server and checks for a success result.
@@ -127,10 +130,6 @@ func (client *Client) Logout() error {
 func (client *Client) SendQuery(query *Query) (*Response, error) {
 	if client.XMLMode {
 		return nil, fmt.Errorf("XML mode not yet supported")
-	}
-
-	if client.AutoNormalizeHandles {
-		client.NormalizeQueryHandles(query)
 	}
 
 	if client.Processor != nil {
@@ -188,7 +187,7 @@ func (client *Client) SendQuery(query *Query) (*Response, error) {
 
 // SendRaw sends a raw message to RRI and reads the returns the raw response.
 //
-// This method should be used with caution as it does not update the client login state and ignores the AutoNormalizeHandles option.
+// This method should be used with caution as it does not update the client login state.
 func (client *Client) SendRaw(msg string) (string, error) {
 	if client.RawQueryPrinter != nil {
 		client.RawQueryPrinter(msg, true)

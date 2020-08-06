@@ -100,7 +100,7 @@ func TestServerSession(t *testing.T) {
 	}()
 	defer server.Close()
 
-	client, err := NewClient(fmt.Sprintf("localhost:%d", port))
+	client, err := NewClient(fmt.Sprintf("localhost:%d", port), &ClientConfig{Insecure: true})
 	if assert.NoError(t, err) {
 		if assert.NoError(t, client.Login(expectedUser, "secret")) {
 			if assert.NoError(t, client.Logout()) {
@@ -148,12 +148,12 @@ func TestServerConcurrentConnections(t *testing.T) {
 	}()
 	defer server.Close()
 
-	client1, err := NewClient(fmt.Sprintf("localhost:%d", port))
+	client1, err := NewClient(fmt.Sprintf("localhost:%d", port), &ClientConfig{Insecure: true})
 	if err != nil {
 		panic(err)
 	}
 
-	client2, err := NewClient(fmt.Sprintf("localhost:%d", port))
+	client2, err := NewClient(fmt.Sprintf("localhost:%d", port), &ClientConfig{Insecure: true})
 	if err != nil {
 		panic(err)
 	}

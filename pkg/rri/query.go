@@ -64,10 +64,6 @@ const (
 	ActionCreateAuthInfo2 QueryAction = "CREATE-AUTHINFO2"
 )
 
-var (
-	handleFields = []QueryFieldName{FieldNameHolder, FieldNameGeneralRequest, FieldNameAbuseContact, FieldNameHandle}
-)
-
 // Version represents the RRI protocol version.
 type Version string
 
@@ -190,6 +186,13 @@ func NewLogoutQuery() *Query {
 
 // NewCheckHandleQuery returns a check query.
 func NewCheckHandleQuery(handle string) *Query {
+	fields := make(map[QueryFieldName][]string)
+	fields[FieldNameHandle] = []string{handle}
+	return NewQuery(LatestVersion, ActionCheck, fields)
+}
+
+// NewInfoHandleQuery returns a check query.
+func NewInfoHandleQuery(handle string) *Query {
 	fields := make(map[QueryFieldName][]string)
 	fields[FieldNameHandle] = []string{handle}
 	return NewQuery(LatestVersion, ActionCheck, fields)

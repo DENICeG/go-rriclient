@@ -14,7 +14,7 @@ func TestClient(t *testing.T) {
 
 		t.Run("NewClient", func(t *testing.T) {
 			var err error
-			client, err = NewClient(server.Address())
+			client, err = NewClient(server.Address(), &ClientConfig{Insecure: true})
 			if assert.NoError(t, err) {
 				assert.Equal(t, server.Address(), client.RemoteAddress())
 				assert.False(t, client.IsLoggedIn())

@@ -26,9 +26,9 @@ var (
 	argPassword    = app.Flag("pass", "RRI password to use for login. Will be asked for if only user is set").Short('p').String()
 	argFile        = app.Flag("file", "Input file containing RRI requests separated by a '=-=' line").Short('f').String()
 	argEnvironment = app.Flag("env", "Named environment to use or create").Short('e').String()
+	argDeleteEnv   = app.Flag("delete-env", "Delete an existing environment").String()
 	argVerbose     = app.Flag("verbose", "Print all sent and received requests").Short('v').Bool()
 	argInsecure    = app.Flag("insecure", "Disable SSL Certificate checks").Bool()
-	argDeleteEnv   = app.Flag("delete-env", "Delete an existing environment").String()
 	argVersion     = app.Flag("version", "Display application version and exit").Bool()
 )
 
@@ -104,7 +104,7 @@ func main() {
 				return err
 			}
 
-			queries, err := rri.ParseQueries(string(content))
+			queries, err := parseQueries(string(content))
 			if err != nil {
 				return err
 			}
@@ -218,4 +218,43 @@ func getEnvTitle(envName, envFile string) string {
 		suffix = fmt.Sprintf(" (%s)", env.Address)
 	}
 	return fmt.Sprintf("%s%s", envName, suffix)
+}
+
+// parseQueries parses multiple queries separated by a =-= line from a string.
+func parseQueries(str string) ([]*rri.Query, error) {
+	lines := strings.Split(str, "\n")
+
+	// each string in queryStrings contains a single, unparsed query
+	queryStrings := make([]string, 0)
+	appendQueryString := func(str string) {
+		str = strings.TrimSpace(str)
+		if len(str) > 0 {
+			queryStrings = append(queryStrings, str)
+		}
+	}
+
+	// separate at lines beginning with =-=
+	var sb strings.Builder
+	for _, line := range lines {
+		if strings.HasPrefix(line, "=-=") {
+			appendQueryString(sb.String())
+			sb.Reset()
+		} else {
+			sb.WriteString(line)
+			sb.WriteString("\n")
+		}
+	}
+	if sb.Len() > 0 {
+		appendQueryString(sb.String())
+	}
+
+	queries := make([]*rri.Query, len(queryStrings))
+	for i, queryString := range queryStrings {
+		query, err := rri.ParseQueryKV(strings.TrimSpace(queryString))
+		if err != nil {
+			return nil, err
+		}
+		queries[i] = query
+	}
+	return queries, nil
 }

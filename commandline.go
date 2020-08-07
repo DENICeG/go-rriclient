@@ -403,7 +403,7 @@ func cmdFile(args []string) error {
 		return err
 	}
 
-	queries, err := rri.ParseQueries(string(data))
+	queries, err := parseQueries(string(data))
 	if err != nil {
 		return err
 	}

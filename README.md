@@ -84,9 +84,9 @@ go-rriclient
 | `--pass {password}` | `-p` | RRI password to log in. |
 | `--file {file}` | `-f` | File containing RRI queries to process. |
 | `--env {alias name}` | `-e` | Name of the environment to create or use. |
+| `--delete-env {alias name}` | | Delete an existing environment. |
 | `--verbose` | `-v` | Verbose mode for more detailed output. |
 | `--insecure` | | Skip SSL certificate check to enable self signed certificates. |
-| `--delete-env {alias name}` | | Delete an existing environment. |
 | `--version` | | Print out the application version and exit. |
 
 ## RRI Commands

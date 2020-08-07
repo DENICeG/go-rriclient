@@ -13,22 +13,6 @@ const (
 	qryOrder        = "action: LOGIN\ncustom: 1\nversion: 3.0\nuser: DENIC-1000042-TEST\nstuff: foobar\npassword: very-secure\ncustom: 2"
 )
 
-func TestParseQueries(t *testing.T) {
-	queries, err := ParseQueries(qryLoginLogout)
-	assert.NoError(t, err)
-	if assert.Len(t, queries, 2) {
-		assert.Equal(t, LatestVersion, queries[0].Version())
-		assert.Equal(t, ActionLogin, queries[0].Action())
-		assert.Len(t, queries[0].Fields(), 2)
-		assert.Equal(t, []string{"DENIC-1000042-TEST"}, queries[0].Field(FieldNameUser))
-		assert.Equal(t, []string{"very-secure"}, queries[0].Field(FieldNamePassword))
-
-		assert.Equal(t, LatestVersion, queries[1].Version())
-		assert.Equal(t, ActionLogout, queries[1].Action())
-		assert.Len(t, queries[1].Fields(), 0)
-	}
-}
-
 func TestParseQueryCasing(t *testing.T) {
 	query, err := ParseQuery(qryIgnoreCasing)
 	if assert.NoError(t, err) {

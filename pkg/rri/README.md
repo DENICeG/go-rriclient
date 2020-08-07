@@ -51,20 +51,20 @@ func main() {
     // for a real-world application you should use a valid certificate here
     tlsConfig, _ := rri.NewMockTLSConfig()
     // now prepare the tls listener
-	rriServer, err := rri.NewServer(":51131", tlsConfig)
-	if err != nil {
+    rriServer, err := rri.NewServer(":51131", tlsConfig)
+    if err != nil {
         log.Fatalln("failed to create server:", err.Error())
     }
     defer rriServer.Close()
     // register the handler that is called for every received query
-	rriServer.Handler = func(s *Session, q *Query) (*Response, error) {
+    rriServer.Handler = func(s *Session, q *Query) (*Response, error) {
         // this method is called for every valid query.
         // malformed queries are ignored by the server
         fmt.Println("received query:", q)
         // return the response object that is sent to the client.
         // returning an error here will instantly close the connection
         // without sending a response the client
-		return &Response{result: ResultSuccess}, nil
+        return &Response{result: ResultSuccess}, nil
     }
     // now run the listener loop to handle incoming connections and queries
     if err := rriServer.Run(); err != nil {

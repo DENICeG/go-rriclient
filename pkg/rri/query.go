@@ -105,8 +105,9 @@ func (q *Query) Action() QueryAction {
 	return q.action
 }
 
-// String returns a shortened, human-readable representation of the query.
+// String returns a human readable representation of the query.
 func (q *Query) String() string {
+	//TODO shortened, single line representation
 	var sb strings.Builder
 	for _, f := range q.fields {
 		if sb.Len() > 0 {
@@ -117,11 +118,6 @@ func (q *Query) String() string {
 		sb.WriteString(f.Value)
 	}
 	return fmt.Sprintf("%sv%s{%s}", q.action, q.version, sb.String())
-}
-
-// Export returns the query representation as used by Parse.
-func (q *Query) Export() string {
-	return q.EncodeKV()
 }
 
 // EncodeKV returns the Key-Value representation as used for RRI communication.
@@ -352,8 +348,9 @@ func ParseQueryKV(str string) (*Query, error) {
 	return &Query{Version(versionValues[0]).Normalize(), QueryAction(actionValues[0]).Normalize(), fields}, nil
 }
 
-// ParseQuery parses a single query from a string.
+// ParseQuery tries to detect the query format (KV or XML) and returns the parsed query.
 func ParseQuery(str string) (*Query, error) {
+	//TODO detect type
 	return ParseQueryKV(str)
 }
 
@@ -387,7 +384,7 @@ func ParseQueries(str string) ([]*Query, error) {
 
 	queries := make([]*Query, len(queryStrings))
 	for i, queryString := range queryStrings {
-		query, err := ParseQuery(strings.TrimSpace(queryString))
+		query, err := ParseQueryKV(strings.TrimSpace(queryString))
 		if err != nil {
 			return nil, err
 		}

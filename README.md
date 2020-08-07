@@ -86,6 +86,7 @@ go-rriclient
 | `--env {alias name}` | `-e` | Name of the environment to create or use. |
 | `--verbose` | `-v` | Verbose mode for more detailed output. |
 | `--insecure` | | Skip SSL certificate check to enable self signed certificates. |
+| `--delete-env {alias name}` | | Delete an existing environment. |
 | `--version` | | Print out the application version and exit. |
 
 ## RRI Commands
@@ -96,6 +97,8 @@ You can use the following commands in file mode and interactive mode:
 | --------------------- | ----------- |
 | `login {username} {password}` | Log in to a RRI account. |
 | `logout` | Log out from the current RRI account. |
+| `check handle {handle}` | Send a CHECK command for a specific handle. |
+| `info handle {handle}` | Send an INFO command for a specific handle. |
 | `create domain {domain} {...}` | Send a CREATE command for a new domain. |
 | `check domain {domain}` | Send a CHECK command for a specific domain. |
 | `info domain {domain}` | Send an INFO command for a specific domain. |
@@ -105,8 +108,9 @@ You can use the following commands in file mode and interactive mode:
 | `create authinfo1 {domain} {secret}` | Send a CREATE-AUTHINFO1 command for a specific domain with AuthInfo. |
 | `create authinfo2 {domain}` | Send a CREATE-AUTHINFO2 command for a specific domain. |
 | `chprov {domain} {secret} {...}` | Send a CHPROV command for a specific domain with AuthInfo. |
+| `raw` | Enter a raw query and send to RRI. |
 | `file {path}` | Process a query file as accepted by flag `--file`. |
-| `xml` | Toggle xml mode. |
+| `xml` | Toggle XML mode. |
 | `verbose` | Toggle verbose mode. |
 | `dry` | Toggle dry mode to only print out raw queries. |
 
@@ -129,6 +133,10 @@ The `chprov` command is like the `create domain` command. It behaves exactly lik
 ```
 chprov {domain} {secret} {holder} {general-request} {abuse-contact} {nserver-1} {nserver-2} ...
 ```
+
+## RRI Package
+
+This repository also provides the Go package `github.com/DENICeG/go-rriclient/pkg/rri` that can be used as base for custom implementations. See [github.com/DENICeG/go-rriclient/tree/master/pkg/rri](https://github.com/DENICeG/go-rriclient/tree/master/pkg/rri) for a detailed, technical explanation and usage examples.
 
 ## Thanks
 

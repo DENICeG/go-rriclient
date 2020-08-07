@@ -127,7 +127,7 @@ func NewMockServer(port int) (*MockServer, error) {
 		return nil, err
 	}
 
-	server, err := NewServer(port, tlsConfig)
+	server, err := NewServer(fmt.Sprintf(":%d", port), tlsConfig)
 	if err != nil {
 		return nil, err
 	}

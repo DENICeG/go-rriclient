@@ -83,6 +83,12 @@ func (r *Response) ErrorMsg() string {
 	return r.errorMsg
 }
 
+// String returns a human readable representation of the response.
+func (r *Response) String() string {
+	//TODO shortened, single line representation
+	return r.EncodeKV()
+}
+
 // EncodeKV returns the Key-Value representation as used for RRI communication.
 func (r *Response) EncodeKV() string {
 	var sb strings.Builder
@@ -187,4 +193,10 @@ func ParseResponseKV(msg string) (*Response, error) {
 	fields.RemoveAll(FieldNameErrorMsg)
 
 	return &Response{Result(resultValues[0]).Normalize(), stid, infoMsg, errorMsg, fields, entities}, nil
+}
+
+// ParseResponse tries to detect the response format (KV or XML) and returns the parsed response.
+func ParseResponse(str string) (*Response, error) {
+	//TODO detect type
+	return ParseResponseKV(str)
 }

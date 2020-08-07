@@ -135,7 +135,7 @@ func (e *Reader) SelectEnvironment(env interface{}) error {
 			envTitles[i] = name
 		}
 	}
-	ui := promptui.Select{Label: "Select environment", Items: envTitles}
+	ui := promptui.Select{Label: "Select environment", Items: envTitles, HideSelected: true}
 	index, _, err := ui.Run()
 	if err != nil {
 		return err
@@ -233,6 +233,21 @@ func (e *Reader) envOrderBringToFront(name string) error {
 	}
 
 	return e.writeEnvOrder(order)
+}
+
+// DeleteEnvironment deletes an existing environment.
+func (e *Reader) DeleteEnvironment(envName string) error {
+	file := e.getEnvFilePath(envName)
+	exists, err := isFile(file)
+	if err != nil {
+		return err
+	}
+
+	if !exists {
+		return fmt.Errorf("environment %q does not exist", envName)
+	}
+
+	return os.Remove(file)
 }
 
 func getConfigDir() (string, error) {

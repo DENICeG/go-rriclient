@@ -99,6 +99,7 @@ func (client *Client) CurrentRegAccID() (int, error) {
 // Close closes the underlying connection.
 func (client *Client) Close() error {
 	if client.connection != nil {
+		//TODO send LOGOUT while connected?
 		return client.connection.Close()
 	}
 	return nil
@@ -165,7 +166,7 @@ func (client *Client) SendQuery(query *Query) (*Response, error) {
 		return nil, err
 	}
 
-	response, err := ParseResponseKV(rawResponse)
+	response, err := ParseResponse(rawResponse)
 	if err != nil {
 		return nil, fmt.Errorf("received malformed response: %s", err.Error())
 	}

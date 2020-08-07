@@ -15,7 +15,7 @@ func TestServer(t *testing.T) {
 	if err != nil {
 		panic(err)
 	}
-	server, err := NewServer(port, tlsConfig)
+	server, err := NewServer(fmt.Sprintf(":%d", port), tlsConfig)
 	if err != nil {
 		panic(err)
 	}
@@ -54,7 +54,7 @@ func TestServer(t *testing.T) {
 
 			msg, err := readMessage(client.connection)
 			if assert.NoError(t, err) {
-				response, err := ParseResponseKV(msg)
+				response, err := ParseResponse(msg)
 				if assert.NoError(t, err) {
 					assert.Equal(t, ResultSuccess, response.Result())
 				}
@@ -69,7 +69,7 @@ func TestServerSession(t *testing.T) {
 	if err != nil {
 		panic(err)
 	}
-	server, err := NewServer(port, tlsConfig)
+	server, err := NewServer(fmt.Sprintf(":%d", port), tlsConfig)
 	if err != nil {
 		panic(err)
 	}
@@ -117,7 +117,7 @@ func TestServerConcurrentConnections(t *testing.T) {
 	if err != nil {
 		panic(err)
 	}
-	server, err := NewServer(port, tlsConfig)
+	server, err := NewServer(fmt.Sprintf(":%d", port), tlsConfig)
 	if err != nil {
 		panic(err)
 	}

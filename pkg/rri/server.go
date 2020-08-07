@@ -69,8 +69,8 @@ type Server struct {
 }
 
 // NewServer returns a new RRI server for the given TLS config listening on the given port.
-func NewServer(port int, tlsConfig *tls.Config) (*Server, error) {
-	listener, err := tls.Listen("tcp", fmt.Sprintf(":%d", port), tlsConfig)
+func NewServer(listenAddress string, tlsConfig *tls.Config) (*Server, error) {
+	listener, err := tls.Listen("tcp", listenAddress, tlsConfig)
 	if err != nil {
 		return nil, err
 	}
@@ -116,6 +116,7 @@ func (srv *Server) Run() error {
 							return err
 						}
 
+						//TODO answer in same type as the query (KV or XML)
 						responseMsg := prepareMessage(response.EncodeKV())
 						if _, err := conn.Write([]byte(responseMsg)); err != nil {
 							return err

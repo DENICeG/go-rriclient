@@ -124,7 +124,7 @@ func cmdHelp(args []string) error {
 	console.Println()
 	//contact-create
 	console.Println("  check handle {domain}               -  send a CHECK command for a specific handle")
-	console.Println("  info handle {domain}                -  send a CHECK command for a specific handle")
+	console.Println("  info handle {domain}                -  send an INFO command for a specific handle")
 	//contact-update
 	console.Println()
 	console.Println("  create domain {domain}              -  send a CREATE command for a new domain")
@@ -478,7 +478,7 @@ func rawQueryPrinter(msg string, isOutgoing bool) {
 }
 
 func dryProcessor(query *rri.Query) *rri.Query {
-	console.Printlnf("%s%s%s", colorPrintDry, query.Export(), colorEnd)
+	console.Printlnf("%s%s%s", colorPrintDry, query.EncodeKV(), colorEnd)
 	return nil
 }
 
@@ -533,6 +533,7 @@ func readDomainData(args []string, dataOffset int) (domainName string, handles [
 			if err != nil {
 				return "", nil, nil, err
 			}
+			histHandles.Put(str)
 			handles[i] = []string{str}
 		}
 	}

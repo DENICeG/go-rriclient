@@ -22,12 +22,13 @@ var (
 var (
 	app            = kingpin.New("rri-client", "Client application for RRI")
 	argAddress     = app.Arg("address", "Address and port like host:1234 of the RRI host").String()
-	argFile        = app.Flag("file", "Input file containing RRI requests separated by a '=-=' line").Short('f').String()
-	argVerbose     = app.Flag("verbose", "Print all sent and received requests").Short('v').Bool()
 	argUser        = app.Flag("user", "RRI user to use for login").Short('u').String()
 	argPassword    = app.Flag("pass", "RRI password to use for login. Will be asked for if only user is set").Short('p').String()
+	argFile        = app.Flag("file", "Input file containing RRI requests separated by a '=-=' line").Short('f').String()
 	argEnvironment = app.Flag("env", "Named environment to use or create").Short('e').String()
+	argVerbose     = app.Flag("verbose", "Print all sent and received requests").Short('v').Bool()
 	argInsecure    = app.Flag("insecure", "Disable SSL Certificate checks").Bool()
+	argDeleteEnv   = app.Flag("delete-env", "Delete an existing environment").String()
 	argVersion     = app.Flag("version", "Display application version and exit").Bool()
 )
 
@@ -55,7 +56,22 @@ func main() {
 	}
 
 	if err := func() error {
-		env, err := retrieveEnvironment()
+		envReader, err := env.NewReader(".rri-client")
+		if err != nil {
+			return err
+		}
+		envReader.EnterEnvHandler = enterEnvironment
+		envReader.GetEnvFileTitle = getEnvTitle
+
+		if len(*argDeleteEnv) > 0 {
+			if err := envReader.DeleteEnvironment(*argDeleteEnv); err != nil {
+				return err
+			}
+			console.Printlnf("environment %q has been deleted", *argDeleteEnv)
+			return nil
+		}
+
+		env, err := retrieveEnvironment(envReader)
 		if err != nil {
 			return err
 		}
@@ -116,14 +132,8 @@ func main() {
 	}
 }
 
-func retrieveEnvironment() (environment, error) {
-	envReader, err := env.NewReader(".rri-client")
-	if err != nil {
-		return environment{}, err
-	}
-	envReader.EnterEnvHandler = enterEnvironment
-	envReader.GetEnvFileTitle = getEnvTitle
-
+func retrieveEnvironment(envReader *env.Reader) (environment, error) {
+	var err error
 	var env environment
 	if len(*argEnvironment) > 0 {
 		err = envReader.CreateOrReadEnvironment(*argEnvironment, &env)

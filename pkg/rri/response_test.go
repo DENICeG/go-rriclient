@@ -11,7 +11,7 @@ const (
 )
 
 func TestResponseEntity(t *testing.T) {
-	response, err := ParseResponseKV(respEntity)
+	response, err := ParseResponse(respEntity)
 	if assert.NoError(t, err) {
 		//TODO assert fields
 		assert.Equal(t, ResultSuccess, response.Result())

@@ -35,18 +35,18 @@ type ClientConfig struct {
 }
 
 // NewClient returns a new Client object for the given RRI Server.
-func NewClient(address string, conf *ClientConfig) (*Client, error) {
+func NewClient(address string, conf ...*ClientConfig) (*Client, error) {
 
-	if conf == nil {
+	if len(conf) == 0 || conf[0] == nil {
 		// instantiate default config
-		conf = &ClientConfig{}
+		conf[0] = &ClientConfig{}
 	}
 
 	client := &Client{
 		address: address,
 		tlsConfig: &tls.Config{
 			MinVersion:         tls.VersionTLS13,
-			InsecureSkipVerify: conf.Insecure,
+			InsecureSkipVerify: conf[0].Insecure,
 		},
 		XMLMode: false,
 	}

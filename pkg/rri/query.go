@@ -167,11 +167,6 @@ func NewQuery(version Version, action QueryAction, fields map[QueryFieldName][]s
 	return &Query{version, action, newFields}
 }
 
-// NewAliveQuery() is currently a stub to enable pre-implementation in clients
-func NewAliveQuery() *Query {
-	return NewCheckDomainQuery("ordertypecoming.soon")
-}
-
 // NewLoginQuery returns a login query for the given credentials.
 func NewLoginQuery(username, password string) *Query {
 	fields := make(map[QueryFieldName][]string)

@@ -37,9 +37,12 @@ type ClientConfig struct {
 // NewClient returns a new Client object for the given RRI Server.
 func NewClient(address string, conf ...*ClientConfig) (*Client, error) {
 
+	if len(conf) > 1 {
+		panic("passing multiple configurations to rri.NewClient is not allowed")
+	}
 	if len(conf) == 0 || conf[0] == nil {
 		// instantiate default config
-		conf[0] = &ClientConfig{}
+		conf = []*ClientConfig{&ClientConfig{}}
 	}
 
 	client := &Client{

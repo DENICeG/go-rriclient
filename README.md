@@ -105,12 +105,13 @@ You can use the following commands in file mode and interactive mode:
 | `update domain {domain} {...}` | Send an UPDATE command for a new domain. |
 | `delete domain {domain}` | Send a DELETE command for a specific domain. |
 | `restore {domain}` | Send a RESTORE command for a specific domain. |
+| `transit {domain}` | Send a TRANSIT command without disconnect for a specific domain. |
 | `create authinfo1 {domain} {secret}` | Send a CREATE-AUTHINFO1 command for a specific domain with AuthInfo. |
 | `create authinfo2 {domain}` | Send a CREATE-AUTHINFO2 command for a specific domain. |
 | `chprov {domain} {secret} {...}` | Send a CHPROV command for a specific domain with AuthInfo. |
 | `raw` | Enter a raw query and send to RRI. |
 | `file {path}` | Process a query file as accepted by flag `--file`. |
-| `xml` | Toggle XML mode. |
+| `xml` | Toggle XML mode. **NOT implemented yet** |
 | `verbose` | Toggle verbose mode. |
 | `dry` | Toggle dry mode to only print out raw queries. |
 

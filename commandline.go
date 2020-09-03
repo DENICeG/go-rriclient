@@ -101,6 +101,7 @@ func prepareCLE() *commandline.Environment {
 
 	registerDomainCommand(cle, "delete", newDomainQueryCommand(rri.NewDeleteDomainQuery))
 	registerDomainCommand(cle, "restore", newDomainQueryCommand(rri.NewRestoreDomainQuery))
+	registerDomainCommand(cle, "transit", cmdTransit, commandline.NewOneOfArgCompletion("disconnect", "connect"))
 	//TODO authinfo1
 	//TODO authinfo2
 	registerDomainCommand(cle, "chprov", cmdChProv)
@@ -134,6 +135,7 @@ func cmdHelp(args []string) error {
 	//chholder
 	console.Println("  delete {domain}                     -  send a DELETE command for a specific domain")
 	console.Println("  restore {domain}                    -  send a RESTORE command for a specific domain")
+	console.Println("  transit {domain}                    -  send a TRANSIT command for a specific domain")
 	//console.Println("  create authinfo1 {domain} {secret}  -  send a CREATE-AUTHINFO1 command for a specific domain")
 	//console.Println("  create authinfo2 {domain}           -  send a CREATE-AUTHINFO2 command for a specific domain")
 	//delete-authinfo1
@@ -173,7 +175,7 @@ func addToListRemoveDouble(list []string, new ...string) []string {
 			newList = append(newList, str)
 		}
 	}
-	return append(list, new...)
+	return append(new, newList...)
 }
 
 type domainHistory struct {
@@ -268,8 +270,10 @@ func isHandle(str string) bool {
 	return strings.HasPrefix(str, "DENIC-")
 }
 
-func registerDomainCommand(cle *commandline.Environment, name string, commandHandler commandline.ExecCommandHandler) {
-	cle.RegisterCommand(commandline.NewCustomCommand(name, commandline.NewFixedArgCompletion(histDomains), commandHandler))
+func registerDomainCommand(cle *commandline.Environment, name string, commandHandler commandline.ExecCommandHandler, additionalCompletionHandlers ...commandline.ArgCompletion) {
+	argCompletionHandlers := []commandline.ArgCompletion{histDomains}
+	argCompletionHandlers = append(argCompletionHandlers, additionalCompletionHandlers...)
+	cle.RegisterCommand(commandline.NewCustomCommand(name, commandline.NewFixedArgCompletion(argCompletionHandlers...), commandHandler))
 }
 
 func newDomainQueryCommand(f func(domain string) *rri.Query) commandline.ExecCommandHandler {
@@ -342,6 +346,27 @@ func cmdUpdateDomain(args []string) error {
 	//TODO use old domain values for empty fields -> only change explicitly entered data
 
 	_, err = processQuery(rri.NewUpdateDomainQuery(domainName, handles[0], handles[1], handles[2], nameServers...))
+	histDomains.Put(domainName)
+	return err
+}
+
+func cmdTransit(args []string) error {
+	if len(args) < 1 {
+		return fmt.Errorf("missing domain name")
+	}
+	domainName := args[0]
+	var disconnect bool
+	if len(args) > 1 {
+		switch strings.ToLower(args[1]) {
+		case "disconnect":
+			disconnect = true
+		case "connect":
+			disconnect = false
+		default:
+			return fmt.Errorf("invalid mode '%s'. expecting 'disconnect' or 'connect'", args[1])
+		}
+	}
+	_, err := processQuery(rri.NewTransitDomainQuery(domainName, disconnect))
 	histDomains.Put(domainName)
 	return err
 }

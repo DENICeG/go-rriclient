@@ -50,4 +50,4 @@ unit-test:
 	@exit $$(cat checktest.out)
 
 run:
-	go run main.go commandline.go
+	@go run . --insecure

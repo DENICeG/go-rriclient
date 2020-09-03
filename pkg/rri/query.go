@@ -35,6 +35,8 @@ const (
 	FieldNameNameServer QueryFieldName = "nserver"
 	// FieldNameHandle denotes the query field name for denic handles.
 	FieldNameHandle QueryFieldName = "handle"
+	// FieldNameDisconnect denotes the query field name for disconnect.
+	FieldNameDisconnect QueryFieldName = "disconnect"
 	// FieldNameAuthInfoHash denotes the query field name for auth info hash.
 	FieldNameAuthInfoHash QueryFieldName = "authinfohash"
 	// FieldNameAuthInfo denotes the query field name for auth info hash.
@@ -54,6 +56,8 @@ const (
 	ActionDelete QueryAction = "DELETE"
 	// ActionRestore deontes the action value for restore.
 	ActionRestore QueryAction = "RESTORE"
+	// ActionTransit deontes the action value for transit.
+	ActionTransit QueryAction = "TRANSIT"
 	// ActionCreateAuthInfo1 denotes the action value for create AuthInfo1.
 	ActionCreateAuthInfo1 QueryAction = "CREATE-AUTHINFO1"
 	// ActionUpdate denotes the action value for update.
@@ -260,6 +264,21 @@ func NewRestoreDomainQuery(idnDomain string) *Query {
 		fields[FieldNameDomainACE] = []string{ace}
 	}
 	return NewQuery(LatestVersion, ActionRestore, fields)
+}
+
+// NewTransitDomainQuery returns a restore query.
+func NewTransitDomainQuery(idnDomain string, disconnect bool) *Query {
+	fields := make(map[QueryFieldName][]string)
+	fields[FieldNameDomainIDN] = []string{idnDomain}
+	if ace, err := idna.ToASCII(idnDomain); err == nil {
+		fields[FieldNameDomainACE] = []string{ace}
+	}
+	if disconnect {
+		fields[FieldNameDisconnect] = []string{"true"}
+	} else {
+		fields[FieldNameDisconnect] = []string{"false"}
+	}
+	return NewQuery(LatestVersion, ActionTransit, fields)
 }
 
 // NewCreateAuthInfo1Query returns a create AuthInfo1 query.

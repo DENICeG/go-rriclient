@@ -13,6 +13,16 @@ const (
 	qryOrder        = "action: LOGIN\ncustom: 1\nversion: 3.0\nuser: DENIC-1000042-TEST\nstuff: foobar\npassword: very-secure\ncustom: 2"
 )
 
+func TestNewTransitDomainQuery(t *testing.T) {
+	query := NewTransitDomainQuery("dönic.de", true)
+	assert.Equal(t, LatestVersion, query.Version())
+	assert.Equal(t, ActionTransit, query.Action())
+	assert.Len(t, query.Fields(), 3)
+	assert.Equal(t, []string{"dönic.de"}, query.Field(FieldNameDomainIDN))
+	assert.Equal(t, []string{"xn--dnic-5qa.de"}, query.Field(FieldNameDomainACE))
+	assert.Equal(t, []string{"true"}, query.Field(FieldNameDisconnect))
+}
+
 func TestParseQueryCasing(t *testing.T) {
 	query, err := ParseQuery(qryIgnoreCasing)
 	if assert.NoError(t, err) {

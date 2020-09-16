@@ -33,6 +33,8 @@ func main() {
 }
 ```
 
+Pass `&rri.ClientConfig{Insecure: true}` as second parameter to `rri.NewClient` if you want to test an RRI server with self-signed certificate.
+
 ## Server
 
 You can also instantiate a RRI server to receive queries and pass them to a custom handler. The RRI server implementation in this package does **not** implement user authentication, business logic or response codes, it solely offers functionality to handle incoming connections and read queries from them. See the following, minimal example application:

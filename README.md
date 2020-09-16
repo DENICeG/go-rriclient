@@ -88,6 +88,7 @@ go-rriclient
 | `--verbose` | `-v` | Verbose mode for more detailed output. |
 | `--insecure` | | Skip SSL certificate check to enable self signed certificates. |
 | `--version` | | Print out the application version and exit. |
+| `--dump-cli-config` | | Print out the application cli configuration and exit. |
 
 ## RRI Commands
 
@@ -110,6 +111,7 @@ You can use the following commands in file mode and interactive mode:
 | `create authinfo2 {domain}` | Send a CREATE-AUTHINFO2 command for a specific domain. |
 | `chprov {domain} {secret} {...}` | Send a CHPROV command for a specific domain with AuthInfo. |
 | `raw` | Enter a raw query and send to RRI. |
+| `raw {command}` | Send a command like `"version: 3.0\naction: queue-read"`. |
 | `file {path}` | Process a query file as accepted by flag `--file`. |
 | `xml` | Toggle XML mode. **NOT implemented yet** |
 | `verbose` | Toggle verbose mode. |

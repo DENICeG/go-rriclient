@@ -20,16 +20,17 @@ var (
 )
 
 var (
-	app            = kingpin.New("rri-client", "Client application for RRI")
-	argAddress     = app.Arg("address", "Address and port like host:1234 of the RRI host").String()
-	argUser        = app.Flag("user", "RRI user to use for login").Short('u').String()
-	argPassword    = app.Flag("pass", "RRI password to use for login. Will be asked for if only user is set").Short('p').String()
-	argFile        = app.Flag("file", "Input file containing RRI requests separated by a '=-=' line").Short('f').String()
-	argEnvironment = app.Flag("env", "Named environment to use or create").Short('e').String()
-	argDeleteEnv   = app.Flag("delete-env", "Delete an existing environment").String()
-	argVerbose     = app.Flag("verbose", "Print all sent and received requests").Short('v').Bool()
-	argInsecure    = app.Flag("insecure", "Disable SSL Certificate checks").Bool()
-	argVersion     = app.Flag("version", "Display application version and exit").Bool()
+	app              = kingpin.New("rri-client", "Client application for RRI")
+	argAddress       = app.Arg("address", "Address and port like host:1234 of the RRI host").String()
+	argUser          = app.Flag("user", "RRI user to use for login").Short('u').String()
+	argPassword      = app.Flag("pass", "RRI password to use for login. Will be asked for if only user is set").Short('p').String()
+	argFile          = app.Flag("file", "Input file containing RRI requests separated by a '=-=' line").Short('f').String()
+	argEnvironment   = app.Flag("env", "Named environment to use or create").Short('e').String()
+	argDeleteEnv     = app.Flag("delete-env", "Delete an existing environment").String()
+	argVerbose       = app.Flag("verbose", "Print all sent and received requests").Short('v').Bool()
+	argInsecure      = app.Flag("insecure", "Disable SSL Certificate checks").Bool()
+	argVersion       = app.Flag("version", "Display application version and exit").Bool()
+	argDumpCLIConfig = app.Flag("dump-cli-config", "Print all configured colors and signs for testing").Bool()
 )
 
 type environment struct {
@@ -52,6 +53,12 @@ func main() {
 		} else {
 			console.Printlnf("  built at %s from commit %s", buildTime, gitCommit)
 		}
+		return
+	}
+
+	if *argDumpCLIConfig {
+		console.Println("print colors and signs for testing:")
+		printColorsAndSigns()
 		return
 	}
 
@@ -90,6 +97,7 @@ func main() {
 		defer client.Close()
 		if *argVerbose {
 			client.RawQueryPrinter = rawQueryPrinter
+			client.InnerErrorPrinter = errorPrinter
 		}
 
 		if env.HasCredentials() {

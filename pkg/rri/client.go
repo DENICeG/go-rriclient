@@ -14,6 +14,9 @@ type QueryProcessor func(*Query) *Query
 // RawQueryPrinter is called to print a raw outgoing or incoming query string.
 type RawQueryPrinter func(msg string, isOutgoing bool)
 
+// ErrorPrinter is called to print uncritical errors.
+type ErrorPrinter func(err error)
+
 // Client represents a stateful connection to a specific RRI Server.
 type Client struct {
 	address            string
@@ -25,18 +28,24 @@ type Client struct {
 	Processor QueryProcessor
 	// RawQueryPrinter is called for the raw messages sent and received by the client.
 	RawQueryPrinter RawQueryPrinter
+	// InnerErrorPrinter is called to print uncritical errors that occur internally.
+	InnerErrorPrinter ErrorPrinter
 	// XMLMode controls whether the queries are sent in KeyValue or XML encoding.
 	XMLMode bool
+	// NoAutoRetry can be used to disable automatic retry and login after connection errors.
+	NoAutoRetry bool
 }
 
 // ClientConfig can be used to further configure the RRI client.
 type ClientConfig struct {
+	// Insecure allows to accept self-signed SSL certificates.
 	Insecure bool
+	// MinTLSVersion denotes the minimum accepted TLS version.
+	MinTLSVersion uint16
 }
 
 // NewClient returns a new Client object for the given RRI Server.
 func NewClient(address string, conf ...*ClientConfig) (*Client, error) {
-
 	if len(conf) > 1 {
 		panic("passing multiple configurations to rri.NewClient is not allowed")
 	}
@@ -44,11 +53,14 @@ func NewClient(address string, conf ...*ClientConfig) (*Client, error) {
 		// instantiate default config
 		conf = []*ClientConfig{&ClientConfig{}}
 	}
+	if conf[0].MinTLSVersion <= 0 {
+		conf[0].MinTLSVersion = tls.VersionTLS13
+	}
 
 	client := &Client{
 		address: address,
 		tlsConfig: &tls.Config{
-			MinVersion:         tls.VersionTLS13,
+			MinVersion:         conf[0].MinTLSVersion,
 			InsecureSkipVerify: conf[0].Insecure,
 		},
 		XMLMode: false,
@@ -193,10 +205,6 @@ func (client *Client) SendQuery(query *Query) (*Response, error) {
 //
 // This method should be used with caution as it does not update the client login state.
 func (client *Client) SendRaw(msg string) (string, error) {
-	if client.RawQueryPrinter != nil {
-		client.RawQueryPrinter(msg, true)
-	}
-
 	// ensure connection is established
 	if err := client.setupConnection(); err != nil {
 		return "", err
@@ -204,8 +212,19 @@ func (client *Client) SendRaw(msg string) (string, error) {
 
 	buffer := prepareMessage(msg)
 
+	if client.RawQueryPrinter != nil {
+		client.RawQueryPrinter(msg, true)
+	}
 	response, err := client.sendAndReceive(buffer)
 	if err != nil {
+		if client.NoAutoRetry {
+			return "", err
+		}
+
+		if client.InnerErrorPrinter != nil {
+			client.InnerErrorPrinter(fmt.Errorf("query failed: %s", err))
+		}
+
 		// try re-establishing lost connection once
 		if client.connection != nil {
 			// ignore close errors (connection will be discarded anyway)
@@ -222,6 +241,9 @@ func (client *Client) SendRaw(msg string) (string, error) {
 			}
 		}
 		// retry sending request once
+		if client.RawQueryPrinter != nil {
+			client.RawQueryPrinter(msg, true)
+		}
 		response, err = client.sendAndReceive(buffer)
 		if err != nil {
 			return "", err

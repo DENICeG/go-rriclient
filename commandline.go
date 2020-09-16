@@ -13,6 +13,7 @@ import (
 )
 
 var (
+	//TODO configure colors and signs from external file
 	colorPromptRRI             = "\033[1;34m"
 	colorPromptUser            = "\033[1;32m"
 	colorPromptHost            = "\033[1;32m"
@@ -23,7 +24,10 @@ var (
 	colorSuccessResponse       = "\033[0;29m"
 	colorErrorResponseMessage  = "\033[0;91m"
 	colorTechnicalErrorMessage = "\033[1;91m"
+	colorInnerError            = "\033[2;91m"
 	colorEnd                   = "\033[0m"
+	signSend                   = "-->"
+	signReceive                = "<--"
 
 	cleRRIClient *rri.Client
 	histDomains  *domainHistory
@@ -41,7 +45,31 @@ func disableColors() {
 	colorSuccessResponse = ""
 	colorErrorResponseMessage = ""
 	colorTechnicalErrorMessage = ""
+	colorInnerError = ""
 	colorEnd = ""
+}
+
+func printColorsAndSigns() {
+	printColor := func(name, colorStr string) {
+		console.Printlnf("  %s%s%s", colorStr, name, colorEnd)
+	}
+	printSign := func(name, sign string) {
+		console.Printlnf("  %s: %q", name, sign)
+	}
+	printColor("ColorDefault", colorEnd)
+	printColor("ColorPromptRRI", colorPromptRRI)
+	printColor("ColorPromptUser", colorPromptUser)
+	printColor("ColorPromptHost", colorPromptHost)
+	printColor("ColorPromptDry", colorPromptDry)
+	printColor("ColorPrintDry", colorPrintDry)
+	printColor("ColorSendRaw", colorSendRaw)
+	printColor("ColorReceiveRaw", colorReceiveRaw)
+	printColor("ColorSuccessResponse", colorSuccessResponse)
+	printColor("ColorErrorResponseMessage", colorErrorResponseMessage)
+	printColor("ColorTechnicalErrorMessage", colorTechnicalErrorMessage)
+	printColor("ColorInnerError", colorInnerError)
+	printSign("SignSend", signSend)
+	printSign("SignReceive", signReceive)
 }
 
 func runCLE(client *rri.Client) error {
@@ -402,13 +430,22 @@ func cmdChProv(args []string) error {
 }
 
 func cmdRaw(args []string) error {
-	raw, ok, err := input.Text("")
-	if err != nil {
-		return err
+	var rawCommand string
+	if len(args) > 0 {
+		rawCommand = strings.ReplaceAll(strings.ReplaceAll(strings.ReplaceAll(args[0], "\\n", "\n"), "\\r", "\r"), "\\\\", "\\")
+
+	} else {
+		raw, ok, err := input.Text("")
+		if err != nil {
+			return err
+		}
+		if ok {
+			rawCommand = raw
+		}
 	}
 
-	if ok {
-		response, err := cleRRIClient.SendRaw(raw)
+	if len(rawCommand) > 0 {
+		response, err := cleRRIClient.SendRaw(rawCommand)
 		if err != nil {
 			return err
 		}
@@ -475,12 +512,26 @@ func cmdXML(args []string) error {
 func cmdVerbose(args []string) error {
 	if cleRRIClient.RawQueryPrinter == nil {
 		cleRRIClient.RawQueryPrinter = rawQueryPrinter
+		cleRRIClient.InnerErrorPrinter = errorPrinter
 		console.Println("Verbose mode on")
 	} else {
 		cleRRIClient.RawQueryPrinter = nil
+		cleRRIClient.InnerErrorPrinter = nil
 		console.Println("Verbose mode off")
 	}
 	return nil
+}
+
+func rawQueryPrinter(msg string, isOutgoing bool) {
+	if isOutgoing {
+		console.Printlnf("%s %s%q%s", signSend, colorSendRaw, msg, colorEnd)
+	} else {
+		console.Printlnf("%s %s%q%s", signReceive, colorReceiveRaw, msg, colorEnd)
+	}
+}
+
+func errorPrinter(err error) {
+	console.Printlnf("%sERR: %s%s", colorInnerError, err.Error(), colorEnd)
 }
 
 func cmdDry(args []string) error {
@@ -492,14 +543,6 @@ func cmdDry(args []string) error {
 		console.Println("Dry mode off")
 	}
 	return nil
-}
-
-func rawQueryPrinter(msg string, isOutgoing bool) {
-	if isOutgoing {
-		console.Printlnf("<-- %s%q%s", colorSendRaw, msg, colorEnd)
-	} else {
-		console.Printlnf("--> %s%q%s", colorReceiveRaw, msg, colorEnd)
-	}
 }
 
 func dryProcessor(query *rri.Query) *rri.Query {

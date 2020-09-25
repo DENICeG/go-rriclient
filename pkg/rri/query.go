@@ -292,7 +292,7 @@ func NewCreateAuthInfo1Query(idnDomain, authInfo string, expireDay time.Time) *Q
 		fields[FieldNameDomainACE] = []string{ace}
 	}
 	fields[FieldNameAuthInfoHash] = []string{computeHashSHA256(authInfo)}
-	fields[FieldNameAuthInfoExpire] = []string{expireDay.Format("20060201")}
+	fields[FieldNameAuthInfoExpire] = []string{expireDay.Format("20060102")}
 	return NewQuery(LatestVersion, ActionCreateAuthInfo1, fields)
 }
 

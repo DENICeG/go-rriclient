@@ -22,11 +22,13 @@ var (
 var (
 	app              = kingpin.New("rri-client", "Client application for RRI")
 	argCmd           = app.Arg("command", "Command with arguments or RRI host like host:51131").Strings()
+	argHost          = app.Flag("host", "A RRI host like host:51131").Short('h').String()
 	argUser          = app.Flag("user", "RRI user to use for login").Short('u').String()
 	argPassword      = app.Flag("pass", "RRI password to use for login. Will be asked for if only user is set").Short('p').String()
 	argFile          = app.Flag("file", "Input file containing RRI requests separated by a '=-=' line").Short('f').String()
 	argEnvironment   = app.Flag("env", "Named environment to use or create").Short('e').String()
 	argDeleteEnv     = app.Flag("delete-env", "Delete an existing environment").String()
+	argFail          = app.Flag("fail", "Exit with code 1 if RRI returns a failed result").Bool()
 	argVerbose       = app.Flag("verbose", "Print all sent and received requests").Short('v').Bool()
 	argInsecure      = app.Flag("insecure", "Disable SSL Certificate checks").Bool()
 	argVersion       = app.Flag("version", "Display application version and exit").Bool()
@@ -91,6 +93,7 @@ func main() {
 		client, err := rri.NewClient(env.Address, &rri.ClientConfig{Insecure: env.Insecure || *argInsecure})
 		if err != nil {
 			if !*argInsecure && strings.Contains(err.Error(), "x509") {
+				// show help message for x509 related errors
 				console.Println("HINT: try the '--insecure' flag if you have trouble with self signed certificates")
 			}
 			return err
@@ -131,6 +134,7 @@ func main() {
 			}
 
 		} else {
+			returnErrorOnFail = *argFail
 			return runCLE(client, *argCmd)
 		}
 
@@ -143,10 +147,19 @@ func main() {
 
 func retrieveEnvironment(envReader *env.Reader) (environment, error) {
 	var addressFromCommandLine string
-	if len(*argCmd) >= 1 && strings.Contains((*argCmd)[0], ":") {
-		// consume first command part as address for backwards compatibility
-		addressFromCommandLine = (*argCmd)[0]
-		*argCmd = (*argCmd)[1:]
+	if len(*argHost) > 0 {
+		addressFromCommandLine = *argHost
+		if !strings.Contains(addressFromCommandLine, ":") {
+			// did the user forget to specify a port? use default port
+			addressFromCommandLine += ":51131"
+		}
+
+	} else {
+		if len(*argCmd) >= 1 && strings.Contains((*argCmd)[0], ":") {
+			// consume first command part as address for backwards compatibility
+			addressFromCommandLine = (*argCmd)[0]
+			*argCmd = (*argCmd)[1:]
+		}
 	}
 
 	var err error
@@ -171,6 +184,7 @@ func retrieveEnvironment(envReader *env.Reader) (environment, error) {
 	}
 
 	if len(env.User) > 0 && len(env.Password) == 0 {
+		// ask for missing user credentials
 		var err error
 		console.Printlnf("Please enter RRI password for user %q", env.User)
 		console.Print("> ")
@@ -197,6 +211,7 @@ func enterEnvironment(envName string, env interface{}) error {
 		return err
 	}
 	if !strings.Contains(e.Address, ":") {
+		// did the user forget to specify a port? use default port
 		e.Address += ":51131"
 	}
 

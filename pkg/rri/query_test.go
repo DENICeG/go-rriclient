@@ -32,7 +32,7 @@ func TestNewCreateAuthInfo1Query(t *testing.T) {
 	assert.Equal(t, []string{"denic.de"}, query.Field(FieldNameDomainIDN))
 	assert.Equal(t, []string{"denic.de"}, query.Field(FieldNameDomainACE))
 	assert.Equal(t, []string{"78152947f3751ab6baf0fb54c3c508d9b959f707999cbab855caaac231628c7f"}, query.Field(FieldNameAuthInfoHash))
-	assert.Equal(t, []string{"20202509"}, query.Field(FieldNameAuthInfoExpire))
+	assert.Equal(t, []string{"20200925"}, query.Field(FieldNameAuthInfoExpire))
 }
 
 func TestParseQueryCasing(t *testing.T) {

@@ -36,6 +36,8 @@ var (
 	cleRRIClient *rri.Client
 	histDomains  *domainHistory
 	histHandles  *handleHistory
+
+	returnErrorOnFail = false
 )
 
 func disableColors() {
@@ -88,6 +90,7 @@ func runCLE(client *rri.Client, cmd []string) error {
 	cle := prepareCLE()
 
 	if len(cmd) > 0 {
+		// exec command that has been passed via command line and return result
 		return cle.ExecCommand(cmd[0], cmd[1:])
 	}
 
@@ -95,6 +98,7 @@ func runCLE(client *rri.Client, cmd []string) error {
 	console.Println("  type 'help' to see a list of available commands")
 	console.Println("  use tab for auto-completion and arrow keys for history")
 
+	// start interactive command line loop
 	err := cle.Run()
 	if err != nil {
 		if commandline.IsErrCtrlC(err) {
@@ -130,16 +134,25 @@ func prepareCLE() *commandline.Environment {
 	cle.RegisterCommand(commandline.NewCustomCommand("login", nil, cmdLogin))
 	cle.RegisterCommand(commandline.NewCustomCommand("logout", nil, cmdLogout))
 
-	registerDomainOrHandleSwitchCommand(cle, "create", cmdCreateDomain, nil)
-	registerDomainOrHandleSwitchCommand(cle, "check", newDomainQueryCommand(rri.NewCheckDomainQuery), newHandleQueryCommand(rri.NewCheckHandleQuery))
-	registerDomainOrHandleSwitchCommand(cle, "info", newDomainQueryCommand(rri.NewInfoDomainQuery), newHandleQueryCommand(rri.NewInfoHandleQuery))
-	registerDomainOrHandleSwitchCommand(cle, "update", cmdUpdateDomain, nil)
+	registerSwitchCommand(cle, "create", cmdSwitches{
+		Domain:    cmdCreateDomain,
+		AuthInfo1: cmdCreateAuthInfo1,
+	})
+	registerSwitchCommand(cle, "check", cmdSwitches{
+		Domain: newDomainQueryCommand(rri.NewCheckDomainQuery),
+		Handle: newHandleQueryCommand(rri.NewCheckHandleQuery),
+	})
+	registerSwitchCommand(cle, "info", cmdSwitches{
+		Domain: newDomainQueryCommand(rri.NewInfoDomainQuery),
+		Handle: newHandleQueryCommand(rri.NewInfoHandleQuery),
+	})
+	registerSwitchCommand(cle, "update", cmdSwitches{
+		Domain: cmdUpdateDomain,
+	})
 
 	registerDomainCommand(cle, "delete", newDomainQueryCommand(rri.NewDeleteDomainQuery))
 	registerDomainCommand(cle, "restore", newDomainQueryCommand(rri.NewRestoreDomainQuery))
 	registerDomainCommand(cle, "transit", cmdTransit, commandline.NewOneOfArgCompletion("disconnect", "connect"))
-	//TODO authinfo1
-	//TODO authinfo2
 	registerDomainCommand(cle, "chprov", cmdChProv)
 
 	cle.RegisterCommand(commandline.NewCustomCommand("raw", nil, cmdRaw))
@@ -153,9 +166,8 @@ func prepareCLE() *commandline.Environment {
 
 func cmdHelp(args []string) error {
 	commands := []struct {
-		Cmd  []string
-		Args []string
-		Desc string
+		Cmd, Args []string
+		Desc      string
 	}{
 		{[]string{"exit"}, nil, "exit application"},
 		{[]string{"help"}, nil, "show this help"},
@@ -180,7 +192,7 @@ func cmdHelp(args []string) error {
 		{[]string{"create", "authinfo1"}, []string{"domain", "secret", "expire"}, "send a CREATE-AUTHINFO1 command for a specific domain"},
 		//TODO create-authinfo2
 		//TODO delete-authinfo1
-		//TODO chprov
+		{[]string{"chprov"}, []string{"domain", "secret"}, "send a CHPROV command for a specific domain"},
 		// -
 		//TODO queue-read
 		//TODO queue-delete
@@ -241,12 +253,67 @@ func cmdHelp(args []string) error {
 	maxLineLength := 2 + maxCmdSumLen + 1 + maxArgsSumLen + 2 + 1 + 2 + maxDescLen
 	w, _, err := terminal.GetSize(int(os.Stdout.Fd()))
 	if w <= 0 || maxLineLength <= w || err != nil {
+		// nice table for wide terminals
 		for i, c := range commands {
 			if c.Cmd == nil {
 				console.Println()
 			} else {
 				leftLen := len([]rune(cmdSumStrings[i])) + 1 + len([]rune(argsSumStrings[i]))
 				console.Printlnf("  %s %s%s  -  %s", cmdSumStrings[i], argsSumStrings[i], strings.Repeat(" ", maxCmdSumLen+1+maxArgsSumLen-leftLen), c.Desc)
+			}
+		}
+
+	} else {
+		if maxCmdSumLen+1+maxArgsSumLen <= w {
+			// print narrow version with two separate lines for command+args and description
+			for i, c := range commands {
+				if c.Cmd == nil {
+					console.Println()
+				} else {
+					if len(c.Args) > 0 {
+						console.Printlnf("%s %s", cmdSumStrings[i], argsSumStrings[i])
+					} else {
+						console.Printlnf("%s", cmdSumStrings[i])
+					}
+					if len([]rune(c.Desc)) <= w-2 {
+						console.Printlnf("  %s", c.Desc)
+
+					} else {
+						// break words of description to multiple lines with indentation
+						parts := strings.Split(c.Desc, " ")
+						lines := make([]string, 1)
+						for _, p := range parts {
+							l := lines[len(lines)-1]
+							if len(l) > 0 {
+								l += " " + p
+							} else {
+								l += p
+							}
+							if len([]rune(l)) < w-2 || len(lines[len(lines)-1]) == 0 {
+								lines[len(lines)-1] = l
+							} else {
+								lines = append(lines, p)
+							}
+						}
+						for _, l := range lines {
+							console.Printlnf("  %s", l)
+						}
+					}
+				}
+			}
+
+		} else {
+			// fallback variant for very narrow terminals
+			for i, c := range commands {
+				if c.Cmd == nil {
+					console.Println()
+				} else {
+					if len(c.Args) > 0 {
+						console.Printlnf("-> %s %s - %s", cmdSumStrings[i], argsSumStrings[i], c.Desc)
+					} else {
+						console.Printlnf("-> %s - %s", cmdSumStrings[i], c.Desc)
+					}
+				}
 			}
 		}
 	}
@@ -315,7 +382,7 @@ type domainOrHandleCompletion struct{}
 
 func (domainOrHandleCompletion) GetCompletionOptions(currentCommand []string, entryIndex int) []commandline.CompletionOption {
 	if len(currentCommand) >= 2 && entryIndex == 2 {
-		if currentCommand[1] == "domain" {
+		if currentCommand[1] == "domain" || currentCommand[1] == "authinfo1" {
 			return histDomains.GetCompletionOptions(currentCommand, entryIndex)
 		}
 
@@ -326,10 +393,28 @@ func (domainOrHandleCompletion) GetCompletionOptions(currentCommand []string, en
 	return nil
 }
 
-func registerDomainOrHandleSwitchCommand(cle *commandline.Environment, name string, domainCommandHandler, handleCommandHandler commandline.ExecCommandHandler) {
+type cmdSwitches struct {
+	Domain    commandline.ExecCommandHandler
+	Handle    commandline.ExecCommandHandler
+	AuthInfo1 commandline.ExecCommandHandler
+}
+
+func registerSwitchCommand(cle *commandline.Environment, name string, switches cmdSwitches) {
+	// assemble arg completion
+	types := make([]string, 0)
+	if switches.Domain != nil {
+		types = append(types, "domain")
+	}
+	if switches.Handle != nil {
+		types = append(types, "handle")
+	}
+	if switches.AuthInfo1 != nil {
+		types = append(types, "authinfo1")
+	}
+
 	cle.RegisterCommand(commandline.NewCustomCommand(name,
 		commandline.NewFixedArgCompletion(
-			commandline.NewOneOfArgCompletion("domain", "handle"),
+			commandline.NewOneOfArgCompletion(types...),
 			domainOrHandleCompletion{},
 		),
 		func(args []string) error {
@@ -338,24 +423,45 @@ func registerDomainOrHandleSwitchCommand(cle *commandline.Environment, name stri
 			}
 
 			// explicit type is given
-			if args[0] == "domain" {
+			if args[0] == "domain" && switches.Domain != nil {
 				// remove type parameter
-				return domainCommandHandler(args[1:])
+				return switches.Domain(args[1:])
 			}
-			if args[0] == "handle" {
+			if args[0] == "handle" && switches.Handle != nil {
 				// remove type parameter
-				return handleCommandHandler(args[1:])
+				return switches.Handle(args[1:])
+			}
+			if args[0] == "authinfo1" && switches.AuthInfo1 != nil {
+				// remove type parameter
+				return switches.AuthInfo1(args[1:])
 			}
 
 			// try to guess type from first parameter
 			if isDomainName(args[0]) {
-				return domainCommandHandler(args)
+				if switches.Domain != nil {
+					return switches.Domain(args)
+				}
+				if switches.AuthInfo1 != nil {
+					return switches.AuthInfo1(args)
+				}
 			}
-			if isHandle(args[0]) {
-				return handleCommandHandler(args)
+			if isHandle(args[0]) && switches.Handle != nil {
+				return switches.Handle(args)
 			}
 
-			return fmt.Errorf("unknown command type. expect 'domain' or 'handle'")
+			// assemble expect string
+			str := ""
+			for i, t := range types {
+				switch {
+				case i == 0:
+					str += "'" + t + "'"
+				case i == len(types)-1:
+					str += " or '" + t + "'"
+				default:
+					str += ", '" + t + "'"
+				}
+			}
+			return fmt.Errorf("unknown command type. expect %s", str)
 		}))
 }
 
@@ -475,8 +581,15 @@ func cmdCreateAuthInfo1(args []string) error {
 	if len(args) < 2 {
 		return fmt.Errorf("missing auth info secret")
 	}
+	var expire time.Time
+	if len(args) > 3 {
+		//TODO parse time arg
+	} else {
+		expire = time.Date(time.Now().Year(), time.Now().Month(), time.Now().Day()+7, 0, 0, 0, 0, time.Local)
+		console.Println("using default expiration of 1 week")
+	}
 
-	_, err := processQuery(rri.NewCreateAuthInfo1Query(args[0], args[1], time.Now()))
+	_, err := processQuery(rri.NewCreateAuthInfo1Query(args[0], args[1], expire))
 	return err
 }
 
@@ -519,6 +632,16 @@ func cmdRaw(args []string) error {
 			return err
 		}
 		console.Println(response)
+
+		if returnErrorOnFail {
+			responseObj, err := rri.ParseResponse(response)
+			if err != nil {
+				return fmt.Errorf("RRI server returned an invalid response")
+			}
+			if !responseObj.IsSuccessful() {
+				return fmt.Errorf("RRI returned result 'failed'")
+			}
+		}
 	}
 
 	return nil
@@ -645,6 +768,10 @@ func processQuery(query *rri.Query) (bool, error) {
 		console.Print(colorEnd)
 	} else {
 		console.Printlnf("%sFailed: %s%s", colorErrorResponseMessage, response.ErrorMsg(), colorEnd)
+	}
+
+	if returnErrorOnFail && !response.IsSuccessful() {
+		return false, fmt.Errorf("RRI returned result 'failed'")
 	}
 	return response.IsSuccessful(), nil
 }

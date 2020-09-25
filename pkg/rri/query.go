@@ -5,6 +5,7 @@ import (
 	"encoding/hex"
 	"fmt"
 	"strings"
+	"time"
 
 	"golang.org/x/net/idna"
 )
@@ -39,6 +40,8 @@ const (
 	FieldNameDisconnect QueryFieldName = "disconnect"
 	// FieldNameAuthInfoHash denotes the query field name for auth info hash.
 	FieldNameAuthInfoHash QueryFieldName = "authinfohash"
+	// FieldNameAuthInfoExpire denotes the query field name for auth info expire.
+	FieldNameAuthInfoExpire QueryFieldName = "authinfoexpire"
 	// FieldNameAuthInfo denotes the query field name for auth info hash.
 	FieldNameAuthInfo QueryFieldName = "authinfo"
 
@@ -282,13 +285,14 @@ func NewTransitDomainQuery(idnDomain string, disconnect bool) *Query {
 }
 
 // NewCreateAuthInfo1Query returns a create AuthInfo1 query.
-func NewCreateAuthInfo1Query(idnDomain, authInfo string) *Query {
+func NewCreateAuthInfo1Query(idnDomain, authInfo string, expireDay time.Time) *Query {
 	fields := make(map[QueryFieldName][]string)
 	fields[FieldNameDomainIDN] = []string{idnDomain}
 	if ace, err := idna.ToASCII(idnDomain); err == nil {
 		fields[FieldNameDomainACE] = []string{ace}
 	}
 	fields[FieldNameAuthInfoHash] = []string{computeHashSHA256(authInfo)}
+	fields[FieldNameAuthInfoExpire] = []string{expireDay.Format("20060201")}
 	return NewQuery(LatestVersion, ActionCreateAuthInfo1, fields)
 }
 

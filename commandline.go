@@ -3,7 +3,11 @@ package main
 import (
 	"fmt"
 	"io/ioutil"
+	"os"
 	"strings"
+	"time"
+
+	"golang.org/x/crypto/ssh/terminal"
 
 	"github.com/DENICeG/go-rriclient/pkg/rri"
 
@@ -72,7 +76,7 @@ func printColorsAndSigns() {
 	printSign("SignReceive", signReceive)
 }
 
-func runCLE(client *rri.Client) error {
+func runCLE(client *rri.Client, cmd []string) error {
 	cleRRIClient = client
 	histDomains = &domainHistory{make([]string, 0)}
 	histHandles = &handleHistory{make([]string, 0)}
@@ -82,6 +86,10 @@ func runCLE(client *rri.Client) error {
 	}
 
 	cle := prepareCLE()
+
+	if len(cmd) > 0 {
+		return cle.ExecCommand(cmd[0], cmd[1:])
+	}
 
 	console.Println("Interactive RRI Command Line")
 	console.Println("  type 'help' to see a list of available commands")
@@ -144,43 +152,104 @@ func prepareCLE() *commandline.Environment {
 }
 
 func cmdHelp(args []string) error {
+	commands := []struct {
+		Cmd  []string
+		Args []string
+		Desc string
+	}{
+		{[]string{"exit"}, nil, "exit application"},
+		{[]string{"help"}, nil, "show this help"},
+		{nil, nil, ""},
+		{[]string{"login"}, []string{"user", "password"}, "log in to a RRI account"},
+		{[]string{"logout"}, nil, "log out from the current RRI account"},
+		{nil, nil, ""},
+		//TODO contact-create
+		{[]string{"check", "handle"}, []string{"domain"}, "send a CHECK command for a specific handle"},
+		{[]string{"info", "handle"}, []string{"domain"}, "send an INFO command for a specific handle"},
+		//TODO contact-update
+		{nil, nil, ""},
+		{[]string{"create", "domain"}, []string{"domain"}, "send a CREATE command for a new domain"},
+		{[]string{"check", "domain"}, []string{"domain"}, "send a CHECK command for a specific domain"},
+		{[]string{"info", "domain"}, []string{"domain"}, "send an INFO command for a specific domain"},
+		{[]string{"update", "domain"}, []string{"domain"}, "send an UPDATE command for a specific domain"},
+		//TODO chholder
+		{nil, nil, ""},
+		{[]string{"delete"}, []string{"domain"}, "send a DELETE command for a specific domain"},
+		{[]string{"restore"}, []string{"domain"}, "send a RESTORE command for a specific domain"},
+		{[]string{"transit"}, []string{"domain"}, "send a TRANSIT command for a specific domain"},
+		{[]string{"create", "authinfo1"}, []string{"domain", "secret", "expire"}, "send a CREATE-AUTHINFO1 command for a specific domain"},
+		//TODO create-authinfo2
+		//TODO delete-authinfo1
+		//TODO chprov
+		// -
+		//TODO queue-read
+		//TODO queue-delete
+		//TODO regacc-info
+		{nil, nil, ""},
+		{[]string{"raw"}, nil, "enter a raw query and send it"},
+		{[]string{"file"}, []string{"path"}, "process a query file as accepted by flag --file"},
+		{nil, nil, ""},
+		{[]string{"xml"}, nil, "toggle XML mode"},
+		{[]string{"verbose"}, nil, "toggle verbose mode"},
+		{[]string{"dry"}, nil, "toggle dry mode to only print out raw queries"},
+	}
+
+	cmdSumStrings := make([]string, len(commands))
+	argsSumStrings := make([]string, len(commands))
+
 	console.Println("Available commands:")
-	console.Println("  exit                                -  exit application")
-	console.Println("  help                                -  show this help")
-	console.Println()
-	console.Println("  login {user} {password}             -  log in to a RRI account")
-	console.Println("  logout                              -  log out from the current RRI account")
-	console.Println()
-	//contact-create
-	console.Println("  check handle {domain}               -  send a CHECK command for a specific handle")
-	console.Println("  info handle {domain}                -  send an INFO command for a specific handle")
-	//contact-update
-	console.Println()
-	console.Println("  create domain {domain}              -  send a CREATE command for a new domain")
-	console.Println("  check domain {domain}               -  send a CHECK command for a specific domain")
-	console.Println("  info domain {domain}                -  send an INFO command for a specific domain")
-	console.Println("  update domain {domain}              -  send an UPDATE command for a specific domain")
-	//chholder
-	console.Println("  delete {domain}                     -  send a DELETE command for a specific domain")
-	console.Println("  restore {domain}                    -  send a RESTORE command for a specific domain")
-	console.Println("  transit {domain}                    -  send a TRANSIT command for a specific domain")
-	//console.Println("  create authinfo1 {domain} {secret}  -  send a CREATE-AUTHINFO1 command for a specific domain")
-	//console.Println("  create authinfo2 {domain}           -  send a CREATE-AUTHINFO2 command for a specific domain")
-	//delete-authinfo1
-	console.Println("  chprov {domain} {secret}            -  send a CHPROV command for a specific domain with auth info secret")
-	//transit
-	//
-	//queue-read
-	//queue-delete
-	//
-	//regacc-info
-	console.Println()
-	console.Println("  raw                                 -  enter a raw query and send it")
-	console.Println("  file {path}                         -  process a query file as accepted by flag --file")
-	console.Println()
-	console.Println("  xml                                 -  toggle XML mode")
-	console.Println("  verbose                             -  toggle verbose mode")
-	console.Println("  dry                                 -  toggle dry mode to only print out raw queries")
+
+	// measure command info texts to find the best fitting display variant for the current tty
+	maxCmdSumLen := 0
+	maxCmdLen := 0
+	maxArgsSumLen := 0
+	maxArgsLen := 0
+	maxDescLen := 0
+	for i, c := range commands {
+		for _, a := range c.Cmd {
+			if len(cmdSumStrings[i]) == 0 {
+				cmdSumStrings[i] += a
+			} else {
+				cmdSumStrings[i] += " " + a
+			}
+			if len([]rune(a)) > maxCmdLen {
+				maxCmdLen = len([]rune(a))
+			}
+		}
+		if len([]rune(cmdSumStrings[i])) > maxCmdSumLen {
+			maxCmdSumLen = len([]rune(cmdSumStrings[i]))
+		}
+		for _, a := range c.Args {
+			if len(argsSumStrings[i]) == 0 {
+				argsSumStrings[i] += "{" + a + "}"
+			} else {
+				argsSumStrings[i] += " {" + a + "}"
+			}
+			if len([]rune(a)) > maxArgsLen {
+				maxArgsLen = len([]rune(a))
+			}
+		}
+		if len([]rune(argsSumStrings[i])) > maxArgsSumLen {
+			maxArgsSumLen = len([]rune(argsSumStrings[i]))
+		}
+		if len([]rune(c.Desc)) > maxDescLen {
+			maxDescLen = len([]rune(c.Desc))
+		}
+	}
+
+	// sum of spacers and placeholders in "  NAME ARGS_SUM  -  DESC"
+	maxLineLength := 2 + maxCmdSumLen + 1 + maxArgsSumLen + 2 + 1 + 2 + maxDescLen
+	w, _, err := terminal.GetSize(int(os.Stdout.Fd()))
+	if w <= 0 || maxLineLength <= w || err != nil {
+		for i, c := range commands {
+			if c.Cmd == nil {
+				console.Println()
+			} else {
+				leftLen := len([]rune(cmdSumStrings[i])) + 1 + len([]rune(argsSumStrings[i]))
+				console.Printlnf("  %s %s%s  -  %s", cmdSumStrings[i], argsSumStrings[i], strings.Repeat(" ", maxCmdSumLen+1+maxArgsSumLen-leftLen), c.Desc)
+			}
+		}
+	}
 	return nil
 }
 
@@ -407,7 +476,7 @@ func cmdCreateAuthInfo1(args []string) error {
 		return fmt.Errorf("missing auth info secret")
 	}
 
-	_, err := processQuery(rri.NewCreateAuthInfo1Query(args[0], args[1]))
+	_, err := processQuery(rri.NewCreateAuthInfo1Query(args[0], args[1], time.Now()))
 	return err
 }
 

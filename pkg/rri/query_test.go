@@ -2,6 +2,7 @@ package rri
 
 import (
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/assert"
 )
@@ -21,6 +22,17 @@ func TestNewTransitDomainQuery(t *testing.T) {
 	assert.Equal(t, []string{"dönic.de"}, query.Field(FieldNameDomainIDN))
 	assert.Equal(t, []string{"xn--dnic-5qa.de"}, query.Field(FieldNameDomainACE))
 	assert.Equal(t, []string{"true"}, query.Field(FieldNameDisconnect))
+}
+
+func TestNewCreateAuthInfo1Query(t *testing.T) {
+	query := NewCreateAuthInfo1Query("denic.de", "a-secret-auth-info", time.Date(2020, time.September, 25, 0, 0, 0, 0, time.Local))
+	assert.Equal(t, LatestVersion, query.Version())
+	assert.Equal(t, ActionCreateAuthInfo1, query.Action())
+	assert.Len(t, query.Fields(), 4)
+	assert.Equal(t, []string{"denic.de"}, query.Field(FieldNameDomainIDN))
+	assert.Equal(t, []string{"denic.de"}, query.Field(FieldNameDomainACE))
+	assert.Equal(t, []string{"78152947f3751ab6baf0fb54c3c508d9b959f707999cbab855caaac231628c7f"}, query.Field(FieldNameAuthInfoHash))
+	assert.Equal(t, []string{"20202509"}, query.Field(FieldNameAuthInfoExpire))
 }
 
 func TestParseQueryCasing(t *testing.T) {

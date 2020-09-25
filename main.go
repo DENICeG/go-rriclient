@@ -21,7 +21,7 @@ var (
 
 var (
 	app              = kingpin.New("rri-client", "Client application for RRI")
-	argAddress       = app.Arg("address", "Address and port like host:1234 of the RRI host").String()
+	argCmd           = app.Arg("command", "Command with arguments or RRI host like host:51131").Strings()
 	argUser          = app.Flag("user", "RRI user to use for login").Short('u').String()
 	argPassword      = app.Flag("pass", "RRI password to use for login. Will be asked for if only user is set").Short('p').String()
 	argFile          = app.Flag("file", "Input file containing RRI requests separated by a '=-=' line").Short('f').String()
@@ -37,6 +37,7 @@ type environment struct {
 	Address  string `json:"address"`
 	User     string `json:"user"`
 	Password string `json:"pass" jcrypt:"aes"`
+	Insecure bool   `json:"insecure"`
 }
 
 func (e environment) HasCredentials() bool {
@@ -87,7 +88,7 @@ func main() {
 			return fmt.Errorf("missing RRI server address")
 		}
 
-		client, err := rri.NewClient(env.Address, &rri.ClientConfig{Insecure: *argInsecure})
+		client, err := rri.NewClient(env.Address, &rri.ClientConfig{Insecure: env.Insecure || *argInsecure})
 		if err != nil {
 			if !*argInsecure && strings.Contains(err.Error(), "x509") {
 				console.Println("HINT: try the '--insecure' flag if you have trouble with self signed certificates")
@@ -130,7 +131,7 @@ func main() {
 			}
 
 		} else {
-			return runCLE(client)
+			return runCLE(client, *argCmd)
 		}
 
 		return nil
@@ -141,19 +142,26 @@ func main() {
 }
 
 func retrieveEnvironment(envReader *env.Reader) (environment, error) {
+	var addressFromCommandLine string
+	if len(*argCmd) >= 1 && strings.Contains((*argCmd)[0], ":") {
+		// consume first command part as address for backwards compatibility
+		addressFromCommandLine = (*argCmd)[0]
+		*argCmd = (*argCmd)[1:]
+	}
+
 	var err error
 	var env environment
 	if len(*argEnvironment) > 0 {
 		err = envReader.CreateOrReadEnvironment(*argEnvironment, &env)
-	} else if len(*argAddress) == 0 {
+	} else if len(addressFromCommandLine) == 0 {
 		err = envReader.SelectEnvironment(&env)
 	}
 	if err != nil {
 		return environment{}, err
 	}
 
-	if len(*argAddress) > 0 {
-		env.Address = *argAddress
+	if len(addressFromCommandLine) > 0 {
+		env.Address = addressFromCommandLine
 	}
 	if len(*argUser) > 0 {
 		env.User = *argUser
@@ -187,6 +195,9 @@ func enterEnvironment(envName string, env interface{}) error {
 	e.Address, err = console.ReadLine()
 	if err != nil {
 		return err
+	}
+	if !strings.Contains(e.Address, ":") {
+		e.Address += ":51131"
 	}
 
 	console.Print("User> ")

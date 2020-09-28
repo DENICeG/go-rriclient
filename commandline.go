@@ -582,8 +582,16 @@ func cmdCreateAuthInfo1(args []string) error {
 		return fmt.Errorf("missing auth info secret")
 	}
 	var expire time.Time
-	if len(args) > 3 {
-		//TODO parse time arg
+	if len(args) >= 3 {
+		var err error
+		expire, err = time.ParseInLocation("2006-01-02", args[2], time.Local)
+		if err != nil {
+			expire, err = time.ParseInLocation("20060102", args[2], time.Local)
+			if err != nil {
+				return fmt.Errorf("expiration date must be in format yyyy-mm-dd or yyyymmdd")
+			}
+		}
+
 	} else {
 		expire = time.Date(time.Now().Year(), time.Now().Month(), time.Now().Day()+7, 0, 0, 0, 0, time.Local)
 		console.Println("using default expiration of 1 week")

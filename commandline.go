@@ -829,6 +829,7 @@ func cmdVerbose(args []string) error {
 }
 
 func rawQueryPrinter(msg string, isOutgoing bool) {
+	//TODO censor password
 	if isOutgoing {
 		console.Printlnf("%s %s%q%s", signSend, colorSendRaw, msg, colorEnd)
 	} else {
@@ -868,8 +869,18 @@ func processQuery(query *rri.Query) (bool, error) {
 
 	if response.IsSuccessful() {
 		console.Print(colorSuccessResponse)
+		console.Printlnf("  %s: %s", rri.FieldNameResult, response.Result())
 		for _, field := range response.Fields() {
 			console.Printlnf("  %s: %s", field.Name, field.Value)
+		}
+		if len(response.InfoMsg()) > 0 {
+			console.Printlnf("  %s: %s", rri.FieldNameInfoMsg, response.InfoMsg())
+		}
+		if len(response.ErrorMsg()) > 0 {
+			console.Printlnf("  %s: %s", rri.FieldNameErrorMsg, response.ErrorMsg())
+		}
+		if len(response.STID()) > 0 {
+			console.Printlnf("  %s: %s", rri.FieldNameSTID, response.STID())
 		}
 		for _, entityName := range response.EntityNames() {
 			console.Println()

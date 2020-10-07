@@ -83,6 +83,11 @@ func (r *Response) ErrorMsg() string {
 	return r.errorMsg
 }
 
+// STID return the server transaction id.
+func (r *Response) STID() string {
+	return r.stid
+}
+
 // String returns a human readable representation of the response.
 func (r *Response) String() string {
 	//TODO shortened, single line representation

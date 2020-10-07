@@ -111,34 +111,13 @@ func main() {
 		}
 
 		if len(*argFile) > 0 {
-			content, err := ioutil.ReadFile(*argFile)
-			if err != nil {
-				return err
-			}
-
-			queries, err := parseQueries(string(content))
-			if err != nil {
-				return err
-			}
-
-			for _, query := range queries {
-				console.Println("Exec query", query)
-				response, err := client.SendQuery(query)
-				if err != nil {
-					return err
-				}
-				if response != nil && !response.IsSuccessful() {
-					console.Printlnf("Query failed: %s", response.ErrorMsg())
-					break
-				}
-			}
-
-		} else {
-			returnErrorOnFail = *argFail
-			return runCLE(envReader.Dir(), client, *argCmd)
+			cleRRIClient = client
+			return cmdFile([]string{*argFile})
 		}
 
-		return nil
+		returnErrorOnFail = *argFail
+		return runCLE(envReader.Dir(), client, *argCmd)
+
 	}(); err != nil {
 		console.Printlnf("FATAL: %s", err.Error())
 		os.Exit(1)

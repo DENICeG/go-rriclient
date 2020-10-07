@@ -155,14 +155,14 @@ func (client *Client) SendQuery(query *Query) (*Response, error) {
 		}
 	}
 
-	if !client.IsLoggedIn() && query.action != ActionLogin {
-		return nil, fmt.Errorf("need to log in before sending action %s", query.action)
+	if !client.IsLoggedIn() && query.Action() != ActionLogin {
+		return nil, fmt.Errorf("need to log in before sending action %s", query.Action())
 	}
-	if client.IsLoggedIn() && query.action == ActionLogin {
+	if client.IsLoggedIn() && query.Action() == ActionLogin {
 		return nil, fmt.Errorf("already logged in")
 	}
 
-	if query.action == ActionLogout {
+	if query.Action() == ActionLogout {
 		defer func() {
 			// after action logout the connection and session are closed
 			client.connection = nil
@@ -174,7 +174,7 @@ func (client *Client) SendQuery(query *Query) (*Response, error) {
 
 	rawResponse, err := client.SendRaw(query.EncodeKV())
 	if err != nil {
-		if err == io.EOF && query.action == ActionLogout {
+		if err == io.EOF && query.Action() == ActionLogout {
 			// the server will immediately close the connection once LOGOUT is received
 			return nil, nil
 		}
@@ -186,13 +186,13 @@ func (client *Client) SendQuery(query *Query) (*Response, error) {
 		return nil, fmt.Errorf("received malformed response: %s", err.Error())
 	}
 
-	if query.action == ActionLogin && response.IsSuccessful() {
-		client.currentUser = query.FirstField(FieldNameUser)
+	if query.Action() == ActionLogin && response.IsSuccessful() {
+		client.currentUser = query.FirstField(QueryFieldNameUser)
 		// save credentials to restore session after lost connections
 		client.lastUser = client.currentUser
-		pwField := query.Field(FieldNamePassword)
+		pwField := query.Field(QueryFieldNamePassword)
 		if pwField != nil && len(pwField) > 0 {
-			client.lastPass = query.Field(FieldNamePassword)[0]
+			client.lastPass = query.Field(QueryFieldNamePassword)[0]
 		} else {
 			client.lastPass = ""
 		}

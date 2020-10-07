@@ -4,6 +4,7 @@ import (
 	"encoding/binary"
 	"fmt"
 	"io"
+	"regexp"
 )
 
 func prepareMessage(msg string) []byte {
@@ -24,7 +25,7 @@ func readMessage(r io.Reader) (string, error) {
 	if len == 0 {
 		return "", fmt.Errorf("message is empty")
 	}
-	if len > 65536 {
+	if len > 65536 || int(len) < 0 {
 		return "", fmt.Errorf("message too large")
 	}
 
@@ -53,4 +54,20 @@ func readBytes(r io.Reader, count int) ([]byte, error) {
 	}
 
 	return buffer, nil
+}
+
+// IsXML returns whether the message seems to contain a XML encoded query or response.
+func IsXML(msg string) bool {
+	//TODO xml detection
+	return false
+}
+
+// CensorRawMessage replaces passwords in a raw query with '******'.
+func CensorRawMessage(msg string) string {
+	//TODO censor xml
+	pattern := regexp.MustCompile("([\r\n]|^)(password:[ \t]+)([^\r\n]*)([\r\n]|$)")
+	return pattern.ReplaceAllStringFunc(msg, func(matchStr string) string {
+		m := pattern.FindStringSubmatch(matchStr)
+		return m[1] + m[2] + "******" + m[4]
+	})
 }

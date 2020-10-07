@@ -5,69 +5,94 @@ import (
 	"time"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 const (
-	qryLoginLogout  = "version: 3.0\naction: LOGIN\nuser: DENIC-1000042-TEST\npassword: very-secure\n=-= now log out\nversion: 3.0\naction: LOGOUT\n"
+	qryEncode       = "Version: 3.0\nAction: update\naddress: foo\nDomain: denic.de\nAddress: bar"
+	qryNormalize    = "Version:   3.0   \nAction: iNfO\ndIsCoNnEcT: tRuE"
 	qryIgnoreCasing = "Version: 3.0\nAction: login\nUser: DENIC-1000042-TEST\nPassword: very-secure"
 	qryWhitespaces  = "  version: \t3.0  \n\n\naction:    LOGIN\n   user: DENIC-1000042-TEST\npassword: very-secure    \n"
 	qryOrder        = "action: LOGIN\ncustom: 1\nversion: 3.0\nuser: DENIC-1000042-TEST\nstuff: foobar\npassword: very-secure\ncustom: 2"
 )
 
+func TestQueryEncodeKV(t *testing.T) {
+	query, err := ParseQuery(qryEncode)
+	require.NoError(t, err)
+	assert.Equal(t, "version: 3.0\naction: update\naddress: foo\ndomain: denic.de\naddress: bar", query.EncodeKV())
+}
+
+func TestQueryNormalization(t *testing.T) {
+	query, err := ParseQuery(qryNormalize)
+	require.NoError(t, err)
+	assert.Equal(t, LatestVersion, query.Version())
+	assert.Equal(t, ActionInfo, query.Action())
+	require.Len(t, query.Fields(), 3)
+	assert.Equal(t, []string{"3.0"}, query.Field(QueryFieldNameVersion))
+	assert.Equal(t, []string{"iNfO"}, query.Field(QueryFieldNameAction))
+	assert.Equal(t, []string{"tRuE"}, query.Field(QueryFieldNameDisconnect))
+}
+
 func TestNewTransitDomainQuery(t *testing.T) {
 	query := NewTransitDomainQuery("dönic.de", true)
 	assert.Equal(t, LatestVersion, query.Version())
 	assert.Equal(t, ActionTransit, query.Action())
-	assert.Len(t, query.Fields(), 3)
-	assert.Equal(t, []string{"dönic.de"}, query.Field(FieldNameDomainIDN))
-	assert.Equal(t, []string{"xn--dnic-5qa.de"}, query.Field(FieldNameDomainACE))
-	assert.Equal(t, []string{"true"}, query.Field(FieldNameDisconnect))
+	require.Len(t, query.Fields(), 5)
+	assert.Equal(t, []string{string(LatestVersion)}, query.Field(QueryFieldNameVersion))
+	assert.Equal(t, []string{string(ActionTransit)}, query.Field(QueryFieldNameAction))
+	assert.Equal(t, []string{"dönic.de"}, query.Field(QueryFieldNameDomainIDN))
+	assert.Equal(t, []string{"xn--dnic-5qa.de"}, query.Field(QueryFieldNameDomainACE))
+	assert.Equal(t, []string{"true"}, query.Field(QueryFieldNameDisconnect))
 }
 
 func TestNewCreateAuthInfo1Query(t *testing.T) {
 	query := NewCreateAuthInfo1Query("denic.de", "a-secret-auth-info", time.Date(2020, time.September, 25, 0, 0, 0, 0, time.Local))
 	assert.Equal(t, LatestVersion, query.Version())
 	assert.Equal(t, ActionCreateAuthInfo1, query.Action())
-	assert.Len(t, query.Fields(), 4)
-	assert.Equal(t, []string{"denic.de"}, query.Field(FieldNameDomainIDN))
-	assert.Equal(t, []string{"denic.de"}, query.Field(FieldNameDomainACE))
-	assert.Equal(t, []string{"78152947f3751ab6baf0fb54c3c508d9b959f707999cbab855caaac231628c7f"}, query.Field(FieldNameAuthInfoHash))
-	assert.Equal(t, []string{"20200925"}, query.Field(FieldNameAuthInfoExpire))
+	require.Len(t, query.Fields(), 6)
+	assert.Equal(t, []string{string(LatestVersion)}, query.Field(QueryFieldNameVersion))
+	assert.Equal(t, []string{string(ActionCreateAuthInfo1)}, query.Field(QueryFieldNameAction))
+	assert.Equal(t, []string{"denic.de"}, query.Field(QueryFieldNameDomainIDN))
+	assert.Equal(t, []string{"denic.de"}, query.Field(QueryFieldNameDomainACE))
+	assert.Equal(t, []string{"78152947f3751ab6baf0fb54c3c508d9b959f707999cbab855caaac231628c7f"}, query.Field(QueryFieldNameAuthInfoHash))
+	assert.Equal(t, []string{"20200925"}, query.Field(QueryFieldNameAuthInfoExpire))
 }
 
 func TestParseQueryCasing(t *testing.T) {
 	query, err := ParseQuery(qryIgnoreCasing)
-	if assert.NoError(t, err) {
-		assert.Equal(t, LatestVersion, query.Version())
-		assert.Equal(t, ActionLogin, query.Action())
-		assert.Len(t, query.Fields(), 2)
-		assert.Equal(t, []string{"DENIC-1000042-TEST"}, query.Field("uSeR"))
-		assert.Equal(t, []string{"very-secure"}, query.Field(FieldNamePassword))
-	}
+	require.NoError(t, err)
+	assert.Equal(t, LatestVersion, query.Version())
+	assert.Equal(t, ActionLogin, query.Action())
+	require.Len(t, query.Fields(), 4)
+	assert.Equal(t, []string{string(LatestVersion)}, query.Field(QueryFieldNameVersion))
+	assert.Equal(t, []string{"login"}, query.Field(QueryFieldNameAction))
+	assert.Equal(t, []string{"DENIC-1000042-TEST"}, query.Field("uSeR"))
+	assert.Equal(t, []string{"very-secure"}, query.Field(QueryFieldNamePassword))
 }
 
 func TestParseQueryWhitespaces(t *testing.T) {
 	query, err := ParseQuery(qryWhitespaces)
-	if assert.NoError(t, err) {
-		assert.Equal(t, LatestVersion, query.Version())
-		assert.Equal(t, ActionLogin, query.Action())
-		assert.Len(t, query.Fields(), 2)
-		assert.Equal(t, []string{"DENIC-1000042-TEST"}, query.Field(FieldNameUser))
-		assert.Equal(t, []string{"very-secure"}, query.Field(FieldNamePassword))
-	}
+	require.NoError(t, err)
+	assert.Equal(t, LatestVersion, query.Version())
+	assert.Equal(t, ActionLogin, query.Action())
+	require.Len(t, query.Fields(), 4)
+	assert.Equal(t, []string{string(LatestVersion)}, query.Field(QueryFieldNameVersion))
+	assert.Equal(t, []string{string(ActionLogin)}, query.Field(QueryFieldNameAction))
+	assert.Equal(t, []string{"DENIC-1000042-TEST"}, query.Field(QueryFieldNameUser))
+	assert.Equal(t, []string{"very-secure"}, query.Field(QueryFieldNamePassword))
 }
 
 func TestParseQueryOrder(t *testing.T) {
 	query, err := ParseQuery(qryOrder)
-	if assert.NoError(t, err) {
-		assert.Equal(t, LatestVersion, query.Version())
-		assert.Equal(t, ActionLogin, query.Action())
-		if assert.Len(t, query.Fields(), 5) {
-			assert.Equal(t, QueryField{QueryFieldName("custom"), "1"}, query.Fields()[0])
-			assert.Equal(t, QueryField{FieldNameUser, "DENIC-1000042-TEST"}, query.Fields()[1])
-			assert.Equal(t, QueryField{QueryFieldName("stuff"), "foobar"}, query.Fields()[2])
-			assert.Equal(t, QueryField{FieldNamePassword, "very-secure"}, query.Fields()[3])
-			assert.Equal(t, QueryField{QueryFieldName("custom"), "2"}, query.Fields()[4])
-		}
-	}
+	require.NoError(t, err)
+	assert.Equal(t, LatestVersion, query.Version())
+	assert.Equal(t, ActionLogin, query.Action())
+	require.Len(t, query.Fields(), 7)
+	assert.Equal(t, QueryField{QueryFieldName("action"), string(ActionLogin)}, query.Fields()[0])
+	assert.Equal(t, QueryField{QueryFieldName("custom"), "1"}, query.Fields()[1])
+	assert.Equal(t, QueryField{QueryFieldName("version"), string(LatestVersion)}, query.Fields()[2])
+	assert.Equal(t, QueryField{QueryFieldNameUser, "DENIC-1000042-TEST"}, query.Fields()[3])
+	assert.Equal(t, QueryField{QueryFieldName("stuff"), "foobar"}, query.Fields()[4])
+	assert.Equal(t, QueryField{QueryFieldNamePassword, "very-secure"}, query.Fields()[5])
+	assert.Equal(t, QueryField{QueryFieldName("custom"), "2"}, query.Fields()[6])
 }

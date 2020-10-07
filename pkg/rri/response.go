@@ -2,6 +2,7 @@ package rri
 
 import (
 	"fmt"
+	"strconv"
 	"strings"
 )
 
@@ -11,17 +12,17 @@ const (
 	// ResultFailure dontes a failed result.
 	ResultFailure Result = "failure"
 
-	// FieldNameResult denotes the response field name for result.
-	FieldNameResult ResponseFieldName = "RESULT"
-	// FieldNameSTID denotes the response field name for STID.
-	FieldNameSTID ResponseFieldName = "STID"
-	// FieldNameInfoMsg denotes the response field name for info message.
-	FieldNameInfoMsg ResponseFieldName = "INFO"
-	// FieldNameErrorMsg denotes the response field name for error message.
-	FieldNameErrorMsg ResponseFieldName = "ERROR"
+	// ResponseFieldNameResult denotes the response field name for result.
+	ResponseFieldNameResult ResponseFieldName = "RESULT"
+	// ResponseFieldNameSTID denotes the response field name for STID.
+	ResponseFieldNameSTID ResponseFieldName = "STID"
+	// ResponseFieldNameInfo denotes the response field name for info message.
+	ResponseFieldNameInfo ResponseFieldName = "INFO"
+	// ResponseFieldNameError denotes the response field name for error message.
+	ResponseFieldNameError ResponseFieldName = "ERROR"
 
-	// EntityNameHolder denotes the entity name of a holder.
-	EntityNameHolder ResponseEntityName = "holder"
+	// ResponseEntityNameHolder denotes the entity name of a holder.
+	ResponseEntityNameHolder ResponseEntityName = "holder"
 )
 
 // Result represents the result of a query response.
@@ -40,6 +41,32 @@ func (r ResponseFieldName) Normalize() ResponseFieldName {
 	return ResponseFieldName(strings.ToUpper(string(r)))
 }
 
+// BusinessMessage represents a response message with id as returned in INFO and ERROR.
+type BusinessMessage struct {
+	id      int64
+	message string
+}
+
+// NewBusinessMessage creates a new BusinessMessage with id and message.
+func NewBusinessMessage(id int64, msg string) BusinessMessage {
+	return BusinessMessage{id, msg}
+}
+
+// ID returns the message id.
+func (bm BusinessMessage) ID() int64 {
+	return bm.id
+}
+
+// Message returns the message string.
+func (bm BusinessMessage) Message() string {
+	return bm.message
+}
+
+// String returns both ID and Message.
+func (bm BusinessMessage) String() string {
+	return fmt.Sprintf("%v %s", bm.id, bm.message)
+}
+
 // ResponseEntityName represents a response entity name.
 type ResponseEntityName string
 
@@ -55,37 +82,45 @@ type responseEntity struct {
 
 // Response represents an RRI response.
 type Response struct {
-	result   Result
-	stid     string
-	infoMsg  string
-	errorMsg string
 	fields   ResponseFieldList
 	entities []responseEntity
 }
 
 // IsSuccessful returns whether the response is successfull.
 func (r *Response) IsSuccessful() bool {
-	return r.result == ResultSuccess
+	return r.Result() == ResultSuccess
 }
 
 // Result returns the returned result.
 func (r *Response) Result() Result {
-	return r.result
+	return Result(r.FirstField(ResponseFieldNameResult)).Normalize()
 }
 
-// InfoMsg returns the info message.
-func (r *Response) InfoMsg() string {
-	return r.infoMsg
+// InfoMessages returns all info messages.
+func (r *Response) InfoMessages() []BusinessMessage {
+	// ignore parse errors here, should be accounted for during response parsing
+	messages := make([]BusinessMessage, 0)
+	for _, msg := range r.Field(ResponseFieldNameInfo) {
+		bm, _ := ParseBusinessMessageKV(msg)
+		messages = append(messages, bm)
+	}
+	return messages
 }
 
-// ErrorMsg returns the error message.
-func (r *Response) ErrorMsg() string {
-	return r.errorMsg
+// ErrorMessages returns all error messages.
+func (r *Response) ErrorMessages() []BusinessMessage {
+	// ignore parse errors here, should be accounted for during response parsing
+	messages := make([]BusinessMessage, 0)
+	for _, msg := range r.Field(ResponseFieldNameError) {
+		bm, _ := ParseBusinessMessageKV(msg)
+		messages = append(messages, bm)
+	}
+	return messages
 }
 
 // STID return the server transaction id.
 func (r *Response) STID() string {
-	return r.stid
+	return r.FirstField(ResponseFieldNameSTID)
 }
 
 // String returns a human readable representation of the response.
@@ -97,9 +132,15 @@ func (r *Response) String() string {
 // EncodeKV returns the Key-Value representation as used for RRI communication.
 func (r *Response) EncodeKV() string {
 	var sb strings.Builder
-	sb.WriteString(string(FieldNameResult))
-	sb.WriteString(": ")
-	sb.WriteString(string(r.result))
+	for _, f := range r.fields {
+		if sb.Len() > 0 {
+			sb.WriteString("\n")
+		}
+		sb.WriteString(string(f.Name))
+		sb.WriteString(": ")
+		sb.WriteString(f.Value)
+	}
+	//TODO encode entities
 	return sb.String()
 }
 
@@ -138,6 +179,54 @@ func (r *Response) Entity(entityName ResponseEntityName) ResponseFieldList {
 	return nil
 }
 
+// NewResponse returns a new Response with the given result code.
+func NewResponse(result Result, fields map[ResponseFieldName][]string) *Response {
+	newFields := newResponseFieldList()
+	newFields.Add(ResponseFieldNameResult, string(result.Normalize()))
+	if fields != nil {
+		for key, values := range fields {
+			for _, value := range values {
+				newFields.Add(key, value)
+			}
+		}
+	}
+	return &Response{newFields, nil}
+}
+
+// NewResponseWithInfo returns a new Response with the given result code and attached info messages.
+func NewResponseWithInfo(result Result, fields map[ResponseFieldName][]string, infos ...BusinessMessage) *Response {
+	newFields := newResponseFieldList()
+	newFields.Add(ResponseFieldNameResult, string(result.Normalize()))
+	if fields != nil {
+		for key, values := range fields {
+			for _, value := range values {
+				newFields.Add(key, value)
+			}
+		}
+	}
+	for _, msg := range infos {
+		newFields.Add(ResponseFieldNameInfo, msg.String())
+	}
+	return &Response{newFields, nil}
+}
+
+// NewResponseWithError returns a new Response with the given result code and attached error messages.
+func NewResponseWithError(result Result, fields map[ResponseFieldName][]string, errors ...BusinessMessage) *Response {
+	newFields := newResponseFieldList()
+	newFields.Add(ResponseFieldNameResult, string(result.Normalize()))
+	if fields != nil {
+		for key, values := range fields {
+			for _, value := range values {
+				newFields.Add(key, value)
+			}
+		}
+	}
+	for _, msg := range errors {
+		newFields.Add(ResponseFieldNameError, msg.String())
+	}
+	return &Response{newFields, nil}
+}
+
 // ParseResponseKV parses a response object from the given key-value response string.
 func ParseResponseKV(msg string) (*Response, error) {
 	lines := strings.Split(msg, "\n")
@@ -153,7 +242,7 @@ func ParseResponseKV(msg string) (*Response, error) {
 				continue
 			}
 			if len(parts) != 2 {
-				return nil, fmt.Errorf("malformed query in line %d", i)
+				return nil, fmt.Errorf("malformed key-value pair in line %d", i)
 			}
 
 			key := strings.TrimSpace(parts[0])
@@ -167,37 +256,45 @@ func ParseResponseKV(msg string) (*Response, error) {
 		}
 	}
 
-	resultValues := fields.Values(FieldNameResult)
+	resultValues := fields.Values(ResponseFieldNameResult)
 	if len(resultValues) == 0 {
-		return nil, fmt.Errorf("%s key is missing", FieldNameResult)
+		return nil, fmt.Errorf("%s key is missing", ResponseFieldNameResult)
 	}
 	if len(resultValues) > 1 {
-		return nil, fmt.Errorf("multiple %s values", FieldNameResult)
+		return nil, fmt.Errorf("multiple %s values", ResponseFieldNameResult)
 	}
-	fields.RemoveAll(FieldNameResult)
 
-	stid := ""
-	stidValues := fields.Values(FieldNameSTID)
-	if len(stidValues) > 0 {
-		stid = stidValues[0]
+	stidValues := fields.Values(ResponseFieldNameSTID)
+	if len(stidValues) > 1 {
+		return nil, fmt.Errorf("multiple %s values", ResponseFieldNameSTID)
 	}
-	fields.RemoveAll(FieldNameSTID)
 
-	infoMsg := ""
-	infoMsgValues := fields.Values(FieldNameInfoMsg)
-	if len(infoMsgValues) > 0 {
-		infoMsg = infoMsgValues[0]
+	for _, msg := range fields.Values(ResponseFieldNameInfo) {
+		if _, err := ParseBusinessMessageKV(msg); err != nil {
+			return nil, fmt.Errorf("invalid info message: %s", err.Error())
+		}
 	}
-	fields.RemoveAll(FieldNameInfoMsg)
 
-	errorMsg := ""
-	errorMsgValues := fields.Values(FieldNameErrorMsg)
-	if len(errorMsgValues) > 0 {
-		errorMsg = errorMsgValues[0]
+	for _, msg := range fields.Values(ResponseFieldNameError) {
+		if _, err := ParseBusinessMessageKV(msg); err != nil {
+			return nil, fmt.Errorf("invalid error message: %s", err.Error())
+		}
 	}
-	fields.RemoveAll(FieldNameErrorMsg)
 
-	return &Response{Result(resultValues[0]).Normalize(), stid, infoMsg, errorMsg, fields, entities}, nil
+	return &Response{fields, entities}, nil
+}
+
+// ParseBusinessMessageKV parses a BusinessMessage from a single KV entry.
+func ParseBusinessMessageKV(str string) (BusinessMessage, error) {
+	parts := strings.SplitN(str, " ", 2)
+	if len(parts) != 2 {
+		return BusinessMessage{}, fmt.Errorf("missing id or message part")
+	}
+	id, err := strconv.ParseInt(parts[0], 10, 64)
+	if err != nil {
+		return BusinessMessage{}, err
+	}
+	return BusinessMessage{id, parts[1]}, nil
 }
 
 // ParseResponse tries to detect the response format (KV or XML) and returns the parsed response.

@@ -16,7 +16,7 @@ import (
 //
 // DO NOT USE IN PRODUCTION!
 func NewMockTLSConfig() (*tls.Config, error) {
-	privKey, err := rsa.GenerateKey(rand.Reader, 4096)
+	privKey, err := rsa.GenerateKey(rand.Reader, 1024)
 	if err != nil {
 		return nil, fmt.Errorf("failed to generate RSA key: %s", err)
 	}
@@ -72,24 +72,24 @@ func (server *MockServer) Run() error {
 	server.server.Handler = func(session *Session, query *Query) (*Response, error) {
 		switch query.Action() {
 		case ActionLogin:
-			user := query.FirstField(FieldNameUser)
-			pass := query.FirstField(FieldNamePassword)
+			user := query.FirstField(QueryFieldNameUser)
+			pass := query.FirstField(QueryFieldNamePassword)
 			if userPass, ok := server.users[user]; ok && pass == userPass {
 				session.Set("user", user)
-				return &Response{result: ResultSuccess}, nil
+				return NewResponse(ResultSuccess, nil), nil
 			}
-			return &Response{result: ResultFailure, errorMsg: "83000000010 Please login first"}, nil
+			return NewResponseWithError(ResultFailure, nil, NewBusinessMessage(83000000010, "Please login first")), nil
 
 		case ActionLogout:
 			return nil, ErrCloseConnection
 
 		default:
 			if server.Handler == nil {
-				return &Response{result: ResultSuccess}, nil
+				return NewResponse(ResultSuccess, nil), nil
 			}
 			user, ok := session.GetString("user")
 			if !ok {
-				return &Response{result: ResultFailure, errorMsg: "83000000010 Please login first"}, nil
+				return NewResponseWithError(ResultFailure, nil, NewBusinessMessage(83000000010, "Please login first")), nil
 			}
 			return server.Handler(user, session, query)
 		}

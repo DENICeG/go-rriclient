@@ -14,36 +14,36 @@ const (
 	// LatestVersion denotes the latest RRI version supported by the client.
 	LatestVersion Version = "3.0"
 
-	// FieldNameVersion denotes the query field name for version.
-	FieldNameVersion QueryFieldName = "version"
-	// FieldNameAction denotes the query field name for action.
-	FieldNameAction QueryFieldName = "action"
-	// FieldNameUser denotes the query field name for login user.
-	FieldNameUser QueryFieldName = "user"
-	// FieldNamePassword denotes the query field name for login password.
-	FieldNamePassword QueryFieldName = "password"
-	// FieldNameDomainIDN denotes the query field name for IDN domain name.
-	FieldNameDomainIDN QueryFieldName = "domain"
-	// FieldNameDomainACE denotes the query field name for ACE domain name.
-	FieldNameDomainACE QueryFieldName = "domain-ace"
-	// FieldNameHolder denotes the query field name for holder handle.
-	FieldNameHolder QueryFieldName = "holder"
-	// FieldNameGeneralRequest denotes the query field name for general request handle.
-	FieldNameGeneralRequest QueryFieldName = "generalrequest"
-	// FieldNameAbuseContact denotes the query field name for abuse contact handle.
-	FieldNameAbuseContact QueryFieldName = "abusecontact"
-	// FieldNameNameServer denotes the query field name for name servers.
-	FieldNameNameServer QueryFieldName = "nserver"
-	// FieldNameHandle denotes the query field name for denic handles.
-	FieldNameHandle QueryFieldName = "handle"
-	// FieldNameDisconnect denotes the query field name for disconnect.
-	FieldNameDisconnect QueryFieldName = "disconnect"
-	// FieldNameAuthInfoHash denotes the query field name for auth info hash.
-	FieldNameAuthInfoHash QueryFieldName = "authinfohash"
-	// FieldNameAuthInfoExpire denotes the query field name for auth info expire.
-	FieldNameAuthInfoExpire QueryFieldName = "authinfoexpire"
-	// FieldNameAuthInfo denotes the query field name for auth info hash.
-	FieldNameAuthInfo QueryFieldName = "authinfo"
+	// QueryFieldNameVersion denotes the query field name for version.
+	QueryFieldNameVersion QueryFieldName = "version"
+	// QueryFieldNameAction denotes the query field name for action.
+	QueryFieldNameAction QueryFieldName = "action"
+	// QueryFieldNameUser denotes the query field name for login user.
+	QueryFieldNameUser QueryFieldName = "user"
+	// QueryFieldNamePassword denotes the query field name for login password.
+	QueryFieldNamePassword QueryFieldName = "password"
+	// QueryFieldNameDomainIDN denotes the query field name for IDN domain name.
+	QueryFieldNameDomainIDN QueryFieldName = "domain"
+	// QueryFieldNameDomainACE denotes the query field name for ACE domain name.
+	QueryFieldNameDomainACE QueryFieldName = "domain-ace"
+	// QueryFieldNameHolder denotes the query field name for holder handle.
+	QueryFieldNameHolder QueryFieldName = "holder"
+	// QueryFieldNameGeneralRequest denotes the query field name for general request handle.
+	QueryFieldNameGeneralRequest QueryFieldName = "generalrequest"
+	// QueryFieldNameAbuseContact denotes the query field name for abuse contact handle.
+	QueryFieldNameAbuseContact QueryFieldName = "abusecontact"
+	// QueryFieldNameNameServer denotes the query field name for name servers.
+	QueryFieldNameNameServer QueryFieldName = "nserver"
+	// QueryFieldNameHandle denotes the query field name for denic handles.
+	QueryFieldNameHandle QueryFieldName = "handle"
+	// QueryFieldNameDisconnect denotes the query field name for disconnect.
+	QueryFieldNameDisconnect QueryFieldName = "disconnect"
+	// QueryFieldNameAuthInfoHash denotes the query field name for auth info hash.
+	QueryFieldNameAuthInfoHash QueryFieldName = "authinfohash"
+	// QueryFieldNameAuthInfoExpire denotes the query field name for auth info expire.
+	QueryFieldNameAuthInfoExpire QueryFieldName = "authinfoexpire"
+	// QueryFieldNameAuthInfo denotes the query field name for auth info hash.
+	QueryFieldNameAuthInfo QueryFieldName = "authinfo"
 
 	// ActionLogin denotes the action value for login.
 	ActionLogin QueryAction = "LOGIN"
@@ -97,19 +97,17 @@ func (q QueryFieldName) Normalize() QueryFieldName {
 
 // Query represents a RRI request.
 type Query struct {
-	version Version
-	action  QueryAction
-	fields  QueryFieldList
+	fields QueryFieldList
 }
 
 // Version returns the query version.
 func (q *Query) Version() Version {
-	return q.version
+	return Version(q.FirstField(QueryFieldNameVersion)).Normalize()
 }
 
 // Action returns the query action.
 func (q *Query) Action() QueryAction {
-	return q.action
+	return QueryAction(q.FirstField(QueryFieldNameAction)).Normalize()
 }
 
 // String returns a human readable representation of the query.
@@ -124,21 +122,16 @@ func (q *Query) String() string {
 		sb.WriteString("=")
 		sb.WriteString(f.Value)
 	}
-	return fmt.Sprintf("%sv%s{%s}", q.action, q.version, sb.String())
+	return fmt.Sprintf("%sv%s{%s}", q.Action(), q.Version(), sb.String())
 }
 
 // EncodeKV returns the Key-Value representation as used for RRI communication.
 func (q *Query) EncodeKV() string {
 	var sb strings.Builder
-	sb.WriteString(string(FieldNameVersion))
-	sb.WriteString(": ")
-	sb.WriteString(string(q.version))
-	sb.WriteString("\n")
-	sb.WriteString(string(FieldNameAction))
-	sb.WriteString(": ")
-	sb.WriteString(string(q.action))
 	for _, f := range q.fields {
-		sb.WriteString("\n")
+		if sb.Len() > 0 {
+			sb.WriteString("\n")
+		}
 		sb.WriteString(string(f.Name))
 		sb.WriteString(": ")
 		sb.WriteString(f.Value)
@@ -164,6 +157,8 @@ func (q *Query) FirstField(fieldName QueryFieldName) string {
 // NewQuery returns a query with the given parameters.
 func NewQuery(version Version, action QueryAction, fields map[QueryFieldName][]string) *Query {
 	newFields := newQueryFieldList()
+	newFields.Add(QueryFieldNameVersion, string(version.Normalize()))
+	newFields.Add(QueryFieldNameAction, string(action.Normalize()))
 	if fields != nil {
 		for key, values := range fields {
 			for _, value := range values {
@@ -171,14 +166,14 @@ func NewQuery(version Version, action QueryAction, fields map[QueryFieldName][]s
 			}
 		}
 	}
-	return &Query{version, action, newFields}
+	return &Query{newFields}
 }
 
 // NewLoginQuery returns a login query for the given credentials.
 func NewLoginQuery(username, password string) *Query {
 	fields := make(map[QueryFieldName][]string)
-	fields[FieldNameUser] = []string{username}
-	fields[FieldNamePassword] = []string{password}
+	fields[QueryFieldNameUser] = []string{username}
+	fields[QueryFieldNamePassword] = []string{password}
 	return NewQuery(LatestVersion, ActionLogin, fields)
 }
 
@@ -190,37 +185,37 @@ func NewLogoutQuery() *Query {
 // NewCheckHandleQuery returns a check query.
 func NewCheckHandleQuery(handle string) *Query {
 	fields := make(map[QueryFieldName][]string)
-	fields[FieldNameHandle] = []string{handle}
+	fields[QueryFieldNameHandle] = []string{handle}
 	return NewQuery(LatestVersion, ActionCheck, fields)
 }
 
 // NewInfoHandleQuery returns a check query.
 func NewInfoHandleQuery(handle string) *Query {
 	fields := make(map[QueryFieldName][]string)
-	fields[FieldNameHandle] = []string{handle}
+	fields[QueryFieldNameHandle] = []string{handle}
 	return NewQuery(LatestVersion, ActionCheck, fields)
 }
 
 // NewCreateDomainQuery returns a query to create a domain.
 func NewCreateDomainQuery(idnDomain string, holderHandles, generalRequestHandles, abuseContactHandles []string, nameServers ...string) *Query {
 	fields := make(map[QueryFieldName][]string)
-	fields[FieldNameDomainIDN] = []string{idnDomain}
+	fields[QueryFieldNameDomainIDN] = []string{idnDomain}
 	if ace, err := idna.ToASCII(idnDomain); err == nil {
-		fields[FieldNameDomainACE] = []string{ace}
+		fields[QueryFieldNameDomainACE] = []string{ace}
 	}
-	fields[FieldNameHolder] = holderHandles
-	fields[FieldNameGeneralRequest] = generalRequestHandles
-	fields[FieldNameAbuseContact] = abuseContactHandles
-	fields[FieldNameNameServer] = nameServers
+	fields[QueryFieldNameHolder] = holderHandles
+	fields[QueryFieldNameGeneralRequest] = generalRequestHandles
+	fields[QueryFieldNameAbuseContact] = abuseContactHandles
+	fields[QueryFieldNameNameServer] = nameServers
 	return NewQuery(LatestVersion, ActionCreate, fields)
 }
 
 // NewCheckDomainQuery returns a check query.
 func NewCheckDomainQuery(idnDomain string) *Query {
 	fields := make(map[QueryFieldName][]string)
-	fields[FieldNameDomainIDN] = []string{idnDomain}
+	fields[QueryFieldNameDomainIDN] = []string{idnDomain}
 	if ace, err := idna.ToASCII(idnDomain); err == nil {
-		fields[FieldNameDomainACE] = []string{ace}
+		fields[QueryFieldNameDomainACE] = []string{ace}
 	}
 	return NewQuery(LatestVersion, ActionCheck, fields)
 }
@@ -228,9 +223,9 @@ func NewCheckDomainQuery(idnDomain string) *Query {
 // NewInfoDomainQuery returns an info query.
 func NewInfoDomainQuery(idnDomain string) *Query {
 	fields := make(map[QueryFieldName][]string)
-	fields[FieldNameDomainIDN] = []string{idnDomain}
+	fields[QueryFieldNameDomainIDN] = []string{idnDomain}
 	if ace, err := idna.ToASCII(idnDomain); err == nil {
-		fields[FieldNameDomainACE] = []string{ace}
+		fields[QueryFieldNameDomainACE] = []string{ace}
 	}
 	return NewQuery(LatestVersion, ActionInfo, fields)
 }
@@ -238,23 +233,23 @@ func NewInfoDomainQuery(idnDomain string) *Query {
 // NewUpdateDomainQuery returns a query to update a domain.
 func NewUpdateDomainQuery(idnDomain string, holderHandles, generalRequestHandles, abuseContactHandles []string, nameServers ...string) *Query {
 	fields := make(map[QueryFieldName][]string)
-	fields[FieldNameDomainIDN] = []string{idnDomain}
+	fields[QueryFieldNameDomainIDN] = []string{idnDomain}
 	if ace, err := idna.ToASCII(idnDomain); err == nil {
-		fields[FieldNameDomainACE] = []string{ace}
+		fields[QueryFieldNameDomainACE] = []string{ace}
 	}
-	fields[FieldNameHolder] = holderHandles
-	fields[FieldNameGeneralRequest] = generalRequestHandles
-	fields[FieldNameAbuseContact] = abuseContactHandles
-	fields[FieldNameNameServer] = nameServers
+	fields[QueryFieldNameHolder] = holderHandles
+	fields[QueryFieldNameGeneralRequest] = generalRequestHandles
+	fields[QueryFieldNameAbuseContact] = abuseContactHandles
+	fields[QueryFieldNameNameServer] = nameServers
 	return NewQuery(LatestVersion, ActionUpdate, fields)
 }
 
 // NewDeleteDomainQuery returns a delete query.
 func NewDeleteDomainQuery(idnDomain string) *Query {
 	fields := make(map[QueryFieldName][]string)
-	fields[FieldNameDomainIDN] = []string{idnDomain}
+	fields[QueryFieldNameDomainIDN] = []string{idnDomain}
 	if ace, err := idna.ToASCII(idnDomain); err == nil {
-		fields[FieldNameDomainACE] = []string{ace}
+		fields[QueryFieldNameDomainACE] = []string{ace}
 	}
 	return NewQuery(LatestVersion, ActionDelete, fields)
 }
@@ -262,9 +257,9 @@ func NewDeleteDomainQuery(idnDomain string) *Query {
 // NewRestoreDomainQuery returns a restore query.
 func NewRestoreDomainQuery(idnDomain string) *Query {
 	fields := make(map[QueryFieldName][]string)
-	fields[FieldNameDomainIDN] = []string{idnDomain}
+	fields[QueryFieldNameDomainIDN] = []string{idnDomain}
 	if ace, err := idna.ToASCII(idnDomain); err == nil {
-		fields[FieldNameDomainACE] = []string{ace}
+		fields[QueryFieldNameDomainACE] = []string{ace}
 	}
 	return NewQuery(LatestVersion, ActionRestore, fields)
 }
@@ -272,14 +267,14 @@ func NewRestoreDomainQuery(idnDomain string) *Query {
 // NewTransitDomainQuery returns a restore query.
 func NewTransitDomainQuery(idnDomain string, disconnect bool) *Query {
 	fields := make(map[QueryFieldName][]string)
-	fields[FieldNameDomainIDN] = []string{idnDomain}
+	fields[QueryFieldNameDomainIDN] = []string{idnDomain}
 	if ace, err := idna.ToASCII(idnDomain); err == nil {
-		fields[FieldNameDomainACE] = []string{ace}
+		fields[QueryFieldNameDomainACE] = []string{ace}
 	}
 	if disconnect {
-		fields[FieldNameDisconnect] = []string{"true"}
+		fields[QueryFieldNameDisconnect] = []string{"true"}
 	} else {
-		fields[FieldNameDisconnect] = []string{"false"}
+		fields[QueryFieldNameDisconnect] = []string{"false"}
 	}
 	return NewQuery(LatestVersion, ActionTransit, fields)
 }
@@ -287,12 +282,12 @@ func NewTransitDomainQuery(idnDomain string, disconnect bool) *Query {
 // NewCreateAuthInfo1Query returns a create AuthInfo1 query.
 func NewCreateAuthInfo1Query(idnDomain, authInfo string, expireDay time.Time) *Query {
 	fields := make(map[QueryFieldName][]string)
-	fields[FieldNameDomainIDN] = []string{idnDomain}
+	fields[QueryFieldNameDomainIDN] = []string{idnDomain}
 	if ace, err := idna.ToASCII(idnDomain); err == nil {
-		fields[FieldNameDomainACE] = []string{ace}
+		fields[QueryFieldNameDomainACE] = []string{ace}
 	}
-	fields[FieldNameAuthInfoHash] = []string{computeHashSHA256(authInfo)}
-	fields[FieldNameAuthInfoExpire] = []string{expireDay.Format("20060102")}
+	fields[QueryFieldNameAuthInfoHash] = []string{computeHashSHA256(authInfo)}
+	fields[QueryFieldNameAuthInfoExpire] = []string{expireDay.Format("20060102")}
 	return NewQuery(LatestVersion, ActionCreateAuthInfo1, fields)
 }
 
@@ -306,9 +301,9 @@ func computeHashSHA256(str string) string {
 // NewCreateAuthInfo2Query returns a create AuthInfo2 query.
 func NewCreateAuthInfo2Query(idnDomain string) *Query {
 	fields := make(map[QueryFieldName][]string)
-	fields[FieldNameDomainIDN] = []string{idnDomain}
+	fields[QueryFieldNameDomainIDN] = []string{idnDomain}
 	if ace, err := idna.ToASCII(idnDomain); err == nil {
-		fields[FieldNameDomainACE] = []string{ace}
+		fields[QueryFieldNameDomainACE] = []string{ace}
 	}
 	return NewQuery(LatestVersion, ActionCreateAuthInfo2, fields)
 }
@@ -316,15 +311,15 @@ func NewCreateAuthInfo2Query(idnDomain string) *Query {
 // NewChangeProviderQuery returns a query to create a domain.
 func NewChangeProviderQuery(idnDomain, authInfo string, holderHandles, generalRequestHandles, abuseContactHandles []string, nameServers ...string) *Query {
 	fields := make(map[QueryFieldName][]string)
-	fields[FieldNameDomainIDN] = []string{idnDomain}
+	fields[QueryFieldNameDomainIDN] = []string{idnDomain}
 	if ace, err := idna.ToASCII(idnDomain); err == nil {
-		fields[FieldNameDomainACE] = []string{ace}
+		fields[QueryFieldNameDomainACE] = []string{ace}
 	}
-	fields[FieldNameHolder] = holderHandles
-	fields[FieldNameGeneralRequest] = generalRequestHandles
-	fields[FieldNameAbuseContact] = abuseContactHandles
-	fields[FieldNameNameServer] = nameServers
-	fields[FieldNameAuthInfo] = []string{authInfo}
+	fields[QueryFieldNameHolder] = holderHandles
+	fields[QueryFieldNameGeneralRequest] = generalRequestHandles
+	fields[QueryFieldNameAbuseContact] = abuseContactHandles
+	fields[QueryFieldNameNameServer] = nameServers
+	fields[QueryFieldNameAuthInfo] = []string{authInfo}
 	return NewQuery(LatestVersion, ActionChangeProvider, fields)
 }
 
@@ -350,25 +345,23 @@ func ParseQueryKV(str string) (*Query, error) {
 		fields.Add(QueryFieldName(key), value)
 	}
 
-	versionValues := fields.Values(FieldNameVersion)
+	versionValues := fields.Values(QueryFieldNameVersion)
 	if len(versionValues) == 0 {
-		return nil, fmt.Errorf("%s key is missing", FieldNameVersion)
+		return nil, fmt.Errorf("%s key is missing", QueryFieldNameVersion)
 	}
 	if len(versionValues) > 1 {
-		return nil, fmt.Errorf("multiple %s values", FieldNameVersion)
+		return nil, fmt.Errorf("multiple %s values", QueryFieldNameVersion)
 	}
-	fields.RemoveAll(FieldNameVersion)
 
-	actionValues := fields.Values(FieldNameAction)
+	actionValues := fields.Values(QueryFieldNameAction)
 	if len(actionValues) == 0 {
-		return nil, fmt.Errorf("%s key is missing", FieldNameAction)
+		return nil, fmt.Errorf("%s key is missing", QueryFieldNameAction)
 	}
 	if len(actionValues) > 1 {
-		return nil, fmt.Errorf("multiple %s values", FieldNameAction)
+		return nil, fmt.Errorf("multiple %s values", QueryFieldNameAction)
 	}
-	fields.RemoveAll(FieldNameAction)
 
-	return &Query{Version(versionValues[0]).Normalize(), QueryAction(actionValues[0]).Normalize(), fields}, nil
+	return &Query{fields}, nil
 }
 
 // ParseQuery tries to detect the query format (KV or XML) and returns the parsed query.

@@ -10,7 +10,7 @@ The RRI client can be used to connect to a RRI server, send queries and interpre
 package main
 
 import (
-    "fmt"
+    "log"
 
     "github.com/DENICeG/go-rriclient/pkg/rri"
 )
@@ -29,7 +29,7 @@ func main() {
         log.Fatalln("failed to log in:", err.Error())
     }
     // now you can use the client for any other queries
-    fmt.Println(client.SendQuery(rri.NewInfoDomainQuery("denic.de")))
+    log.Println(client.SendQuery(rri.NewInfoDomainQuery("denic.de")))
 }
 ```
 
@@ -43,7 +43,7 @@ You can also instantiate a RRI server to receive queries and pass them to a cust
 package main
 
 import (
-    "fmt"
+    "log"
 
     "github.com/DENICeG/go-rriclient/pkg/rri"
 )
@@ -62,11 +62,11 @@ func main() {
     rriServer.Handler = func(s *Session, q *Query) (*Response, error) {
         // this method is called for every valid query.
         // malformed queries are ignored by the server
-        fmt.Println("received query:", q)
+        log.Println("received query:", q)
         // return the response object that is sent to the client.
         // returning an error here will instantly close the connection
         // without sending a response the client
-        return &Response{result: ResultSuccess}, nil
+        return rri.NewResponse(ResultSuccess, nil), nil
     }
     // now run the listener loop to handle incoming connections and queries
     if err := rriServer.Run(); err != nil {

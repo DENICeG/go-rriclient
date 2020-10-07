@@ -259,6 +259,7 @@ func cmdHelp(args []string) error {
 		//TODO create-authinfo2
 		//TODO delete-authinfo1
 		{[]string{"chprov"}, []string{"domain", "secret"}, "send a CHPROV command for a specific domain"},
+		//TODO verify
 		// -
 		//TODO queue-read
 		//TODO queue-delete
@@ -777,7 +778,23 @@ func cmdFile(args []string) error {
 	}
 
 	skipAuthQueries := cleRRIClient.IsLoggedIn()
-	if skipAuthQueries {
+
+	// find queries to execute first
+	executedQueryCount := 0
+	hasLoginLogoutQueries := false
+	for _, query := range queries {
+		if query.Action() == rri.ActionLogin || query.Action() == rri.ActionLogout {
+			hasLoginLogoutQueries = true
+			if !skipAuthQueries {
+				executedQueryCount++
+			}
+		} else {
+			executedQueryCount++
+		}
+	}
+
+	if skipAuthQueries && hasLoginLogoutQueries {
+		//TODO colored orange
 		console.Println("Currently logged in. Auth queries will be skipped")
 	}
 
@@ -790,8 +807,7 @@ func cmdFile(args []string) error {
 			}
 		}
 
-		//TODO better visibility during dry mode
-
+		//TODO colored in send color
 		console.Println("Exec query", query)
 		success, err := processQuery(query)
 		if err != nil {
@@ -829,11 +845,10 @@ func cmdVerbose(args []string) error {
 }
 
 func rawQueryPrinter(msg string, isOutgoing bool) {
-	//TODO censor password
 	if isOutgoing {
-		console.Printlnf("%s %s%q%s", signSend, colorSendRaw, msg, colorEnd)
+		console.Printlnf("%s %s%q%s", signSend, colorSendRaw, rri.CensorRawMessage(msg), colorEnd)
 	} else {
-		console.Printlnf("%s %s%q%s", signReceive, colorReceiveRaw, msg, colorEnd)
+		console.Printlnf("%s %s%q%s", signReceive, colorReceiveRaw, rri.CensorRawMessage(msg), colorEnd)
 	}
 }
 
@@ -867,33 +882,26 @@ func processQuery(query *rri.Query) (bool, error) {
 		return true, nil
 	}
 
+	var colorStr string
 	if response.IsSuccessful() {
-		console.Print(colorSuccessResponse)
-		console.Printlnf("  %s: %s", rri.FieldNameResult, response.Result())
-		for _, field := range response.Fields() {
+		colorStr = colorSuccessResponse
+	} else {
+		colorStr = colorErrorResponseMessage
+	}
+
+	console.Print(colorStr)
+	for _, field := range response.Fields() {
+		console.Printlnf("  %s: %s", field.Name, field.Value)
+	}
+	for _, entityName := range response.EntityNames() {
+		console.Println()
+		console.Printlnf("[%s]", entityName)
+		entity := response.Entity(entityName)
+		for _, field := range entity {
 			console.Printlnf("  %s: %s", field.Name, field.Value)
 		}
-		if len(response.InfoMsg()) > 0 {
-			console.Printlnf("  %s: %s", rri.FieldNameInfoMsg, response.InfoMsg())
-		}
-		if len(response.ErrorMsg()) > 0 {
-			console.Printlnf("  %s: %s", rri.FieldNameErrorMsg, response.ErrorMsg())
-		}
-		if len(response.STID()) > 0 {
-			console.Printlnf("  %s: %s", rri.FieldNameSTID, response.STID())
-		}
-		for _, entityName := range response.EntityNames() {
-			console.Println()
-			console.Printlnf("[%s]", entityName)
-			entity := response.Entity(entityName)
-			for _, field := range entity {
-				console.Printlnf("  %s: %s", field.Name, field.Value)
-			}
-		}
-		console.Print(colorEnd)
-	} else {
-		console.Printlnf("%sFailed: %s%s", colorErrorResponseMessage, response.ErrorMsg(), colorEnd)
 	}
+	console.Print(colorEnd)
 
 	if returnErrorOnFail && !response.IsSuccessful() {
 		return false, fmt.Errorf("RRI returned result 'failed'")

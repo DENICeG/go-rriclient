@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func TestServer(t *testing.T) {
@@ -26,7 +27,7 @@ func TestServer(t *testing.T) {
 	server.Handler = func(s *Session, q *Query) (*Response, error) {
 		queryCount++
 		lastQuery = q
-		return &Response{result: ResultSuccess}, nil
+		return NewResponse(ResultSuccess, nil), nil
 	}
 
 	go func() {
@@ -41,26 +42,22 @@ func TestServer(t *testing.T) {
 	}
 
 	client.connection, err = tls.Dial("tcp", client.address, client.tlsConfig)
-	if assert.NoError(t, err) {
-		client.connection.Write(prepareMessage("version: 3.0\naction: LOGIN\nuser: user\npassword: secret"))
+	require.NoError(t, err)
+	client.connection.Write(prepareMessage("version: 3.0\naction: LOGIN\nuser: user\npassword: secret"))
 
-		// let some time pass for the query to be processed
-		time.Sleep(50 * time.Millisecond)
+	// let some time pass for the query to be processed
+	time.Sleep(50 * time.Millisecond)
 
-		if assert.Equal(t, 1, queryCount, "expected to receive exactly one query") {
-			assert.Equal(t, ActionLogin, lastQuery.Action())
-			assert.Equal(t, "user", lastQuery.FirstField(FieldNameUser))
-			assert.Equal(t, "secret", lastQuery.FirstField(FieldNamePassword))
+	require.Equal(t, 1, queryCount, "expected to receive exactly one query")
+	assert.Equal(t, ActionLogin, lastQuery.Action())
+	assert.Equal(t, "user", lastQuery.FirstField(QueryFieldNameUser))
+	assert.Equal(t, "secret", lastQuery.FirstField(QueryFieldNamePassword))
 
-			msg, err := readMessage(client.connection)
-			if assert.NoError(t, err) {
-				response, err := ParseResponse(msg)
-				if assert.NoError(t, err) {
-					assert.Equal(t, ResultSuccess, response.Result())
-				}
-			}
-		}
-	}
+	msg, err := readMessage(client.connection)
+	require.NoError(t, err)
+	response, err := ParseResponse(msg)
+	require.NoError(t, err)
+	assert.Equal(t, ResultSuccess, response.Result())
 }
 
 func TestServerSession(t *testing.T) {
@@ -83,7 +80,7 @@ func TestServerSession(t *testing.T) {
 			loginQueryCount++
 			_, ok := s.GetString("user")
 			assert.False(t, ok)
-			s.Set("user", q.FirstField(FieldNameUser))
+			s.Set("user", q.FirstField(QueryFieldNameUser))
 
 		} else {
 			logoutQueryCount++
@@ -92,7 +89,7 @@ func TestServerSession(t *testing.T) {
 			assert.Equal(t, expectedUser, user)
 		}
 
-		return &Response{result: ResultSuccess}, nil
+		return NewResponse(ResultSuccess, nil), nil
 	}
 
 	go func() {
@@ -101,14 +98,11 @@ func TestServerSession(t *testing.T) {
 	defer server.Close()
 
 	client, err := NewClient(fmt.Sprintf("localhost:%d", port), &ClientConfig{Insecure: true})
-	if assert.NoError(t, err) {
-		if assert.NoError(t, client.Login(expectedUser, "secret")) {
-			if assert.NoError(t, client.Logout()) {
-				assert.Equal(t, 1, loginQueryCount)
-				assert.Equal(t, 1, logoutQueryCount)
-			}
-		}
-	}
+	require.NoError(t, err)
+	require.NoError(t, client.Login(expectedUser, "secret"))
+	require.NoError(t, client.Logout())
+	assert.Equal(t, 1, loginQueryCount)
+	assert.Equal(t, 1, logoutQueryCount)
 }
 
 func TestServerConcurrentConnections(t *testing.T) {
@@ -127,11 +121,11 @@ func TestServerConcurrentConnections(t *testing.T) {
 
 	server.Handler = func(s *Session, q *Query) (*Response, error) {
 		if q.Action() == ActionLogin {
-			num, _ := loggedIn[q.FirstField(FieldNameUser)]
-			loggedIn[q.FirstField(FieldNameUser)] = num + 1
+			num, _ := loggedIn[q.FirstField(QueryFieldNameUser)]
+			loggedIn[q.FirstField(QueryFieldNameUser)] = num + 1
 			_, ok := s.GetString("user")
 			assert.False(t, ok)
-			s.Set("user", q.FirstField(FieldNameUser))
+			s.Set("user", q.FirstField(QueryFieldNameUser))
 
 		} else {
 			user, ok := s.GetString("user")
@@ -140,7 +134,7 @@ func TestServerConcurrentConnections(t *testing.T) {
 			loggedOut[user] = num + 1
 		}
 
-		return &Response{result: ResultSuccess}, nil
+		return NewResponse(ResultSuccess, nil), nil
 	}
 
 	go func() {
@@ -158,28 +152,20 @@ func TestServerConcurrentConnections(t *testing.T) {
 		panic(err)
 	}
 
-	if assert.NoError(t, client1.Login("user1", "secret")) {
-		defer client1.Close()
-		if assert.NoError(t, client2.Login("user2", "secret")) {
-			defer client2.Close()
-			if assert.NoError(t, client1.Logout()) {
-				if assert.NoError(t, client2.Logout()) {
-					if assert.Len(t, loggedIn, 2) {
-						if assert.Len(t, loggedOut, 2) {
-							assert.Contains(t, loggedIn, "user1")
-							assert.Contains(t, loggedIn, "user2")
-							assert.Contains(t, loggedOut, "user1")
-							assert.Contains(t, loggedOut, "user2")
-							if !t.Failed() {
-								assert.Equal(t, 1, loggedIn["user1"])
-								assert.Equal(t, 1, loggedIn["user2"])
-								assert.Equal(t, 1, loggedOut["user1"])
-								assert.Equal(t, 1, loggedOut["user2"])
-							}
-						}
-					}
-				}
-			}
-		}
-	}
+	require.NoError(t, client1.Login("user1", "secret"))
+	defer client1.Close()
+	require.NoError(t, client2.Login("user2", "secret"))
+	defer client2.Close()
+	require.NoError(t, client1.Logout())
+	require.NoError(t, client2.Logout())
+	require.Len(t, loggedIn, 2)
+	require.Len(t, loggedOut, 2)
+	require.Contains(t, loggedIn, "user1")
+	require.Contains(t, loggedIn, "user2")
+	require.Contains(t, loggedOut, "user1")
+	require.Contains(t, loggedOut, "user2")
+	assert.Equal(t, 1, loggedIn["user1"])
+	assert.Equal(t, 1, loggedIn["user2"])
+	assert.Equal(t, 1, loggedOut["user1"])
+	assert.Equal(t, 1, loggedOut["user2"])
 }

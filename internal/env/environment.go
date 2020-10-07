@@ -42,6 +42,11 @@ type Reader struct {
 	GetEnvFileTitle GetEnvFileTitleHandler
 }
 
+// Dir returns the configuration directory.
+func (e *Reader) Dir() string {
+	return e.dir
+}
+
 // NewReader returns a new environment reader using the given key source and enter environment handler.
 func NewReader(homeDirName string) (*Reader, error) {
 	dir, err := getConfigDir()

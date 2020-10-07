@@ -1,9 +1,11 @@
 package main
 
 import (
+	"encoding/json"
 	"fmt"
 	"io/ioutil"
 	"os"
+	"path/filepath"
 	"strings"
 	"time"
 
@@ -38,6 +40,8 @@ var (
 	histHandles  *handleHistory
 
 	returnErrorOnFail = false
+
+	customCommands []customCommand
 )
 
 func disableColors() {
@@ -78,7 +82,7 @@ func printColorsAndSigns() {
 	printSign("SignReceive", signReceive)
 }
 
-func runCLE(client *rri.Client, cmd []string) error {
+func runCLE(confDir string, client *rri.Client, cmd []string) error {
 	cleRRIClient = client
 	histDomains = &domainHistory{make([]string, 0)}
 	histHandles = &handleHistory{make([]string, 0)}
@@ -87,6 +91,11 @@ func runCLE(client *rri.Client, cmd []string) error {
 		disableColors()
 	}
 
+	var err error
+	customCommands, err = readCustomCommands(filepath.Join(confDir, "custom-commands"))
+	if err != nil {
+		return fmt.Errorf("failed to import custom commands: %s", err.Error())
+	}
 	cle := prepareCLE()
 
 	if len(cmd) > 0 {
@@ -99,8 +108,7 @@ func runCLE(client *rri.Client, cmd []string) error {
 	console.Println("  use tab for auto-completion and arrow keys for history")
 
 	// start interactive command line loop
-	err := cle.Run()
-	if err != nil {
+	if err := cle.Run(); err != nil {
 		if commandline.IsErrCtrlC(err) {
 			console.Println()
 			return nil
@@ -108,6 +116,59 @@ func runCLE(client *rri.Client, cmd []string) error {
 		return err
 	}
 	return nil
+}
+
+type customCommand struct {
+	DisabledFor []string           `json:"disable-for-env"`
+	Name        string             `json:"name"`
+	Cmd         string             `json:"cmd"`
+	Description string             `json:"description"`
+	Action      string             `json:"action"`
+	Args        []customCommandArg `json:"args"`
+}
+
+type customCommandArg struct {
+	Name  string `json:"name"`
+	Type  string `json:"type"`
+	Field string `json:"field"`
+	Value string `json:"value"`
+}
+
+func (arg customCommandArg) IsInputParameter() bool {
+	return strings.ToLower(arg.Type) == "domain"
+}
+
+func readCustomCommands(dir string) ([]customCommand, error) {
+	files, err := ioutil.ReadDir(dir)
+	if err != nil {
+		return nil, err
+	}
+	customCommands := make([]customCommand, 0)
+	for _, f := range files {
+		if !f.IsDir() {
+			data, err := ioutil.ReadFile(filepath.Join(dir, f.Name()))
+			if err != nil {
+				return nil, err
+			}
+			var cmd customCommand
+			if err := json.Unmarshal(data, &cmd); err != nil {
+				return nil, fmt.Errorf("could not import %q: %s", f.Name(), err.Error())
+			}
+			if len(cmd.Name) == 0 {
+				cmd.Name = f.Name()
+			}
+			if len(cmd.Cmd) == 0 {
+				cmd.Cmd = f.Name()
+			}
+			for i := range cmd.Args {
+				if strings.ToLower(cmd.Args[i].Type) == "domain" && len(cmd.Args[i].Field) == 0 {
+					cmd.Args[i].Field = "domain"
+				}
+			}
+			customCommands = append(customCommands, cmd)
+		}
+	}
+	return customCommands, nil
 }
 
 func prepareCLE() *commandline.Environment {
@@ -154,6 +215,11 @@ func prepareCLE() *commandline.Environment {
 	registerDomainCommand(cle, "restore", newDomainQueryCommand(rri.NewRestoreDomainQuery))
 	registerDomainCommand(cle, "transit", cmdTransit, commandline.NewOneOfArgCompletion("disconnect", "connect"))
 	registerDomainCommand(cle, "chprov", cmdChProv)
+
+	// register custom commands
+	for _, cmd := range customCommands {
+		registerCustomCommand(cle, cmd)
+	}
 
 	cle.RegisterCommand(commandline.NewCustomCommand("raw", nil, cmdRaw))
 	cle.RegisterCommand(commandline.NewCustomCommand("file", commandline.NewFixedArgCompletion(commandline.NewLocalFileSystemArgCompletion(true)), cmdFile))
@@ -499,6 +565,46 @@ func newSingleArgQueryCommand(missingMsg string, hist history, f func(arg string
 		}
 		return err
 	}
+}
+
+func registerCustomCommand(cle *commandline.Environment, cmd customCommand) {
+	clArgs := make([]commandline.ArgCompletion, 0)
+	for _, arg := range cmd.Args {
+		switch strings.ToLower(arg.Type) {
+		case "domain":
+			clArgs = append(clArgs, histDomains)
+		}
+	}
+	cle.RegisterCommand(commandline.NewCustomCommand(cmd.Cmd, commandline.NewFixedArgCompletion(clArgs...), func(args []string) error {
+		fields := make(map[rri.QueryFieldName][]string)
+		argIndex := 0
+		for _, arg := range cmd.Args {
+			var inValue string
+			if arg.IsInputParameter() {
+				if len(args) <= argIndex {
+					return fmt.Errorf("missing argument '%s'", arg.Name)
+				}
+				inValue = args[argIndex]
+				argIndex++
+			}
+
+			values, ok := fields[rri.QueryFieldName(arg.Field)]
+			if !ok {
+				values = []string{}
+			}
+
+			switch strings.ToLower(arg.Type) {
+			case "domain":
+				fields[rri.QueryFieldName(arg.Field)] = append(values, inValue)
+			case "const":
+				fields[rri.QueryFieldName(arg.Field)] = append(values, arg.Value)
+			}
+		}
+		//TODO fill history
+		query := rri.NewQuery(rri.LatestVersion, rri.QueryAction(cmd.Action), fields)
+		_, err := processQuery(query)
+		return err
+	}))
 }
 
 func cmdLogin(args []string) error {

@@ -135,7 +135,7 @@ func main() {
 
 		} else {
 			returnErrorOnFail = *argFail
-			return runCLE(client, *argCmd)
+			return runCLE(envReader.Dir(), client, *argCmd)
 		}
 
 		return nil

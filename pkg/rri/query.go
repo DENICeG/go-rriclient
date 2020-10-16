@@ -44,6 +44,18 @@ const (
 	QueryFieldNameAuthInfoExpire QueryFieldName = "authinfoexpire"
 	// QueryFieldNameAuthInfo denotes the query field name for auth info hash.
 	QueryFieldNameAuthInfo QueryFieldName = "authinfo"
+	// QueryFieldNameAuthSigFirstName denotes the first name of an authorized signatory.
+	QueryFieldNameAuthSigFirstName QueryFieldName = "authorizedsignatoryfirstname"
+	// QueryFieldNameAuthSigLastName denotes the last name of an authorized signatory.
+	QueryFieldNameAuthSigLastName QueryFieldName = "authorizedsignatorylastname"
+	// QueryFieldNameAuthSigEMail denotes the email address of an authorized signatory.
+	QueryFieldNameAuthSigEMail QueryFieldName = "authorizedsignatoryemail"
+	// QueryFieldNameAuthSigDateOfBirth denotes the date of birth of an authorized signatory.
+	QueryFieldNameAuthSigDateOfBirth QueryFieldName = "authorizedsignatorydateofbirth"
+	// QueryFieldNameAuthSigPlaceOfBirth denotes the place of birth of an authorized signatory.
+	QueryFieldNameAuthSigPlaceOfBirth QueryFieldName = "authorizedsignatoryplaceofbirth"
+	// QueryFieldNameAuthSigPhone denotes the phone number of an authorized signatory.
+	QueryFieldNameAuthSigPhone QueryFieldName = "authorizedsignatoryphone"
 
 	// ActionLogin denotes the action value for login.
 	ActionLogin QueryAction = "LOGIN"
@@ -55,6 +67,8 @@ const (
 	ActionInfo QueryAction = "INFO"
 	// ActionCreate denotes the action value for create.
 	ActionCreate QueryAction = "CREATE"
+	// ActionUpdate denotes the action value for update.
+	ActionUpdate QueryAction = "UPDATE"
 	// ActionDelete deontes the action value for delete.
 	ActionDelete QueryAction = "DELETE"
 	// ActionRestore deontes the action value for restore.
@@ -63,12 +77,12 @@ const (
 	ActionTransit QueryAction = "TRANSIT"
 	// ActionCreateAuthInfo1 denotes the action value for create AuthInfo1.
 	ActionCreateAuthInfo1 QueryAction = "CREATE-AUTHINFO1"
-	// ActionUpdate denotes the action value for update.
-	ActionUpdate QueryAction = "UPDATE"
-	// ActionChangeProvider denotes the action value for change provider.
-	ActionChangeProvider QueryAction = "CHPROV"
 	// ActionCreateAuthInfo2 denotes the action value for create AuthInfo2.
 	ActionCreateAuthInfo2 QueryAction = "CREATE-AUTHINFO2"
+	// ActionVerify denotes the action value for verify.
+	ActionVerify QueryAction = "VERIFY"
+	// ActionChangeProvider denotes the action value for change provider.
+	ActionChangeProvider QueryAction = "CHPROV"
 )
 
 // Version represents the RRI protocol version.
@@ -93,6 +107,21 @@ type QueryFieldName string
 // Normalize returns the normalized representation of the given QueryFieldName.
 func (q QueryFieldName) Normalize() QueryFieldName {
 	return QueryFieldName(strings.ToLower(string(q)))
+}
+
+// DomainData holds domain information.
+type DomainData struct {
+	HolderHandles         []string
+	GeneralRequestHandles []string
+	AbuseContactHandles   []string
+	NameServers           []string
+}
+
+func (domainData *DomainData) putToQueryFields(fields map[QueryFieldName][]string) {
+	fields[QueryFieldNameHolder] = domainData.HolderHandles
+	fields[QueryFieldNameGeneralRequest] = domainData.GeneralRequestHandles
+	fields[QueryFieldNameAbuseContact] = domainData.AbuseContactHandles
+	fields[QueryFieldNameNameServer] = domainData.NameServers
 }
 
 // Query represents a RRI request.
@@ -156,6 +185,7 @@ func (q *Query) FirstField(fieldName QueryFieldName) string {
 
 // NewQuery returns a query with the given parameters.
 func NewQuery(version Version, action QueryAction, fields map[QueryFieldName][]string) *Query {
+	//TODO instantiate from QueryFieldList instead of map
 	newFields := newQueryFieldList()
 	newFields.Add(QueryFieldNameVersion, string(version.Normalize()))
 	newFields.Add(QueryFieldNameAction, string(action.Normalize()))
@@ -196,81 +226,69 @@ func NewInfoHandleQuery(handle string) *Query {
 	return NewQuery(LatestVersion, ActionCheck, fields)
 }
 
-// NewCreateDomainQuery returns a query to create a domain.
-func NewCreateDomainQuery(idnDomain string, holderHandles, generalRequestHandles, abuseContactHandles []string, nameServers ...string) *Query {
-	fields := make(map[QueryFieldName][]string)
-	fields[QueryFieldNameDomainIDN] = []string{idnDomain}
-	if ace, err := idna.ToASCII(idnDomain); err == nil {
-		fields[QueryFieldNameDomainACE] = []string{ace}
+func putDomainToQueryFields(fields map[QueryFieldName][]string, domain string) {
+	if strings.HasPrefix(strings.ToLower(domain), "xn--") {
+		fields[QueryFieldNameDomainACE] = []string{domain}
+		if idn, err := idna.ToUnicode(domain); err == nil {
+			fields[QueryFieldNameDomainIDN] = []string{idn}
+		}
+
+	} else {
+		fields[QueryFieldNameDomainIDN] = []string{domain}
+		if ace, err := idna.ToASCII(domain); err == nil {
+			fields[QueryFieldNameDomainACE] = []string{ace}
+		}
 	}
-	fields[QueryFieldNameHolder] = holderHandles
-	fields[QueryFieldNameGeneralRequest] = generalRequestHandles
-	fields[QueryFieldNameAbuseContact] = abuseContactHandles
-	fields[QueryFieldNameNameServer] = nameServers
+}
+
+// NewCreateDomainQuery returns a query to create a domain.
+func NewCreateDomainQuery(domain string, domainData DomainData) *Query {
+	fields := make(map[QueryFieldName][]string)
+	putDomainToQueryFields(fields, domain)
+	domainData.putToQueryFields(fields)
 	return NewQuery(LatestVersion, ActionCreate, fields)
 }
 
 // NewCheckDomainQuery returns a check query.
-func NewCheckDomainQuery(idnDomain string) *Query {
+func NewCheckDomainQuery(domain string) *Query {
 	fields := make(map[QueryFieldName][]string)
-	fields[QueryFieldNameDomainIDN] = []string{idnDomain}
-	if ace, err := idna.ToASCII(idnDomain); err == nil {
-		fields[QueryFieldNameDomainACE] = []string{ace}
-	}
+	putDomainToQueryFields(fields, domain)
 	return NewQuery(LatestVersion, ActionCheck, fields)
 }
 
 // NewInfoDomainQuery returns an info query.
-func NewInfoDomainQuery(idnDomain string) *Query {
+func NewInfoDomainQuery(domain string) *Query {
 	fields := make(map[QueryFieldName][]string)
-	fields[QueryFieldNameDomainIDN] = []string{idnDomain}
-	if ace, err := idna.ToASCII(idnDomain); err == nil {
-		fields[QueryFieldNameDomainACE] = []string{ace}
-	}
+	putDomainToQueryFields(fields, domain)
 	return NewQuery(LatestVersion, ActionInfo, fields)
 }
 
 // NewUpdateDomainQuery returns a query to update a domain.
-func NewUpdateDomainQuery(idnDomain string, holderHandles, generalRequestHandles, abuseContactHandles []string, nameServers ...string) *Query {
+func NewUpdateDomainQuery(domain string, domainData DomainData) *Query {
 	fields := make(map[QueryFieldName][]string)
-	fields[QueryFieldNameDomainIDN] = []string{idnDomain}
-	if ace, err := idna.ToASCII(idnDomain); err == nil {
-		fields[QueryFieldNameDomainACE] = []string{ace}
-	}
-	fields[QueryFieldNameHolder] = holderHandles
-	fields[QueryFieldNameGeneralRequest] = generalRequestHandles
-	fields[QueryFieldNameAbuseContact] = abuseContactHandles
-	fields[QueryFieldNameNameServer] = nameServers
+	putDomainToQueryFields(fields, domain)
+	domainData.putToQueryFields(fields)
 	return NewQuery(LatestVersion, ActionUpdate, fields)
 }
 
 // NewDeleteDomainQuery returns a delete query.
-func NewDeleteDomainQuery(idnDomain string) *Query {
+func NewDeleteDomainQuery(domain string) *Query {
 	fields := make(map[QueryFieldName][]string)
-	fields[QueryFieldNameDomainIDN] = []string{idnDomain}
-	if ace, err := idna.ToASCII(idnDomain); err == nil {
-		fields[QueryFieldNameDomainACE] = []string{ace}
-	}
+	putDomainToQueryFields(fields, domain)
 	return NewQuery(LatestVersion, ActionDelete, fields)
 }
 
 // NewRestoreDomainQuery returns a restore query.
-func NewRestoreDomainQuery(idnDomain string) *Query {
+func NewRestoreDomainQuery(domain string) *Query {
 	fields := make(map[QueryFieldName][]string)
-	fields[QueryFieldNameDomainIDN] = []string{idnDomain}
-	if ace, err := idna.ToASCII(idnDomain); err == nil {
-		fields[QueryFieldNameDomainACE] = []string{ace}
-	}
+	putDomainToQueryFields(fields, domain)
 	return NewQuery(LatestVersion, ActionRestore, fields)
 }
 
 // NewTransitDomainQuery returns a restore query.
-func NewTransitDomainQuery(idnDomain string, disconnect bool) *Query {
+func NewTransitDomainQuery(domain string, disconnect bool) *Query {
 	fields := make(map[QueryFieldName][]string)
-	fields[QueryFieldNameDomainIDN] = []string{idnDomain}
-	if ace, err := idna.ToASCII(idnDomain); err == nil {
-		fields[QueryFieldNameDomainACE] = []string{ace}
-	}
+	putDomainToQueryFields(fields, domain)
 	if disconnect {
 		fields[QueryFieldNameDisconnect] = []string{"true"}
 	} else {
@@ -280,12 +298,9 @@ func NewTransitDomainQuery(idnDomain string, disconnect bool) *Query {
 }
 
 // NewCreateAuthInfo1Query returns a create AuthInfo1 query.
-func NewCreateAuthInfo1Query(idnDomain, authInfo string, expireDay time.Time) *Query {
+func NewCreateAuthInfo1Query(domain, authInfo string, expireDay time.Time) *Query {
 	fields := make(map[QueryFieldName][]string)
-	fields[QueryFieldNameDomainIDN] = []string{idnDomain}
-	if ace, err := idna.ToASCII(idnDomain); err == nil {
-		fields[QueryFieldNameDomainACE] = []string{ace}
-	}
+	putDomainToQueryFields(fields, domain)
 	fields[QueryFieldNameAuthInfoHash] = []string{computeHashSHA256(authInfo)}
 	fields[QueryFieldNameAuthInfoExpire] = []string{expireDay.Format("20060102")}
 	return NewQuery(LatestVersion, ActionCreateAuthInfo1, fields)
@@ -299,26 +314,42 @@ func computeHashSHA256(str string) string {
 }
 
 // NewCreateAuthInfo2Query returns a create AuthInfo2 query.
-func NewCreateAuthInfo2Query(idnDomain string) *Query {
+func NewCreateAuthInfo2Query(domain string) *Query {
 	fields := make(map[QueryFieldName][]string)
-	fields[QueryFieldNameDomainIDN] = []string{idnDomain}
-	if ace, err := idna.ToASCII(idnDomain); err == nil {
-		fields[QueryFieldNameDomainACE] = []string{ace}
-	}
+	putDomainToQueryFields(fields, domain)
 	return NewQuery(LatestVersion, ActionCreateAuthInfo2, fields)
 }
 
-// NewChangeProviderQuery returns a query to create a domain.
-func NewChangeProviderQuery(idnDomain, authInfo string, holderHandles, generalRequestHandles, abuseContactHandles []string, nameServers ...string) *Query {
+// AuthorizedSignatory represents the authorized signatory for a VERIFY query.
+type AuthorizedSignatory struct {
+	FirstName    string
+	LastName     string
+	EMail        string
+	DateOfBirth  time.Time
+	PlaceOfBirth string
+	Phone        string
+}
+
+// NewVerifyDomainQuery returns a query to create a verify domain.
+func NewVerifyDomainQuery(domain string, authSignatory AuthorizedSignatory) *Query {
 	fields := make(map[QueryFieldName][]string)
-	fields[QueryFieldNameDomainIDN] = []string{idnDomain}
-	if ace, err := idna.ToASCII(idnDomain); err == nil {
-		fields[QueryFieldNameDomainACE] = []string{ace}
+	putDomainToQueryFields(fields, domain)
+	fields[QueryFieldNameAuthSigFirstName] = []string{authSignatory.FirstName}
+	fields[QueryFieldNameAuthSigLastName] = []string{authSignatory.LastName}
+	fields[QueryFieldNameAuthSigEMail] = []string{authSignatory.EMail}
+	fields[QueryFieldNameAuthSigDateOfBirth] = []string{authSignatory.DateOfBirth.Format("2006-01-02")}
+	fields[QueryFieldNameAuthSigPlaceOfBirth] = []string{authSignatory.PlaceOfBirth}
+	if len(authSignatory.Phone) > 0 {
+		fields[QueryFieldNameAuthSigPhone] = []string{authSignatory.Phone}
 	}
-	fields[QueryFieldNameHolder] = holderHandles
-	fields[QueryFieldNameGeneralRequest] = generalRequestHandles
-	fields[QueryFieldNameAbuseContact] = abuseContactHandles
-	fields[QueryFieldNameNameServer] = nameServers
+	return NewQuery(LatestVersion, ActionVerify, fields)
+}
+
+// NewChangeProviderQuery returns a query to create a domain.
+func NewChangeProviderQuery(domain, authInfo string, domainData DomainData) *Query {
+	fields := make(map[QueryFieldName][]string)
+	putDomainToQueryFields(fields, domain)
+	domainData.putToQueryFields(fields)
 	fields[QueryFieldNameAuthInfo] = []string{authInfo}
 	return NewQuery(LatestVersion, ActionChangeProvider, fields)
 }

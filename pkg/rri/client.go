@@ -20,7 +20,8 @@ type ErrorPrinter func(err error)
 // Client represents a stateful connection to a specific RRI Server.
 type Client struct {
 	address            string
-	connection         *tls.Conn
+	dialer             TLSDialer
+	connection         TLSConnection
 	tlsConfig          *tls.Config
 	currentUser        string
 	lastUser, lastPass string
@@ -38,32 +39,49 @@ type Client struct {
 
 // ClientConfig can be used to further configure the RRI client.
 type ClientConfig struct {
+	// TLSDialHandler denotes the TLS dialer to use for the instanced RRI Client. Maps tls.Dial by default.
+	TLSDialHandler TLSDialer
 	// Insecure allows to accept self-signed SSL certificates.
 	Insecure bool
 	// MinTLSVersion denotes the minimum accepted TLS version.
 	MinTLSVersion uint16
 }
 
+// TLSDialer is the callback function to open a new TLS connection. Maps tls.Dial by default.
+type TLSDialer func(network, addr string, config *tls.Config) (TLSConnection, error)
+
+// TLSConnection wraps a TLS connection as denoted by *tls.Conn.
+type TLSConnection interface {
+	io.ReadWriteCloser
+}
+
 // NewClient returns a new Client object for the given RRI Server.
-func NewClient(address string, conf ...*ClientConfig) (*Client, error) {
-	if len(conf) > 1 {
-		panic("passing multiple configurations to rri.NewClient is not allowed")
+func NewClient(address string, conf *ClientConfig) (*Client, error) {
+	var actualConf ClientConfig
+	if conf != nil {
+		// create copy of config to operate on
+		actualConf = *conf
 	}
-	if len(conf) == 0 || conf[0] == nil {
-		// instantiate default config
-		conf = []*ClientConfig{&ClientConfig{}}
+	if !strings.ContainsRune(address, ':') {
+		address += ":51131"
 	}
-	if conf[0].MinTLSVersion <= 0 {
-		conf[0].MinTLSVersion = tls.VersionTLS13
+	if conf.TLSDialHandler == nil {
+		// use tls.Dial by default to establish a tls connection
+		conf.TLSDialHandler = func(network, addr string, config *tls.Config) (TLSConnection, error) {
+			return tls.Dial(network, addr, config)
+		}
+	}
+	if actualConf.MinTLSVersion <= 0 {
+		actualConf.MinTLSVersion = tls.VersionTLS13
 	}
 
 	client := &Client{
 		address: address,
+		dialer:  conf.TLSDialHandler,
 		tlsConfig: &tls.Config{
-			MinVersion:         conf[0].MinTLSVersion,
-			InsecureSkipVerify: conf[0].Insecure,
+			MinVersion:         actualConf.MinTLSVersion,
+			InsecureSkipVerify: actualConf.Insecure,
 		},
-		XMLMode: false,
 	}
 
 	if err := client.setupConnection(); err != nil {
@@ -76,7 +94,7 @@ func NewClient(address string, conf ...*ClientConfig) (*Client, error) {
 func (client *Client) setupConnection() error {
 	if client.connection == nil {
 		var err error
-		client.connection, err = tls.Dial("tcp", client.address, client.tlsConfig)
+		client.connection, err = client.dialer("tcp", client.address, client.tlsConfig)
 		client.currentUser = ""
 		return err
 	}

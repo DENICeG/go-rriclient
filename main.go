@@ -14,6 +14,11 @@ import (
 	"gopkg.in/alecthomas/kingpin.v2"
 )
 
+const (
+	// this field is not updated automatically and needs to be set before every release!
+	version = "0.9.9"
+)
+
 var (
 	gitCommit string
 	buildTime string
@@ -28,6 +33,7 @@ var (
 	argFile          = app.Flag("file", "Input file containing RRI requests separated by a '=-=' line").Short('f').String()
 	argEnvironment   = app.Flag("env", "Named environment to use or create").Short('e').String()
 	argDeleteEnv     = app.Flag("delete-env", "Delete an existing environment").String()
+	argListEnv       = app.Flag("list-env", "List all environments").Bool()
 	argFail          = app.Flag("fail", "Exit with code 1 if RRI returns a failed result").Bool()
 	argVerbose       = app.Flag("verbose", "Print all sent and received requests").Short('v').Bool()
 	argInsecure      = app.Flag("insecure", "Disable SSL Certificate checks").Bool()
@@ -50,7 +56,7 @@ func main() {
 	kingpin.MustParse(app.Parse(os.Args[1:]))
 
 	if *argVersion {
-		console.Println("Standalone RRI Client")
+		console.Printlnf("Standalone RRI Client v%s", version)
 		if len(buildTime) == 0 || len(gitCommit) == 0 {
 			console.Println("  no build information available")
 		} else {
@@ -72,6 +78,17 @@ func main() {
 		}
 		envReader.EnterEnvHandler = enterEnvironment
 		envReader.GetEnvFileTitle = getEnvTitle
+
+		if *argListEnv {
+			environments, err := envReader.ListEnvironments()
+			if err != nil {
+				return err
+			}
+			for _, env := range environments {
+				console.Printlnf("- %s", env)
+			}
+			return nil
+		}
 
 		if len(*argDeleteEnv) > 0 {
 			if err := envReader.DeleteEnvironment(*argDeleteEnv); err != nil {

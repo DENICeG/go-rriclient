@@ -16,6 +16,24 @@ const (
 	qryOrder        = "action: LOGIN\ncustom: 1\nversion: 3.0\nuser: DENIC-1000042-TEST\nstuff: foobar\npassword: very-secure\ncustom: 2"
 )
 
+func TestPutDomainToQueryFields(t *testing.T) {
+	fieldsFromIDN := make(map[QueryFieldName][]string)
+	putDomainToQueryFields(fieldsFromIDN, "dönic.de")
+	require.Len(t, fieldsFromIDN, 2)
+	require.Contains(t, fieldsFromIDN, QueryFieldNameDomainIDN)
+	require.Contains(t, fieldsFromIDN, QueryFieldNameDomainACE)
+	assert.Equal(t, []string{"dönic.de"}, fieldsFromIDN[QueryFieldNameDomainIDN])
+	assert.Equal(t, []string{"xn--dnic-5qa.de"}, fieldsFromIDN[QueryFieldNameDomainACE])
+
+	fieldsFromACE := make(map[QueryFieldName][]string)
+	putDomainToQueryFields(fieldsFromACE, "xn--dnic-5qa.de")
+	require.Len(t, fieldsFromACE, 2)
+	require.Contains(t, fieldsFromACE, QueryFieldNameDomainIDN)
+	require.Contains(t, fieldsFromACE, QueryFieldNameDomainACE)
+	assert.Equal(t, []string{"dönic.de"}, fieldsFromACE[QueryFieldNameDomainIDN])
+	assert.Equal(t, []string{"xn--dnic-5qa.de"}, fieldsFromACE[QueryFieldNameDomainACE])
+}
+
 func TestQueryEncodeKV(t *testing.T) {
 	query, err := ParseQuery(qryEncode)
 	require.NoError(t, err)
@@ -56,6 +74,30 @@ func TestNewCreateAuthInfo1Query(t *testing.T) {
 	assert.Equal(t, []string{"denic.de"}, query.Field(QueryFieldNameDomainACE))
 	assert.Equal(t, []string{"78152947f3751ab6baf0fb54c3c508d9b959f707999cbab855caaac231628c7f"}, query.Field(QueryFieldNameAuthInfoHash))
 	assert.Equal(t, []string{"20200925"}, query.Field(QueryFieldNameAuthInfoExpire))
+}
+
+func TestNewVerifyDomainQuery(t *testing.T) {
+	query := NewVerifyDomainQuery("denic.de", AuthorizedSignatory{
+		FirstName:    "Donald",
+		LastName:     "Duck",
+		EMail:        "donald@duck.de",
+		DateOfBirth:  time.Date(1934, time.June, 9, 0, 0, 0, 0, time.UTC),
+		PlaceOfBirth: "Entenhausen",
+		Phone:        "+0123 456789",
+	})
+	assert.Equal(t, LatestVersion, query.Version())
+	assert.Equal(t, ActionVerify, query.Action())
+	require.Len(t, query.Fields(), 10)
+	assert.Equal(t, []string{string(LatestVersion)}, query.Field(QueryFieldNameVersion))
+	assert.Equal(t, []string{string(ActionVerify)}, query.Field(QueryFieldNameAction))
+	assert.Equal(t, []string{"denic.de"}, query.Field(QueryFieldNameDomainIDN))
+	assert.Equal(t, []string{"denic.de"}, query.Field(QueryFieldNameDomainACE))
+	assert.Equal(t, []string{"Donald"}, query.Field(QueryFieldNameAuthSigFirstName))
+	assert.Equal(t, []string{"Duck"}, query.Field(QueryFieldNameAuthSigLastName))
+	assert.Equal(t, []string{"donald@duck.de"}, query.Field(QueryFieldNameAuthSigEMail))
+	assert.Equal(t, []string{"1934-06-09"}, query.Field(QueryFieldNameAuthSigDateOfBirth))
+	assert.Equal(t, []string{"Entenhausen"}, query.Field(QueryFieldNameAuthSigPlaceOfBirth))
+	assert.Equal(t, []string{"+0123 456789"}, query.Field(QueryFieldNameAuthSigPhone))
 }
 
 func TestParseQueryCasing(t *testing.T) {

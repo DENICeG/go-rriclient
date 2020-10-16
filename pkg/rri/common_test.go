@@ -12,9 +12,24 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
+func b64(str string) []byte {
+	data, err := base64.StdEncoding.DecodeString(str)
+	if err != nil {
+		panic(err)
+	}
+	return data
+}
+
+func b64enc(data []byte) string {
+	if data == nil {
+		return ""
+	}
+	return base64.StdEncoding.EncodeToString(data)
+}
+
 func TestPrepareMessage(t *testing.T) {
 	// hardcoded RRI packet with size prefix and query "version: 3.0\naction: LOGIN\nuser: user\npassword: secret"
-	expected, _ := base64.StdEncoding.DecodeString("AAAANnZlcnNpb246IDMuMAphY3Rpb246IExPR0lOCnVzZXI6IHVzZXIKcGFzc3dvcmQ6IHNlY3JldA==")
+	expected := b64("AAAANnZlcnNpb246IDMuMAphY3Rpb246IExPR0lOCnVzZXI6IHVzZXIKcGFzc3dvcmQ6IHNlY3JldA==")
 	assert.Equal(t, expected, prepareMessage("version: 3.0\naction: LOGIN\nuser: user\npassword: secret"))
 }
 
@@ -33,6 +48,22 @@ func TestReadMessageEmpty(t *testing.T) {
 
 func TestReadMessageTooLong(t *testing.T) {
 	_, err := readMessage(bytes.NewReader(prepareMessage(strings.Repeat("a", 70000))))
+	assert.Error(t, err)
+}
+
+func TestReadMessageNoData(t *testing.T) {
+	_, err := readMessage(bytes.NewReader([]byte{}))
+	assert.Error(t, err)
+}
+
+func TestReadMessageIncompleteSize(t *testing.T) {
+	_, err := readMessage(bytes.NewReader([]byte{0}))
+	assert.Error(t, err)
+}
+
+func TestReadMessageIncompleteMessage(t *testing.T) {
+	msg := b64("AAAANnZlcnNp")
+	_, err := readMessage(bytes.NewReader(msg))
 	assert.Error(t, err)
 }
 

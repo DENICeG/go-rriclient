@@ -13,6 +13,11 @@ func newQueryFieldList() QueryFieldList {
 	return make([]QueryField, 0)
 }
 
+// Size returns the number of values stored in this list.
+func (l *QueryFieldList) Size() int {
+	return len(*l)
+}
+
 // Add adds a sequence of values for the given field name.
 func (l *QueryFieldList) Add(fieldName QueryFieldName, values ...string) {
 	fieldName = fieldName.Normalize()
@@ -67,6 +72,11 @@ type ResponseField struct {
 
 func newResponseFieldList() ResponseFieldList {
 	return make([]ResponseField, 0)
+}
+
+// Size returns the number of values stored in this list.
+func (l *ResponseFieldList) Size() int {
+	return len(*l)
 }
 
 // Add adds a sequence of values for the given field name.

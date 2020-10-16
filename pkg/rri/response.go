@@ -181,6 +181,7 @@ func (r *Response) Entity(entityName ResponseEntityName) ResponseFieldList {
 
 // NewResponse returns a new Response with the given result code.
 func NewResponse(result Result, fields map[ResponseFieldName][]string) *Response {
+	//TODO instantiate from ResponseFieldName instead of map
 	newFields := newResponseFieldList()
 	newFields.Add(ResponseFieldNameResult, string(result.Normalize()))
 	if fields != nil {
@@ -195,6 +196,7 @@ func NewResponse(result Result, fields map[ResponseFieldName][]string) *Response
 
 // NewResponseWithInfo returns a new Response with the given result code and attached info messages.
 func NewResponseWithInfo(result Result, fields map[ResponseFieldName][]string, infos ...BusinessMessage) *Response {
+	//TODO instantiate from ResponseFieldName instead of map
 	newFields := newResponseFieldList()
 	newFields.Add(ResponseFieldNameResult, string(result.Normalize()))
 	if fields != nil {
@@ -212,6 +214,7 @@ func NewResponseWithInfo(result Result, fields map[ResponseFieldName][]string, i
 
 // NewResponseWithError returns a new Response with the given result code and attached error messages.
 func NewResponseWithError(result Result, fields map[ResponseFieldName][]string, errors ...BusinessMessage) *Response {
+	//TODO instantiate from ResponseFieldName instead of map
 	newFields := newResponseFieldList()
 	newFields.Add(ResponseFieldNameResult, string(result.Normalize()))
 	if fields != nil {

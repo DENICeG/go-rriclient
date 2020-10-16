@@ -150,6 +150,32 @@ func (e *Reader) SelectEnvironment(env interface{}) error {
 	return e.createOrReadEnvironment(fileName[:len(fileName)-5], env, nil)
 }
 
+// ListEnvironments returns a list of all environment titles.
+func (e *Reader) ListEnvironments() ([]string, error) {
+	envFiles, err := e.GetEnvironmentFiles()
+	if err != nil {
+		return nil, err
+	}
+	if len(envFiles) == 0 {
+		return []string{}, nil
+	}
+
+	envTitles := make([]string, len(envFiles))
+	for i, fi := range envFiles {
+		name := fi.Name()
+		if strings.HasSuffix(name, ".json") {
+			name = name[:len(name)-5]
+		}
+
+		if e.GetEnvFileTitle != nil {
+			envTitles[i] = e.GetEnvFileTitle(name, filepath.Join(e.dir, fi.Name()))
+		} else {
+			envTitles[i] = name
+		}
+	}
+	return envTitles, nil
+}
+
 // GetEnvironmentFiles returns an ordered list of files that contain environments.
 func (e *Reader) GetEnvironmentFiles() ([]os.FileInfo, error) {
 	files, err := ioutil.ReadDir(e.dir)

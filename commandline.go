@@ -642,7 +642,12 @@ func cmdCreateDomain(args []string) error {
 		return err
 	}
 
-	_, err = processQuery(rri.NewCreateDomainQuery(domainName, handles[0], handles[1], handles[2], nameServers...))
+	_, err = processQuery(rri.NewCreateDomainQuery(domainName, rri.DomainData{
+		HolderHandles:         handles[0],
+		GeneralRequestHandles: handles[1],
+		AbuseContactHandles:   handles[2],
+		NameServers:           nameServers,
+	}))
 	histDomains.Put(domainName)
 	return err
 }
@@ -655,7 +660,12 @@ func cmdUpdateDomain(args []string) error {
 
 	//TODO use old domain values for empty fields -> only change explicitly entered data
 
-	_, err = processQuery(rri.NewUpdateDomainQuery(domainName, handles[0], handles[1], handles[2], nameServers...))
+	_, err = processQuery(rri.NewUpdateDomainQuery(domainName, rri.DomainData{
+		HolderHandles:         handles[0],
+		GeneralRequestHandles: handles[1],
+		AbuseContactHandles:   handles[2],
+		NameServers:           nameServers,
+	}))
 	histDomains.Put(domainName)
 	return err
 }
@@ -721,7 +731,12 @@ func cmdChProv(args []string) error {
 		return err
 	}
 
-	_, err = processQuery(rri.NewChangeProviderQuery(domainName, args[1], handles[0], handles[1], handles[2], nameServers...))
+	_, err = processQuery(rri.NewChangeProviderQuery(domainName, args[1], rri.DomainData{
+		HolderHandles:         handles[0],
+		GeneralRequestHandles: handles[1],
+		AbuseContactHandles:   handles[2],
+		NameServers:           nameServers,
+	}))
 	histDomains.Put(domainName)
 	return err
 }

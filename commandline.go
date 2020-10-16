@@ -163,6 +163,7 @@ func readCustomCommands(dir string) ([]customCommand, error) {
 			for i := range cmd.Args {
 				if strings.ToLower(cmd.Args[i].Type) == "domain" && len(cmd.Args[i].Field) == 0 {
 					cmd.Args[i].Field = "domain"
+					cmd.Args[i].Name = "domain"
 				}
 			}
 			customCommands = append(customCommands, cmd)
@@ -231,27 +232,28 @@ func prepareCLE() *commandline.Environment {
 }
 
 func cmdHelp(args []string) error {
-	commands := []struct {
+	type customCmd struct {
 		Cmd, Args []string
 		Desc      string
-	}{
+	}
+	commands := []customCmd{
 		{[]string{"exit"}, nil, "exit application"},
 		{[]string{"help"}, nil, "show this help"},
-		{nil, nil, ""},
+		{},
 		{[]string{"login"}, []string{"user", "password"}, "log in to a RRI account"},
 		{[]string{"logout"}, nil, "log out from the current RRI account"},
-		{nil, nil, ""},
+		{},
 		//TODO contact-create
 		{[]string{"check", "handle"}, []string{"domain"}, "send a CHECK command for a specific handle"},
 		{[]string{"info", "handle"}, []string{"domain"}, "send an INFO command for a specific handle"},
 		//TODO contact-update
-		{nil, nil, ""},
+		{},
 		{[]string{"create", "domain"}, []string{"domain"}, "send a CREATE command for a new domain"},
 		{[]string{"check", "domain"}, []string{"domain"}, "send a CHECK command for a specific domain"},
 		{[]string{"info", "domain"}, []string{"domain"}, "send an INFO command for a specific domain"},
 		{[]string{"update", "domain"}, []string{"domain"}, "send an UPDATE command for a specific domain"},
 		//TODO chholder
-		{nil, nil, ""},
+		{},
 		{[]string{"delete"}, []string{"domain"}, "send a DELETE command for a specific domain"},
 		{[]string{"restore"}, []string{"domain"}, "send a RESTORE command for a specific domain"},
 		{[]string{"transit"}, []string{"domain"}, "send a TRANSIT command for a specific domain"},
@@ -264,13 +266,31 @@ func cmdHelp(args []string) error {
 		//TODO queue-read
 		//TODO queue-delete
 		//TODO regacc-info
-		{nil, nil, ""},
+		{},
 		{[]string{"raw"}, nil, "enter a raw query and send it"},
 		{[]string{"file"}, []string{"path"}, "process a query file as accepted by flag --file"},
-		{nil, nil, ""},
+		{},
 		{[]string{"xml"}, nil, "toggle XML mode"},
 		{[]string{"verbose"}, nil, "toggle verbose mode"},
 		{[]string{"dry"}, nil, "toggle dry mode to only print out raw queries"},
+	}
+
+	if len(customCommands) > 0 {
+		head := commands[:20]
+		tail := make([]customCmd, 6)
+		copy(tail, commands[20:])
+		commands = head
+		for _, cmd := range customCommands {
+			args := make([]string, 0)
+			for _, arg := range cmd.Args {
+				if arg.IsInputParameter() {
+					args = append(args, arg.Name)
+				}
+			}
+			commands = append(commands, customCmd{[]string{cmd.Cmd}, args, cmd.Description})
+		}
+		commands = append(commands, customCmd{})
+		commands = append(commands, tail...)
 	}
 
 	cmdSumStrings := make([]string, len(commands))

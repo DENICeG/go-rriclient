@@ -180,31 +180,21 @@ func (r *Response) Entity(entityName ResponseEntityName) ResponseFieldList {
 }
 
 // NewResponse returns a new Response with the given result code.
-func NewResponse(result Result, fields map[ResponseFieldName][]string) *Response {
-	//TODO instantiate from ResponseFieldName instead of map
-	newFields := newResponseFieldList()
+func NewResponse(result Result, fields ResponseFieldList) *Response {
+	newFields := NewResponseFieldList()
 	newFields.Add(ResponseFieldNameResult, string(result.Normalize()))
 	if fields != nil {
-		for key, values := range fields {
-			for _, value := range values {
-				newFields.Add(key, value)
-			}
-		}
+		fields.CopyTo(&newFields)
 	}
 	return &Response{newFields, nil}
 }
 
 // NewResponseWithInfo returns a new Response with the given result code and attached info messages.
-func NewResponseWithInfo(result Result, fields map[ResponseFieldName][]string, infos ...BusinessMessage) *Response {
-	//TODO instantiate from ResponseFieldName instead of map
-	newFields := newResponseFieldList()
+func NewResponseWithInfo(result Result, fields ResponseFieldList, infos ...BusinessMessage) *Response {
+	newFields := NewResponseFieldList()
 	newFields.Add(ResponseFieldNameResult, string(result.Normalize()))
 	if fields != nil {
-		for key, values := range fields {
-			for _, value := range values {
-				newFields.Add(key, value)
-			}
-		}
+		fields.CopyTo(&newFields)
 	}
 	for _, msg := range infos {
 		newFields.Add(ResponseFieldNameInfo, msg.String())
@@ -213,16 +203,11 @@ func NewResponseWithInfo(result Result, fields map[ResponseFieldName][]string, i
 }
 
 // NewResponseWithError returns a new Response with the given result code and attached error messages.
-func NewResponseWithError(result Result, fields map[ResponseFieldName][]string, errors ...BusinessMessage) *Response {
-	//TODO instantiate from ResponseFieldName instead of map
-	newFields := newResponseFieldList()
+func NewResponseWithError(result Result, fields ResponseFieldList, errors ...BusinessMessage) *Response {
+	newFields := NewResponseFieldList()
 	newFields.Add(ResponseFieldNameResult, string(result.Normalize()))
 	if fields != nil {
-		for key, values := range fields {
-			for _, value := range values {
-				newFields.Add(key, value)
-			}
-		}
+		fields.CopyTo(&newFields)
 	}
 	for _, msg := range errors {
 		newFields.Add(ResponseFieldNameError, msg.String())
@@ -233,7 +218,7 @@ func NewResponseWithError(result Result, fields map[ResponseFieldName][]string, 
 // ParseResponseKV parses a response object from the given key-value response string.
 func ParseResponseKV(msg string) (*Response, error) {
 	lines := strings.Split(msg, "\n")
-	fields := newResponseFieldList()
+	fields := NewResponseFieldList()
 	entities := make([]responseEntity, 0)
 	for i, line := range lines {
 		line = strings.TrimSpace(line)
@@ -241,7 +226,7 @@ func ParseResponseKV(msg string) (*Response, error) {
 			parts := strings.SplitN(line, ":", 2)
 			if len(parts) == 1 && strings.HasPrefix(parts[0], "[") && strings.HasSuffix(parts[0], "]") {
 				// begin of new entity
-				entities = append(entities, responseEntity{ResponseEntityName(parts[0][1 : len(parts[0])-1]).Normalize(), newResponseFieldList()})
+				entities = append(entities, responseEntity{ResponseEntityName(parts[0][1 : len(parts[0])-1]).Normalize(), NewResponseFieldList()})
 				continue
 			}
 			if len(parts) != 2 {

@@ -117,11 +117,11 @@ type DomainData struct {
 	NameServers           []string
 }
 
-func (domainData *DomainData) putToQueryFields(fields map[QueryFieldName][]string) {
-	fields[QueryFieldNameHolder] = domainData.HolderHandles
-	fields[QueryFieldNameGeneralRequest] = domainData.GeneralRequestHandles
-	fields[QueryFieldNameAbuseContact] = domainData.AbuseContactHandles
-	fields[QueryFieldNameNameServer] = domainData.NameServers
+func (domainData *DomainData) putToQueryFields(fields *QueryFieldList) {
+	fields.Add(QueryFieldNameHolder, domainData.HolderHandles...)
+	fields.Add(QueryFieldNameGeneralRequest, domainData.GeneralRequestHandles...)
+	fields.Add(QueryFieldNameAbuseContact, domainData.AbuseContactHandles...)
+	fields.Add(QueryFieldNameNameServer, domainData.NameServers...)
 }
 
 // Query represents a RRI request.
@@ -184,26 +184,21 @@ func (q *Query) FirstField(fieldName QueryFieldName) string {
 }
 
 // NewQuery returns a query with the given parameters.
-func NewQuery(version Version, action QueryAction, fields map[QueryFieldName][]string) *Query {
-	//TODO instantiate from QueryFieldList instead of map
-	newFields := newQueryFieldList()
+func NewQuery(version Version, action QueryAction, fields QueryFieldList) *Query {
+	newFields := NewQueryFieldList()
 	newFields.Add(QueryFieldNameVersion, string(version.Normalize()))
 	newFields.Add(QueryFieldNameAction, string(action.Normalize()))
 	if fields != nil {
-		for key, values := range fields {
-			for _, value := range values {
-				newFields.Add(key, value)
-			}
-		}
+		fields.CopyTo(&newFields)
 	}
 	return &Query{newFields}
 }
 
 // NewLoginQuery returns a login query for the given credentials.
 func NewLoginQuery(username, password string) *Query {
-	fields := make(map[QueryFieldName][]string)
-	fields[QueryFieldNameUser] = []string{username}
-	fields[QueryFieldNamePassword] = []string{password}
+	fields := NewQueryFieldList()
+	fields.Add(QueryFieldNameUser, username)
+	fields.Add(QueryFieldNamePassword, password)
 	return NewQuery(LatestVersion, ActionLogin, fields)
 }
 
@@ -214,95 +209,95 @@ func NewLogoutQuery() *Query {
 
 // NewCheckHandleQuery returns a check query.
 func NewCheckHandleQuery(handle string) *Query {
-	fields := make(map[QueryFieldName][]string)
-	fields[QueryFieldNameHandle] = []string{handle}
+	fields := NewQueryFieldList()
+	fields.Add(QueryFieldNameHandle, handle)
 	return NewQuery(LatestVersion, ActionCheck, fields)
 }
 
 // NewInfoHandleQuery returns a check query.
 func NewInfoHandleQuery(handle string) *Query {
-	fields := make(map[QueryFieldName][]string)
-	fields[QueryFieldNameHandle] = []string{handle}
+	fields := NewQueryFieldList()
+	fields.Add(QueryFieldNameHandle, handle)
 	return NewQuery(LatestVersion, ActionCheck, fields)
 }
 
-func putDomainToQueryFields(fields map[QueryFieldName][]string, domain string) {
+func putDomainToQueryFields(fields *QueryFieldList, domain string) {
 	if strings.HasPrefix(strings.ToLower(domain), "xn--") {
-		fields[QueryFieldNameDomainACE] = []string{domain}
+		fields.Add(QueryFieldNameDomainACE, domain)
 		if idn, err := idna.ToUnicode(domain); err == nil {
-			fields[QueryFieldNameDomainIDN] = []string{idn}
+			fields.Add(QueryFieldNameDomainIDN, idn)
 		}
 
 	} else {
-		fields[QueryFieldNameDomainIDN] = []string{domain}
+		fields.Add(QueryFieldNameDomainIDN, domain)
 		if ace, err := idna.ToASCII(domain); err == nil {
-			fields[QueryFieldNameDomainACE] = []string{ace}
+			fields.Add(QueryFieldNameDomainACE, ace)
 		}
 	}
 }
 
 // NewCreateDomainQuery returns a query to create a domain.
 func NewCreateDomainQuery(domain string, domainData DomainData) *Query {
-	fields := make(map[QueryFieldName][]string)
-	putDomainToQueryFields(fields, domain)
-	domainData.putToQueryFields(fields)
+	fields := NewQueryFieldList()
+	putDomainToQueryFields(&fields, domain)
+	domainData.putToQueryFields(&fields)
 	return NewQuery(LatestVersion, ActionCreate, fields)
 }
 
 // NewCheckDomainQuery returns a check query.
 func NewCheckDomainQuery(domain string) *Query {
-	fields := make(map[QueryFieldName][]string)
-	putDomainToQueryFields(fields, domain)
+	fields := NewQueryFieldList()
+	putDomainToQueryFields(&fields, domain)
 	return NewQuery(LatestVersion, ActionCheck, fields)
 }
 
 // NewInfoDomainQuery returns an info query.
 func NewInfoDomainQuery(domain string) *Query {
-	fields := make(map[QueryFieldName][]string)
-	putDomainToQueryFields(fields, domain)
+	fields := NewQueryFieldList()
+	putDomainToQueryFields(&fields, domain)
 	return NewQuery(LatestVersion, ActionInfo, fields)
 }
 
 // NewUpdateDomainQuery returns a query to update a domain.
 func NewUpdateDomainQuery(domain string, domainData DomainData) *Query {
-	fields := make(map[QueryFieldName][]string)
-	putDomainToQueryFields(fields, domain)
-	domainData.putToQueryFields(fields)
+	fields := NewQueryFieldList()
+	putDomainToQueryFields(&fields, domain)
+	domainData.putToQueryFields(&fields)
 	return NewQuery(LatestVersion, ActionUpdate, fields)
 }
 
 // NewDeleteDomainQuery returns a delete query.
 func NewDeleteDomainQuery(domain string) *Query {
-	fields := make(map[QueryFieldName][]string)
-	putDomainToQueryFields(fields, domain)
+	fields := NewQueryFieldList()
+	putDomainToQueryFields(&fields, domain)
 	return NewQuery(LatestVersion, ActionDelete, fields)
 }
 
 // NewRestoreDomainQuery returns a restore query.
 func NewRestoreDomainQuery(domain string) *Query {
-	fields := make(map[QueryFieldName][]string)
-	putDomainToQueryFields(fields, domain)
+	fields := NewQueryFieldList()
+	putDomainToQueryFields(&fields, domain)
 	return NewQuery(LatestVersion, ActionRestore, fields)
 }
 
 // NewTransitDomainQuery returns a restore query.
 func NewTransitDomainQuery(domain string, disconnect bool) *Query {
-	fields := make(map[QueryFieldName][]string)
-	putDomainToQueryFields(fields, domain)
+	fields := NewQueryFieldList()
+	putDomainToQueryFields(&fields, domain)
 	if disconnect {
-		fields[QueryFieldNameDisconnect] = []string{"true"}
+		fields.Add(QueryFieldNameDisconnect, "true")
 	} else {
-		fields[QueryFieldNameDisconnect] = []string{"false"}
+		fields.Add(QueryFieldNameDisconnect, "false")
 	}
 	return NewQuery(LatestVersion, ActionTransit, fields)
 }
 
 // NewCreateAuthInfo1Query returns a create AuthInfo1 query.
 func NewCreateAuthInfo1Query(domain, authInfo string, expireDay time.Time) *Query {
-	fields := make(map[QueryFieldName][]string)
-	putDomainToQueryFields(fields, domain)
-	fields[QueryFieldNameAuthInfoHash] = []string{computeHashSHA256(authInfo)}
-	fields[QueryFieldNameAuthInfoExpire] = []string{expireDay.Format("20060102")}
+	fields := NewQueryFieldList()
+	putDomainToQueryFields(&fields, domain)
+	fields.Add(QueryFieldNameAuthInfoHash, computeHashSHA256(authInfo))
+	fields.Add(QueryFieldNameAuthInfoExpire, expireDay.Format("20060102"))
 	return NewQuery(LatestVersion, ActionCreateAuthInfo1, fields)
 }
 
@@ -315,8 +310,8 @@ func computeHashSHA256(str string) string {
 
 // NewCreateAuthInfo2Query returns a create AuthInfo2 query.
 func NewCreateAuthInfo2Query(domain string) *Query {
-	fields := make(map[QueryFieldName][]string)
-	putDomainToQueryFields(fields, domain)
+	fields := NewQueryFieldList()
+	putDomainToQueryFields(&fields, domain)
 	return NewQuery(LatestVersion, ActionCreateAuthInfo2, fields)
 }
 
@@ -332,32 +327,32 @@ type AuthorizedSignatory struct {
 
 // NewVerifyDomainQuery returns a query to create a verify domain.
 func NewVerifyDomainQuery(domain string, authSignatory AuthorizedSignatory) *Query {
-	fields := make(map[QueryFieldName][]string)
-	putDomainToQueryFields(fields, domain)
-	fields[QueryFieldNameAuthSigFirstName] = []string{authSignatory.FirstName}
-	fields[QueryFieldNameAuthSigLastName] = []string{authSignatory.LastName}
-	fields[QueryFieldNameAuthSigEMail] = []string{authSignatory.EMail}
-	fields[QueryFieldNameAuthSigDateOfBirth] = []string{authSignatory.DateOfBirth.Format("2006-01-02")}
-	fields[QueryFieldNameAuthSigPlaceOfBirth] = []string{authSignatory.PlaceOfBirth}
+	fields := NewQueryFieldList()
+	putDomainToQueryFields(&fields, domain)
+	fields.Add(QueryFieldNameAuthSigFirstName, authSignatory.FirstName)
+	fields.Add(QueryFieldNameAuthSigLastName, authSignatory.LastName)
+	fields.Add(QueryFieldNameAuthSigEMail, authSignatory.EMail)
+	fields.Add(QueryFieldNameAuthSigDateOfBirth, authSignatory.DateOfBirth.Format("2006-01-02"))
+	fields.Add(QueryFieldNameAuthSigPlaceOfBirth, authSignatory.PlaceOfBirth)
 	if len(authSignatory.Phone) > 0 {
-		fields[QueryFieldNameAuthSigPhone] = []string{authSignatory.Phone}
+		fields.Add(QueryFieldNameAuthSigPhone, authSignatory.Phone)
 	}
 	return NewQuery(LatestVersion, ActionVerify, fields)
 }
 
 // NewChangeProviderQuery returns a query to create a domain.
 func NewChangeProviderQuery(domain, authInfo string, domainData DomainData) *Query {
-	fields := make(map[QueryFieldName][]string)
-	putDomainToQueryFields(fields, domain)
-	domainData.putToQueryFields(fields)
-	fields[QueryFieldNameAuthInfo] = []string{authInfo}
+	fields := NewQueryFieldList()
+	putDomainToQueryFields(&fields, domain)
+	domainData.putToQueryFields(&fields)
+	fields.Add(QueryFieldNameAuthInfo, authInfo)
 	return NewQuery(LatestVersion, ActionChangeProvider, fields)
 }
 
 // ParseQueryKV parses a single key-value encoded query.
 func ParseQueryKV(str string) (*Query, error) {
 	lines := strings.Split(str, "\n")
-	fields := newQueryFieldList()
+	fields := NewQueryFieldList()
 	for _, line := range lines {
 		// trim spaces and ignore empty lines
 		line = strings.TrimSpace(line)

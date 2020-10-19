@@ -16,22 +16,26 @@ const (
 	qryOrder        = "action: LOGIN\ncustom: 1\nversion: 3.0\nuser: DENIC-1000042-TEST\nstuff: foobar\npassword: very-secure\ncustom: 2"
 )
 
-func TestPutDomainToQueryFields(t *testing.T) {
-	fieldsFromIDN := make(map[QueryFieldName][]string)
-	putDomainToQueryFields(fieldsFromIDN, "dönic.de")
-	require.Len(t, fieldsFromIDN, 2)
-	require.Contains(t, fieldsFromIDN, QueryFieldNameDomainIDN)
-	require.Contains(t, fieldsFromIDN, QueryFieldNameDomainACE)
-	assert.Equal(t, []string{"dönic.de"}, fieldsFromIDN[QueryFieldNameDomainIDN])
-	assert.Equal(t, []string{"xn--dnic-5qa.de"}, fieldsFromIDN[QueryFieldNameDomainACE])
+func TestNewQueryNil(t *testing.T) {
+	var qry *Query
+	require.NotPanics(t, func() {
+		qry = NewQuery(LatestVersion, ActionLogout, nil)
+	})
+	assert.Equal(t, 2, qry.Fields().Size())
+}
 
-	fieldsFromACE := make(map[QueryFieldName][]string)
-	putDomainToQueryFields(fieldsFromACE, "xn--dnic-5qa.de")
+func TestPutDomainToQueryFields(t *testing.T) {
+	fieldsFromIDN := NewQueryFieldList()
+	putDomainToQueryFields(&fieldsFromIDN, "dönic.de")
+	require.Len(t, fieldsFromIDN, 2)
+	assert.Equal(t, []string{"dönic.de"}, fieldsFromIDN.Values(QueryFieldNameDomainIDN))
+	assert.Equal(t, []string{"xn--dnic-5qa.de"}, fieldsFromIDN.Values(QueryFieldNameDomainACE))
+
+	fieldsFromACE := NewQueryFieldList()
+	putDomainToQueryFields(&fieldsFromACE, "xn--dnic-5qa.de")
 	require.Len(t, fieldsFromACE, 2)
-	require.Contains(t, fieldsFromACE, QueryFieldNameDomainIDN)
-	require.Contains(t, fieldsFromACE, QueryFieldNameDomainACE)
-	assert.Equal(t, []string{"dönic.de"}, fieldsFromACE[QueryFieldNameDomainIDN])
-	assert.Equal(t, []string{"xn--dnic-5qa.de"}, fieldsFromACE[QueryFieldNameDomainACE])
+	assert.Equal(t, []string{"dönic.de"}, fieldsFromACE.Values(QueryFieldNameDomainIDN))
+	assert.Equal(t, []string{"xn--dnic-5qa.de"}, fieldsFromACE.Values(QueryFieldNameDomainACE))
 }
 
 func TestQueryEncodeKV(t *testing.T) {

@@ -9,13 +9,14 @@ type QueryField struct {
 	Value string
 }
 
-func newQueryFieldList() QueryFieldList {
+// NewQueryFieldList returns an empty query field list.
+func NewQueryFieldList() QueryFieldList {
 	return make([]QueryField, 0)
 }
 
 // Size returns the number of values stored in this list.
-func (l *QueryFieldList) Size() int {
-	return len(*l)
+func (l QueryFieldList) Size() int {
+	return len(l)
 }
 
 // Add adds a sequence of values for the given field name.
@@ -39,10 +40,10 @@ func (l *QueryFieldList) RemoveAll(fieldName QueryFieldName) {
 }
 
 // Values returns all values defined for a field name.
-func (l *QueryFieldList) Values(fieldName QueryFieldName) []string {
+func (l QueryFieldList) Values(fieldName QueryFieldName) []string {
 	fieldName = fieldName.Normalize()
 	arr := make([]string, 0)
-	for _, f := range *l {
+	for _, f := range l {
 		if f.Name == fieldName {
 			arr = append(arr, f.Value)
 		}
@@ -51,14 +52,21 @@ func (l *QueryFieldList) Values(fieldName QueryFieldName) []string {
 }
 
 // FirstValue returns the first field value or an empty string for a field name.
-func (l *QueryFieldList) FirstValue(fieldName QueryFieldName) string {
+func (l QueryFieldList) FirstValue(fieldName QueryFieldName) string {
 	fieldName = fieldName.Normalize()
-	for _, f := range *l {
+	for _, f := range l {
 		if f.Name == fieldName {
 			return f.Value
 		}
 	}
 	return ""
+}
+
+// CopyTo appends all values of this list to dstList.
+func (l QueryFieldList) CopyTo(dstList *QueryFieldList) {
+	for _, f := range l {
+		dstList.Add(f.Name, f.Value)
+	}
 }
 
 // ResponseFieldList contains an ordered list of query fields.
@@ -70,13 +78,14 @@ type ResponseField struct {
 	Value string
 }
 
-func newResponseFieldList() ResponseFieldList {
+// NewResponseFieldList returns an empty response field list.
+func NewResponseFieldList() ResponseFieldList {
 	return make([]ResponseField, 0)
 }
 
 // Size returns the number of values stored in this list.
-func (l *ResponseFieldList) Size() int {
-	return len(*l)
+func (l ResponseFieldList) Size() int {
+	return len(l)
 }
 
 // Add adds a sequence of values for the given field name.
@@ -100,10 +109,10 @@ func (l *ResponseFieldList) RemoveAll(fieldName ResponseFieldName) {
 }
 
 // Values returns all values defined for a field name.
-func (l *ResponseFieldList) Values(fieldName ResponseFieldName) []string {
+func (l ResponseFieldList) Values(fieldName ResponseFieldName) []string {
 	fieldName = fieldName.Normalize()
 	arr := make([]string, 0)
-	for _, f := range *l {
+	for _, f := range l {
 		if f.Name == fieldName {
 			arr = append(arr, f.Value)
 		}
@@ -112,12 +121,19 @@ func (l *ResponseFieldList) Values(fieldName ResponseFieldName) []string {
 }
 
 // FirstValue returns the first field value or an empty string for a field name.
-func (l *ResponseFieldList) FirstValue(fieldName ResponseFieldName) string {
+func (l ResponseFieldList) FirstValue(fieldName ResponseFieldName) string {
 	fieldName = fieldName.Normalize()
-	for _, f := range *l {
+	for _, f := range l {
 		if f.Name == fieldName {
 			return f.Value
 		}
 	}
 	return ""
+}
+
+// CopyTo appends all values of this list to dstList.
+func (l ResponseFieldList) CopyTo(dstList *ResponseFieldList) {
+	for _, f := range l {
+		dstList.Add(f.Name, f.Value)
+	}
 }

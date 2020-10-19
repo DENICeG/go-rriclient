@@ -8,13 +8,20 @@ import (
 )
 
 func TestQueryFieldList(t *testing.T) {
-	l := newQueryFieldList()
+	l := NewQueryFieldList()
 	require.Equal(t, 0, l.Size())
 
 	assert.Equal(t, []string{}, l.Values(QueryFieldNameDomainIDN))
 	assert.Equal(t, "", l.FirstValue(QueryFieldNameDomainIDN))
 
 	l.Add(QueryFieldNameDomainIDN, "denic.de")
+	require.Equal(t, 1, l.Size())
+	assert.Equal(t, []string{"denic.de"}, l.Values(QueryFieldNameDomainIDN))
+	assert.Equal(t, "denic.de", l.FirstValue(QueryFieldNameDomainIDN))
+
+	require.NotPanics(t, func() {
+		l.Add(QueryFieldNameDomainIDN, nil...)
+	})
 	require.Equal(t, 1, l.Size())
 	assert.Equal(t, []string{"denic.de"}, l.Values(QueryFieldNameDomainIDN))
 	assert.Equal(t, "denic.de", l.FirstValue(QueryFieldNameDomainIDN))
@@ -37,14 +44,32 @@ func TestQueryFieldList(t *testing.T) {
 	assert.Equal(t, "denic.de", l.FirstValue(QueryFieldNameDomainIDN))
 }
 
+func TestQueryFieldsCopyTo(t *testing.T) {
+	src := NewQueryFieldList()
+	src.Add(QueryFieldNameAction, string(ActionLogin))
+	src.Add(QueryFieldNameUser, "test")
+	dst := NewQueryFieldList()
+	src.CopyTo(&dst)
+	require.Equal(t, src.Size(), dst.Size())
+	assert.Equal(t, src.Values(QueryFieldNameAction), dst.Values(QueryFieldNameAction))
+	assert.Equal(t, src.Values(QueryFieldNameUser), dst.Values(QueryFieldNameUser))
+}
+
 func TestResponseFieldList(t *testing.T) {
-	l := newResponseFieldList()
+	l := NewResponseFieldList()
 	require.Equal(t, 0, l.Size())
 
 	assert.Equal(t, []string{}, l.Values(ResponseFieldNameResult))
 	assert.Equal(t, "", l.FirstValue(ResponseFieldNameResult))
 
 	l.Add(ResponseFieldNameError, "foobar")
+	require.Equal(t, 1, l.Size())
+	assert.Equal(t, []string{"foobar"}, l.Values(ResponseFieldNameError))
+	assert.Equal(t, "foobar", l.FirstValue(ResponseFieldNameError))
+
+	require.NotPanics(t, func() {
+		l.Add(ResponseFieldNameSTID, nil...)
+	})
 	require.Equal(t, 1, l.Size())
 	assert.Equal(t, []string{"foobar"}, l.Values(ResponseFieldNameError))
 	assert.Equal(t, "foobar", l.FirstValue(ResponseFieldNameError))
@@ -65,4 +90,15 @@ func TestResponseFieldList(t *testing.T) {
 	assert.Equal(t, "", l.FirstValue(ResponseFieldNameInfo))
 	assert.Equal(t, []string{"foobar", "some-other", "stuff"}, l.Values(ResponseFieldNameError))
 	assert.Equal(t, "foobar", l.FirstValue(ResponseFieldNameError))
+}
+
+func TestResponseFieldsCopyTo(t *testing.T) {
+	src := NewResponseFieldList()
+	src.Add(ResponseFieldNameResult, string(ResultFailure))
+	src.Add(ResponseFieldNameError, "12345 foobar")
+	dst := NewResponseFieldList()
+	src.CopyTo(&dst)
+	require.Equal(t, src.Size(), dst.Size())
+	assert.Equal(t, src.Values(ResponseFieldNameResult), dst.Values(ResponseFieldNameResult))
+	assert.Equal(t, src.Values(ResponseFieldNameError), dst.Values(ResponseFieldNameError))
 }

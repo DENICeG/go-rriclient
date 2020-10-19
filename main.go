@@ -39,7 +39,6 @@ var (
 	argInsecure      = app.Flag("insecure", "Disable SSL Certificate checks").Bool()
 	argVersion       = app.Flag("version", "Display application version and exit").Bool()
 	argDumpCLIConfig = app.Flag("dump-cli-config", "Print all configured colors and signs for testing").Bool()
-	//TODO flag to allow older tls versions
 )
 
 type environment struct {

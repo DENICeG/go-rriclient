@@ -597,7 +597,7 @@ func registerCustomCommand(cle *commandline.Environment, cmd customCommand) {
 		}
 	}
 	cle.RegisterCommand(commandline.NewCustomCommand(cmd.Cmd, commandline.NewFixedArgCompletion(clArgs...), func(args []string) error {
-		fields := make(map[rri.QueryFieldName][]string)
+		fields := rri.NewQueryFieldList()
 		argIndex := 0
 		for _, arg := range cmd.Args {
 			var inValue string
@@ -609,16 +609,11 @@ func registerCustomCommand(cle *commandline.Environment, cmd customCommand) {
 				argIndex++
 			}
 
-			values, ok := fields[rri.QueryFieldName(arg.Field)]
-			if !ok {
-				values = []string{}
-			}
-
 			switch strings.ToLower(arg.Type) {
 			case "domain":
-				fields[rri.QueryFieldName(arg.Field)] = append(values, inValue)
+				fields.Add(rri.QueryFieldName(arg.Field), inValue)
 			case "const":
-				fields[rri.QueryFieldName(arg.Field)] = append(values, arg.Value)
+				fields.Add(rri.QueryFieldName(arg.Field), arg.Value)
 			}
 		}
 		//TODO fill history

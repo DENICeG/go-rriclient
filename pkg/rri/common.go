@@ -64,7 +64,12 @@ func IsXML(msg string) bool {
 
 // CensorRawMessage replaces passwords in a raw query with '******'.
 func CensorRawMessage(msg string) string {
-	//TODO censor xml
+	if IsXML(msg) {
+		//TODO censor xml
+		return msg
+
+	}
+
 	pattern := regexp.MustCompile("([\r\n]|^)(password:[ \t]+)([^\r\n]*)([\r\n]|$)")
 	return pattern.ReplaceAllStringFunc(msg, func(matchStr string) string {
 		m := pattern.FindStringSubmatch(matchStr)

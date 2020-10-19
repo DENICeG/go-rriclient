@@ -8,6 +8,14 @@ import (
 	"strings"
 )
 
+// TLSDialer is the callback function to open a new TLS connection. Maps tls.Dial by default.
+type TLSDialer func(network, addr string, config *tls.Config) (TLSConnection, error)
+
+// TLSConnection wraps a TLS connection as denoted by *tls.Conn.
+type TLSConnection interface {
+	io.ReadWriteCloser
+}
+
 // QueryProcessor is used to process a query directly before sending. The returned query is sent to RRI server. Return nil to abort processing.
 type QueryProcessor func(*Query) *Query
 
@@ -25,7 +33,7 @@ type Client struct {
 	tlsConfig          *tls.Config
 	currentUser        string
 	lastUser, lastPass string
-	// Processor is called for all queries before they are sent.
+	// Processor is called for all queries before they are sent. The query returned by this callback function is sent to RRI instead. If nil is returned, no request is sent and a nil response without error is returned by the corresponding SendQuery call.
 	Processor QueryProcessor
 	// RawQueryPrinter is called for the raw messages sent and received by the client.
 	RawQueryPrinter RawQueryPrinter
@@ -45,14 +53,6 @@ type ClientConfig struct {
 	Insecure bool
 	// MinTLSVersion denotes the minimum accepted TLS version.
 	MinTLSVersion uint16
-}
-
-// TLSDialer is the callback function to open a new TLS connection. Maps tls.Dial by default.
-type TLSDialer func(network, addr string, config *tls.Config) (TLSConnection, error)
-
-// TLSConnection wraps a TLS connection as denoted by *tls.Conn.
-type TLSConnection interface {
-	io.ReadWriteCloser
 }
 
 // NewClient returns a new Client object for the given RRI Server.

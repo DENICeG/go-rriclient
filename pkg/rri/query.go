@@ -141,17 +141,12 @@ func (q *Query) Action() QueryAction {
 
 // String returns a human readable representation of the query.
 func (q *Query) String() string {
-	//TODO shortened, single line representation
 	var sb strings.Builder
-	for _, f := range q.fields {
-		if sb.Len() > 0 {
-			sb.WriteString("; ")
-		}
-		sb.WriteString(string(f.Name))
-		sb.WriteString("=")
-		sb.WriteString(f.Value)
+	switch q.Action() {
+	case ActionLogin:
+		sb.WriteString(fmt.Sprintf("%q", q.FirstField(QueryFieldNameUser)))
 	}
-	return fmt.Sprintf("%sv%s{%s}", q.Action(), q.Version(), sb.String())
+	return fmt.Sprintf("%s{%s}", q.Action(), sb.String())
 }
 
 // EncodeKV returns the Key-Value representation as used for RRI communication.
@@ -218,7 +213,7 @@ func NewCheckHandleQuery(handle string) *Query {
 func NewInfoHandleQuery(handle string) *Query {
 	fields := NewQueryFieldList()
 	fields.Add(QueryFieldNameHandle, handle)
-	return NewQuery(LatestVersion, ActionCheck, fields)
+	return NewQuery(LatestVersion, ActionInfo, fields)
 }
 
 func putDomainToQueryFields(fields *QueryFieldList, domain string) {
@@ -231,6 +226,7 @@ func putDomainToQueryFields(fields *QueryFieldList, domain string) {
 	} else {
 		fields.Add(QueryFieldNameDomainIDN, domain)
 		if ace, err := idna.ToASCII(domain); err == nil {
+			//TODO only add ace string if it differs from idn
 			fields.Add(QueryFieldNameDomainACE, ace)
 		}
 	}

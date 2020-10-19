@@ -12,7 +12,7 @@ import (
 
 func TestClient(t *testing.T) {
 	mustWithMockServer(func(server *MockServer) {
-		server.AddUser("test", "secret")
+		server.AddUser("DENIC-1000011-TEST", "secret")
 
 		var client *Client
 
@@ -34,9 +34,12 @@ func TestClient(t *testing.T) {
 		t.Run("Login", func(t *testing.T) {
 			assert.Error(t, client.Login("asdf", "foobar"))
 			assert.False(t, client.IsLoggedIn())
-			assert.NoError(t, client.Login("test", "secret"))
+			assert.NoError(t, client.Login("DENIC-1000011-TEST", "secret"))
 			assert.True(t, client.IsLoggedIn())
-			assert.Equal(t, "test", client.CurrentUser())
+			assert.Equal(t, "DENIC-1000011-TEST", client.CurrentUser())
+			regAccID, err := client.CurrentRegAccID()
+			require.NoError(t, err)
+			assert.Equal(t, 1000011, regAccID)
 		})
 	})
 }
@@ -79,19 +82,17 @@ func TestClientConf(t *testing.T) {
 	assert.Equal(t, 1, dialCount)
 }
 
-func TestClientAutoRetry(t *testing.T) {
-	//TODO this test requires deterministic response creation
-	/*dialCount := 0
+func TestClientNoAutoRetry(t *testing.T) {
+	dialCount := 0
 	conn := newMockReadWriteCloser(t, []readResponse{
-		{[]byte{0, 0, 0, 4}, nil},
+		{[]byte{0, 0, 0, 15}, nil},
 		{[]byte("RESULT: success"), nil},
 	}, []writeResponse{
 		{b64("AAAAQ3ZlcnNpb246IDMuMAphY3Rpb246IExPR0lOCnVzZXI6IERFTklDLTEwMDAwMTEtUlJJCnBhc3N3b3JkOiBzZWNyZXQ="), nil},
+		{b64("AAAAP3ZlcnNpb246IDMuMAphY3Rpb246IElORk8KZG9tYWluOiBkZW5pYy5kZQpkb21haW4tYWNlOiBkZW5pYy5kZQ=="), fmt.Errorf("broken pipe")},
 	})
 
 	client, err := NewClient("localhost", &ClientConfig{
-		Insecure:      true,
-		MinTLSVersion: tls.VersionTLS12,
 		TLSDialHandler: func(network, addr string, config *tls.Config) (TLSConnection, error) {
 			dialCount++
 			return conn, nil
@@ -101,8 +102,48 @@ func TestClientAutoRetry(t *testing.T) {
 	require.NoError(t, err)
 
 	require.NoError(t, client.Login("DENIC-1000011-RRI", "secret"))
+	client.NoAutoRetry = true
+	_, err = client.SendQuery(NewInfoDomainQuery("denic.de"))
+	require.Error(t, err)
 
-	assert.Equal(t, 2, dialCount)*/
+	assert.Equal(t, 1, dialCount, "unexpected number of tls connections")
+	conn.AssertComplete()
+}
+
+func TestClientAutoRetry(t *testing.T) {
+	dialCount := 0
+	conn := newMockReadWriteCloser(t, []readResponse{
+		{[]byte{0, 0, 0, 15}, nil},
+		{[]byte("RESULT: success"), nil},
+		{[]byte{0, 0, 0, 15}, nil},
+		{[]byte("RESULT: success"), nil},
+		{[]byte{0, 0, 0, 39}, nil},
+		{[]byte("RESULT: success\nINFO: 12345 only a test"), nil},
+	}, []writeResponse{
+		{b64("AAAAQ3ZlcnNpb246IDMuMAphY3Rpb246IExPR0lOCnVzZXI6IERFTklDLTEwMDAwMTEtUlJJCnBhc3N3b3JkOiBzZWNyZXQ="), nil},
+		{b64("AAAAP3ZlcnNpb246IDMuMAphY3Rpb246IElORk8KZG9tYWluOiBkZW5pYy5kZQpkb21haW4tYWNlOiBkZW5pYy5kZQ=="), fmt.Errorf("broken pipe")},
+		{b64("AAAAQ3ZlcnNpb246IDMuMAphY3Rpb246IExPR0lOCnVzZXI6IERFTklDLTEwMDAwMTEtUlJJCnBhc3N3b3JkOiBzZWNyZXQ="), nil},
+		{b64("AAAAP3ZlcnNpb246IDMuMAphY3Rpb246IElORk8KZG9tYWluOiBkZW5pYy5kZQpkb21haW4tYWNlOiBkZW5pYy5kZQ=="), nil},
+	})
+
+	client, err := NewClient("localhost", &ClientConfig{
+		TLSDialHandler: func(network, addr string, config *tls.Config) (TLSConnection, error) {
+			dialCount++
+			return conn, nil
+		},
+	})
+	defer client.Close()
+	require.NoError(t, err)
+
+	require.NoError(t, client.Login("DENIC-1000011-RRI", "secret"))
+	resp, err := client.SendQuery(NewInfoDomainQuery("denic.de"))
+	require.NoError(t, err)
+	require.Equal(t, 2, resp.Fields().Size())
+	assert.Equal(t, []string{"success"}, resp.Field(ResponseFieldNameResult))
+	assert.Equal(t, []string{"12345 only a test"}, resp.Field(ResponseFieldNameInfo))
+
+	assert.Equal(t, 2, dialCount, "unexpected number of tls connections")
+	conn.AssertComplete()
 }
 
 type mockReadWriteCloser struct {
@@ -110,7 +151,6 @@ type mockReadWriteCloser struct {
 	ReadIndex      int
 	WriteResponses []writeResponse
 	WriteIndex     int
-	Closed         bool
 	m              sync.Mutex
 	t              *testing.T
 }
@@ -129,19 +169,28 @@ type writeResponse struct {
 	Error        error
 }
 
+func (m *mockReadWriteCloser) AssertComplete() bool {
+	eq1 := assert.Equal(m.t, len(m.ReadResponses), m.ReadIndex)
+	eq2 := assert.Equal(m.t, len(m.WriteResponses), m.WriteIndex)
+	return eq1 && eq2
+}
+
 func (m *mockReadWriteCloser) Read(p []byte) (int, error) {
 	m.m.Lock()
 	defer m.m.Unlock()
 
 	if m.ReadIndex >= len(m.ReadResponses) {
-		require.Fail(m.t, fmt.Sprintf("more than %d read operations detected", len(m.ReadResponses)))
+		require.Fail(m.t, fmt.Sprintf("unexpected read operation %d of %d", m.ReadIndex+1, len(m.ReadResponses)))
 	}
-	if len(m.ReadResponses[m.ReadIndex].Data) > len(p) {
-		panic("read response does not fit destination array")
+	if len(m.ReadResponses[m.ReadIndex].Data) != len(p) {
+		require.Fail(m.t, fmt.Sprintf("read response destination array of size %d does not match expected output of size %d", len(p), len(m.ReadResponses[m.ReadIndex].Data)))
 	}
 	m.ReadIndex++
 	if m.ReadResponses[m.ReadIndex-1].Error != nil {
 		return 0, m.ReadResponses[m.ReadIndex-1].Error
+	}
+	for i, b := range m.ReadResponses[m.ReadIndex-1].Data {
+		p[i] = b
 	}
 	return len(m.ReadResponses[m.ReadIndex-1].Data), nil
 }
@@ -151,7 +200,7 @@ func (m *mockReadWriteCloser) Write(p []byte) (int, error) {
 	defer m.m.Unlock()
 
 	if m.WriteIndex >= len(m.WriteResponses) {
-		require.Fail(m.t, fmt.Sprintf("more than %d write operations detected", len(m.WriteResponses)))
+		require.Fail(m.t, fmt.Sprintf("unexpected write operation %d of %d: %s", m.WriteIndex+1, len(m.WriteResponses), b64enc(p)))
 	}
 	require.Equal(m.t, b64enc(m.WriteResponses[m.WriteIndex].ExpectedData), b64enc(p))
 	m.WriteIndex++

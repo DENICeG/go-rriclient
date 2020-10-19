@@ -7,21 +7,14 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-const (
-	respEncode   = "RESULT: success\nINFO: 13000000011 foo\nSTID: 554c2cd7-0885-11eb-a619-610f86f60bcb\nINFO: 13000000011 bar"
-	respInfoMsg  = "RESULT: success\nINFO: 13000000011 Request was processed in test environment - not valid in real world [testing platform]\nSTID: 554c2cd7-0885-11eb-a619-610f86f60bcb"
-	respErrorMsg = "RESULT: failed\nSTID: d97b7af9-0886-11eb-a619-610f86f60bcb\nERROR: 63300062009 Domain doesn't exist [foobartestgibtsnet.de]\nINFO: 13000000011 Request was processed in test environment - not valid in real world [testing platform]"
-	respEntity   = "RESULT: success\nSTID: 10459b07-861a-11ea-b33a-d9ddb946cb7c\n\nDomain: de-registrylock.de\nDomain-Ace: de-registrylock.de\nNserver: ns1.denic.de.\nNserver: ns2.denic.de.\nNserver: ns3.denic.de.\nStatus: connect\nRegistryLock: true\nRegAccId: DENIC-1000006\nRegAccName: DENIC eG\nChanged: 2020-04-23T09:58:11+02:00\n\n[Holder]\nHandle: DENIC-1000006-DENIC\nType: ORG\nName: DENIC eG\nAddress: Kaiserstrasse 75-77\nCity: Frankfurt am Main\nPostalCode: 60329\nCountryCode: DE\nEmail: info@denic.de\nChanged: 2019-04-05T10:26:06+02:00\n"
-)
-
 func TestResponseEncodeKV(t *testing.T) {
-	response, err := ParseResponse(respEncode)
+	response, err := ParseResponse("RESULT: success\nINFO: 13000000011 foo\nSTID: 554c2cd7-0885-11eb-a619-610f86f60bcb\nINFO: 13000000011 bar")
 	require.NoError(t, err)
 	assert.Equal(t, "RESULT: success\nINFO: 13000000011 foo\nSTID: 554c2cd7-0885-11eb-a619-610f86f60bcb\nINFO: 13000000011 bar", response.EncodeKV())
 }
 
 func TestResponseInfoMessages(t *testing.T) {
-	response, err := ParseResponse(respInfoMsg)
+	response, err := ParseResponse("RESULT: success\nINFO: 13000000011 Request was processed in test environment - not valid in real world [testing platform]\nSTID: 554c2cd7-0885-11eb-a619-610f86f60bcb")
 	require.NoError(t, err)
 	require.Len(t, response.InfoMessages(), 1)
 	assert.Equal(t, []BusinessMessage{NewBusinessMessage(13000000011, "Request was processed in test environment - not valid in real world [testing platform]")}, response.InfoMessages())
@@ -30,7 +23,7 @@ func TestResponseInfoMessages(t *testing.T) {
 }
 
 func TestResponseErrorMessages(t *testing.T) {
-	response, err := ParseResponse(respErrorMsg)
+	response, err := ParseResponse("RESULT: failed\nSTID: d97b7af9-0886-11eb-a619-610f86f60bcb\nERROR: 63300062009 Domain doesn't exist [foobartestgibtsnet.de]\nINFO: 13000000011 Request was processed in test environment - not valid in real world [testing platform]")
 	require.NoError(t, err)
 	require.Len(t, response.InfoMessages(), 1)
 	assert.Equal(t, []BusinessMessage{NewBusinessMessage(13000000011, "Request was processed in test environment - not valid in real world [testing platform]")}, response.InfoMessages())
@@ -39,7 +32,7 @@ func TestResponseErrorMessages(t *testing.T) {
 }
 
 func TestResponseEntity(t *testing.T) {
-	response, err := ParseResponse(respEntity)
+	response, err := ParseResponse("RESULT: success\nSTID: 10459b07-861a-11ea-b33a-d9ddb946cb7c\n\nDomain: de-registrylock.de\nDomain-Ace: de-registrylock.de\nNserver: ns1.denic.de.\nNserver: ns2.denic.de.\nNserver: ns3.denic.de.\nStatus: connect\nRegistryLock: true\nRegAccId: DENIC-1000006\nRegAccName: DENIC eG\nChanged: 2020-04-23T09:58:11+02:00\n\n[Holder]\nHandle: DENIC-1000006-DENIC\nType: ORG\nName: DENIC eG\nAddress: Kaiserstrasse 75-77\nCity: Frankfurt am Main\nPostalCode: 60329\nCountryCode: DE\nEmail: info@denic.de\nChanged: 2019-04-05T10:26:06+02:00\n")
 	require.NoError(t, err)
 	assert.Equal(t, ResultSuccess, response.Result())
 	assert.Equal(t, "10459b07-861a-11ea-b33a-d9ddb946cb7c", response.STID())

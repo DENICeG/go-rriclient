@@ -57,9 +57,7 @@ func main() {
 
 	if *argVersion {
 		console.Printlnf("Standalone RRI Client v%s", version)
-		if len(buildTime) == 0 || len(gitCommit) == 0 {
-			console.Println("  no build information available")
-		} else {
+		if len(buildTime) > 0 && len(gitCommit) > 0 {
 			console.Printlnf("  built at %s from commit %s", buildTime, gitCommit)
 		}
 		return

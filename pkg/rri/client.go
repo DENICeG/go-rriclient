@@ -133,9 +133,31 @@ func (client *Client) CurrentRegAccID() (int, error) {
 func (client *Client) Close() error {
 	if client.connection != nil {
 		//TODO send LOGOUT while connected?
-		return client.connection.Close()
+		return client.closeConnection()
 	}
 	return nil
+}
+
+func (client *Client) closeConnection() error {
+	if client.connection == nil {
+		// no connection? nothing to do
+		return nil
+	}
+
+	// wrap tls connection close to also catch nil-pointer panics (regression in tls package)
+	var err error
+	func() {
+		defer func() {
+			if r := recover(); r != nil {
+				// pass recovered panic as error
+				err = fmt.Errorf("panic: %v", r)
+			}
+		}()
+
+		err = client.connection.Close()
+	}()
+	client.connection = nil
+	return err
 }
 
 // Login sends a login request to the server and checks for a success result.
@@ -246,8 +268,7 @@ func (client *Client) SendRaw(msg string) (string, error) {
 		// try re-establishing lost connection once
 		if client.connection != nil {
 			// ignore close errors (connection will be discarded anyway)
-			client.connection.Close()
-			client.connection = nil
+			client.closeConnection()
 		}
 		if err := client.setupConnection(); err != nil {
 			return "", fmt.Errorf("failed to restore lost connection: %s", err.Error())

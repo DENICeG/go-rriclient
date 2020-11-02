@@ -1,7 +1,0 @@
-version: 3.0
-action: LOGIN
-user: DENIC-1000001-RRI
-password: secret
-=-=
-version: 3.0
-action: LOGOUT

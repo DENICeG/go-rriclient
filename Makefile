@@ -22,18 +22,37 @@ clean:
 	rm -f cover.out
 
 dep:
-	@go get -v -d ./...
-	@go get github.com/stretchr/testify/assert
+	@go get ./...
 
-build-linux: dep
+build-all: dep build-linux build-windows
+
+build-linux:
 	@echo Building for linux
 	@mkdir -p bin
 	CGO_ENABLED=0 GOOS=linux go build -o bin/$(APPNAME) -a -ldflags $(LDFLAGS) .
 
-build-windows: dep
+build-windows:
 	@echo Building for windows
 	@mkdir -p bin
 	CGO_ENABLED=0 GOOS=windows go build -o bin/$(APPNAME).exe -a -ldflags $(LDFLAGS_WINDOWS) .
+
+build-all-container:
+	@set -e
+	@export UID=$$(id -u)
+	@if [ -z "$$UID" ]; then
+	@	echo "could not detect UID"
+	@	exit 1
+	@fi
+	@export GID=$$(id -g)
+	@if [ -z "$$GID" ]; then
+	@	echo "could not detect GID"
+	@	exit 1
+	@fi
+	docker run -it --rm --name rri-client-builder --network host --env UID=$$UID --env GID=$$GID --mount type=bind,source="$(CURDIR)",target=/data --workdir /data golang:1.15 sh -c '
+		mkdir -p ./bin
+		chown -R $$UID:$$GID ./bin
+		make build-all
+		chown -R $$UID:$$GID ./bin'
 
 unit-test:
 	@rm -f coverage.out

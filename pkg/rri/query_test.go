@@ -108,16 +108,46 @@ func TestNewCreateDomainQuery(t *testing.T) {
 	assert.Equal(t, []string{"ns1.denic.de", "ns2.denic.de"}, query.Field(QueryFieldNameNameServer))
 }
 
-func TestQueryNormalization(t *testing.T) {
-	query, err := ParseQuery("Version:   3.0   \nAction: iNfO\ndIsCoNnEcT: tRuE")
-	require.NoError(t, err)
+func TestNewUpdateDomainQuery(t *testing.T) {
+	query := NewUpdateDomainQuery("denic.de", DomainData{
+		HolderHandles:         []string{"DENIC-1000011-HOLDER-DUDE"},
+		GeneralRequestHandles: []string{"DENIC-1000011-REQUEST-DUDE"},
+		AbuseContactHandles:   []string{"DENIC-1000011-ABUSE-DUDE"},
+		NameServers:           []string{"ns1.denic.de", "ns2.denic.de"},
+	})
 	require.NotNil(t, query)
 	assert.Equal(t, LatestVersion, query.Version())
-	assert.Equal(t, ActionInfo, query.Action())
-	require.Len(t, query.Fields(), 3)
-	assert.Equal(t, []string{"3.0"}, query.Field(QueryFieldNameVersion))
-	assert.Equal(t, []string{"iNfO"}, query.Field(QueryFieldNameAction))
-	assert.Equal(t, []string{"tRuE"}, query.Field(QueryFieldNameDisconnect))
+	assert.Equal(t, ActionUpdate, query.Action())
+	require.Len(t, query.Fields(), 9)
+	assert.Equal(t, []string{string(LatestVersion)}, query.Field(QueryFieldNameVersion))
+	assert.Equal(t, []string{string(ActionUpdate)}, query.Field(QueryFieldNameAction))
+	assert.Equal(t, []string{"denic.de"}, query.Field(QueryFieldNameDomainIDN))
+	assert.Equal(t, []string{"denic.de"}, query.Field(QueryFieldNameDomainACE))
+	assert.Equal(t, []string{"DENIC-1000011-HOLDER-DUDE"}, query.Field(QueryFieldNameHolder))
+	assert.Equal(t, []string{"DENIC-1000011-REQUEST-DUDE"}, query.Field(QueryFieldNameGeneralRequest))
+	assert.Equal(t, []string{"DENIC-1000011-ABUSE-DUDE"}, query.Field(QueryFieldNameAbuseContact))
+	assert.Equal(t, []string{"ns1.denic.de", "ns2.denic.de"}, query.Field(QueryFieldNameNameServer))
+}
+
+func TestNewChangeHolderQuery(t *testing.T) {
+	query := NewChangeHolderQuery("denic.de", DomainData{
+		HolderHandles:         []string{"DENIC-1000011-HOLDER-DUDE"},
+		GeneralRequestHandles: []string{"DENIC-1000011-REQUEST-DUDE"},
+		AbuseContactHandles:   []string{"DENIC-1000011-ABUSE-DUDE"},
+		NameServers:           []string{"ns1.denic.de", "ns2.denic.de"},
+	})
+	require.NotNil(t, query)
+	assert.Equal(t, LatestVersion, query.Version())
+	assert.Equal(t, ActionChangeHolder, query.Action())
+	require.Len(t, query.Fields(), 9)
+	assert.Equal(t, []string{string(LatestVersion)}, query.Field(QueryFieldNameVersion))
+	assert.Equal(t, []string{string(ActionChangeHolder)}, query.Field(QueryFieldNameAction))
+	assert.Equal(t, []string{"denic.de"}, query.Field(QueryFieldNameDomainIDN))
+	assert.Equal(t, []string{"denic.de"}, query.Field(QueryFieldNameDomainACE))
+	assert.Equal(t, []string{"DENIC-1000011-HOLDER-DUDE"}, query.Field(QueryFieldNameHolder))
+	assert.Equal(t, []string{"DENIC-1000011-REQUEST-DUDE"}, query.Field(QueryFieldNameGeneralRequest))
+	assert.Equal(t, []string{"DENIC-1000011-ABUSE-DUDE"}, query.Field(QueryFieldNameAbuseContact))
+	assert.Equal(t, []string{"ns1.denic.de", "ns2.denic.de"}, query.Field(QueryFieldNameNameServer))
 }
 
 func TestNewTransitDomainQuery(t *testing.T) {
@@ -162,17 +192,20 @@ func TestNewCreateAuthInfo1Query(t *testing.T) {
 
 func TestNewVerifyDomainQuery(t *testing.T) {
 	query := NewVerifyDomainQuery("denic.de", AuthorizedSignatory{
-		FirstName:    "Donald",
-		LastName:     "Duck",
-		EMail:        "donald@duck.de",
-		DateOfBirth:  time.Date(1934, time.June, 9, 0, 0, 0, 0, time.UTC),
-		PlaceOfBirth: "Entenhausen",
-		Phone:        "+0123 456789",
+		FirstName:   "Donald",
+		LastName:    "Duck",
+		EMail:       "donald@duck.de",
+		DateOfBirth: time.Date(1934, time.June, 9, 0, 0, 0, 0, time.UTC),
+		CountryCode: "DE",
+		City:        "Entenhausen",
+		PostalCode:  "12345",
+		Street:      "Gänsestraße 42",
+		Phone:       "+0123 456789",
 	})
 	require.NotNil(t, query)
 	assert.Equal(t, LatestVersion, query.Version())
 	assert.Equal(t, ActionVerify, query.Action())
-	require.Len(t, query.Fields(), 10)
+	require.Len(t, query.Fields(), 13)
 	assert.Equal(t, []string{string(LatestVersion)}, query.Field(QueryFieldNameVersion))
 	assert.Equal(t, []string{string(ActionVerify)}, query.Field(QueryFieldNameAction))
 	assert.Equal(t, []string{"denic.de"}, query.Field(QueryFieldNameDomainIDN))
@@ -181,8 +214,23 @@ func TestNewVerifyDomainQuery(t *testing.T) {
 	assert.Equal(t, []string{"Duck"}, query.Field(QueryFieldNameAuthSigLastName))
 	assert.Equal(t, []string{"donald@duck.de"}, query.Field(QueryFieldNameAuthSigEMail))
 	assert.Equal(t, []string{"1934-06-09"}, query.Field(QueryFieldNameAuthSigDateOfBirth))
-	assert.Equal(t, []string{"Entenhausen"}, query.Field(QueryFieldNameAuthSigPlaceOfBirth))
+	assert.Equal(t, []string{"DE"}, query.Field(QueryFieldNameAuthSigCountryCode))
+	assert.Equal(t, []string{"Entenhausen"}, query.Field(QueryFieldNameAuthSigCity))
+	assert.Equal(t, []string{"12345"}, query.Field(QueryFieldNameAuthSigPostalCode))
+	assert.Equal(t, []string{"Gänsestraße 42"}, query.Field(QueryFieldNameAuthSigStreet))
 	assert.Equal(t, []string{"+0123 456789"}, query.Field(QueryFieldNameAuthSigPhone))
+}
+
+func TestQueryNormalization(t *testing.T) {
+	query, err := ParseQuery("Version:   3.0   \nAction: iNfO\ndIsCoNnEcT: tRuE")
+	require.NoError(t, err)
+	require.NotNil(t, query)
+	assert.Equal(t, LatestVersion, query.Version())
+	assert.Equal(t, ActionInfo, query.Action())
+	require.Len(t, query.Fields(), 3)
+	assert.Equal(t, []string{"3.0"}, query.Field(QueryFieldNameVersion))
+	assert.Equal(t, []string{"iNfO"}, query.Field(QueryFieldNameAction))
+	assert.Equal(t, []string{"tRuE"}, query.Field(QueryFieldNameDisconnect))
 }
 
 func TestParseQueryCasing(t *testing.T) {

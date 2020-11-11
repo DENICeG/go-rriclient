@@ -215,7 +215,8 @@ func prepareCLE() *commandline.Environment {
 	registerDomainCommand(cle, "delete", newDomainQueryCommand(rri.NewDeleteDomainQuery))
 	registerDomainCommand(cle, "restore", newDomainQueryCommand(rri.NewRestoreDomainQuery))
 	registerDomainCommand(cle, "transit", cmdTransit, commandline.NewOneOfArgCompletion("disconnect", "connect"))
-	registerDomainCommand(cle, "chprov", cmdChProv)
+	registerDomainCommand(cle, "chholder", cmdChangeHolder)
+	registerDomainCommand(cle, "chprov", cmdChangeProvider)
 
 	// register custom commands
 	for _, cmd := range customCommands {
@@ -252,7 +253,7 @@ func cmdHelp(args []string) error {
 		{[]string{"check", "domain"}, []string{"domain"}, "send a CHECK command for a specific domain"},
 		{[]string{"info", "domain"}, []string{"domain"}, "send an INFO command for a specific domain"},
 		{[]string{"update", "domain"}, []string{"domain"}, "send an UPDATE command for a specific domain"},
-		//TODO chholder
+		{[]string{"chholder", "domain"}, []string{"domain"}, "send an CHHOLDER command for a specific domain"},
 		{},
 		{[]string{"delete"}, []string{"domain"}, "send a DELETE command for a specific domain"},
 		{[]string{"restore"}, []string{"domain"}, "send a RESTORE command for a specific domain"},
@@ -276,9 +277,9 @@ func cmdHelp(args []string) error {
 	}
 
 	if len(customCommands) > 0 {
-		head := commands[:20]
+		head := commands[:21]
 		tail := make([]customCmd, 6)
-		copy(tail, commands[20:])
+		copy(tail, commands[21:])
 		commands = head
 		for _, cmd := range customCommands {
 			args := make([]string, 0)
@@ -685,6 +686,24 @@ func cmdUpdateDomain(args []string) error {
 	return err
 }
 
+func cmdChangeHolder(args []string) error {
+	domainName, handles, nameServers, err := readDomainData(args, 1)
+	if err != nil {
+		return err
+	}
+
+	//TODO use old domain values for empty fields -> only change explicitly entered data
+
+	_, err = processQuery(rri.NewChangeHolderQuery(domainName, rri.DomainData{
+		HolderHandles:         handles[0],
+		GeneralRequestHandles: handles[1],
+		AbuseContactHandles:   handles[2],
+		NameServers:           nameServers,
+	}))
+	histDomains.Put(domainName)
+	return err
+}
+
 func cmdTransit(args []string) error {
 	if len(args) < 1 {
 		return fmt.Errorf("missing domain name")
@@ -733,7 +752,7 @@ func cmdCreateAuthInfo1(args []string) error {
 	return err
 }
 
-func cmdChProv(args []string) error {
+func cmdChangeProvider(args []string) error {
 	if len(args) < 1 {
 		return fmt.Errorf("missing domain name")
 	}

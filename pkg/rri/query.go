@@ -52,8 +52,14 @@ const (
 	QueryFieldNameAuthSigEMail QueryFieldName = "authorizedsignatoryemail"
 	// QueryFieldNameAuthSigDateOfBirth denotes the date of birth of an authorized signatory.
 	QueryFieldNameAuthSigDateOfBirth QueryFieldName = "authorizedsignatorydateofbirth"
-	// QueryFieldNameAuthSigPlaceOfBirth denotes the place of birth of an authorized signatory.
-	QueryFieldNameAuthSigPlaceOfBirth QueryFieldName = "authorizedsignatoryplaceofbirth"
+	// QueryFieldNameAuthSigCountryCode denotes the country of an authorized signatory.
+	QueryFieldNameAuthSigCountryCode QueryFieldName = "authorizedsignatorycountrycode"
+	// QueryFieldNameAuthSigCity denotes the city of an authorized signatory.
+	QueryFieldNameAuthSigCity QueryFieldName = "authorizedsignatorycity"
+	// QueryFieldNameAuthSigPostalCode denotes the postal code of an authorized signatory.
+	QueryFieldNameAuthSigPostalCode QueryFieldName = "authorizedsignatorypostalcode"
+	// QueryFieldNameAuthSigStreet denotes the street of an authorized signatory.
+	QueryFieldNameAuthSigStreet QueryFieldName = "authorizedsignatorystreet"
 	// QueryFieldNameAuthSigPhone denotes the phone number of an authorized signatory.
 	QueryFieldNameAuthSigPhone QueryFieldName = "authorizedsignatoryphone"
 
@@ -69,6 +75,8 @@ const (
 	ActionCreate QueryAction = "CREATE"
 	// ActionUpdate denotes the action value for update.
 	ActionUpdate QueryAction = "UPDATE"
+	// ActionChangeHolder denotes the action value for change holder.
+	ActionChangeHolder QueryAction = "CHHOLDER"
 	// ActionDelete deontes the action value for delete.
 	ActionDelete QueryAction = "DELETE"
 	// ActionRestore deontes the action value for restore.
@@ -262,6 +270,14 @@ func NewUpdateDomainQuery(domain string, domainData DomainData) *Query {
 	return NewQuery(LatestVersion, ActionUpdate, fields)
 }
 
+// NewChangeHolderQuery returns a query to update a domain.
+func NewChangeHolderQuery(domain string, domainData DomainData) *Query {
+	fields := NewQueryFieldList()
+	putDomainToQueryFields(&fields, domain)
+	domainData.putToQueryFields(&fields)
+	return NewQuery(LatestVersion, ActionChangeHolder, fields)
+}
+
 // NewDeleteDomainQuery returns a delete query.
 func NewDeleteDomainQuery(domain string) *Query {
 	fields := NewQueryFieldList()
@@ -313,12 +329,15 @@ func NewCreateAuthInfo2Query(domain string) *Query {
 
 // AuthorizedSignatory represents the authorized signatory for a VERIFY query.
 type AuthorizedSignatory struct {
-	FirstName    string
-	LastName     string
-	EMail        string
-	DateOfBirth  time.Time
-	PlaceOfBirth string
-	Phone        string
+	FirstName   string
+	LastName    string
+	EMail       string
+	DateOfBirth time.Time
+	CountryCode string
+	City        string
+	PostalCode  string
+	Street      string
+	Phone       string
 }
 
 // NewVerifyDomainQuery returns a query to create a verify domain.
@@ -329,7 +348,10 @@ func NewVerifyDomainQuery(domain string, authSignatory AuthorizedSignatory) *Que
 	fields.Add(QueryFieldNameAuthSigLastName, authSignatory.LastName)
 	fields.Add(QueryFieldNameAuthSigEMail, authSignatory.EMail)
 	fields.Add(QueryFieldNameAuthSigDateOfBirth, authSignatory.DateOfBirth.Format("2006-01-02"))
-	fields.Add(QueryFieldNameAuthSigPlaceOfBirth, authSignatory.PlaceOfBirth)
+	fields.Add(QueryFieldNameAuthSigCountryCode, authSignatory.CountryCode)
+	fields.Add(QueryFieldNameAuthSigCity, authSignatory.City)
+	fields.Add(QueryFieldNameAuthSigPostalCode, authSignatory.PostalCode)
+	fields.Add(QueryFieldNameAuthSigStreet, authSignatory.Street)
 	if len(authSignatory.Phone) > 0 {
 		fields.Add(QueryFieldNameAuthSigPhone, authSignatory.Phone)
 	}

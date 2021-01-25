@@ -52,7 +52,7 @@ func TestNewLogoutQuery(t *testing.T) {
 }
 
 func TestNewCheckHandleQuery(t *testing.T) {
-	query := NewCheckHandleQuery("DENIC-1000011-SOME-DUDE")
+	query := NewCheckHandleQuery(NewDenicHandle(1000011, "SOME-DUDE"))
 	require.NotNil(t, query)
 	assert.Equal(t, LatestVersion, query.Version())
 	assert.Equal(t, ActionCheck, query.Action())
@@ -63,7 +63,7 @@ func TestNewCheckHandleQuery(t *testing.T) {
 }
 
 func TestNewInfoHandleQuery(t *testing.T) {
-	query := NewInfoHandleQuery("DENIC-1000011-SOME-DUDE")
+	query := NewInfoHandleQuery(NewDenicHandle(1000011, "SOME-DUDE"))
 	require.NotNil(t, query)
 	assert.Equal(t, LatestVersion, query.Version())
 	assert.Equal(t, ActionInfo, query.Action())
@@ -89,9 +89,9 @@ func TestPutDomainToQueryFields(t *testing.T) {
 
 func TestNewCreateDomainQuery(t *testing.T) {
 	query := NewCreateDomainQuery("denic.de", DomainData{
-		HolderHandles:         []string{"DENIC-1000011-HOLDER-DUDE"},
-		GeneralRequestHandles: []string{"DENIC-1000011-REQUEST-DUDE"},
-		AbuseContactHandles:   []string{"DENIC-1000011-ABUSE-DUDE"},
+		HolderHandles:         []DenicHandle{NewDenicHandle(1000011, "HOLDER-DUDE")},
+		GeneralRequestHandles: []DenicHandle{NewDenicHandle(1000011, "REQUEST-DUDE")},
+		AbuseContactHandles:   []DenicHandle{NewDenicHandle(1000011, "ABUSE-DUDE")},
 		NameServers:           []string{"ns1.denic.de", "ns2.denic.de"},
 	})
 	require.NotNil(t, query)
@@ -110,9 +110,9 @@ func TestNewCreateDomainQuery(t *testing.T) {
 
 func TestNewUpdateDomainQuery(t *testing.T) {
 	query := NewUpdateDomainQuery("denic.de", DomainData{
-		HolderHandles:         []string{"DENIC-1000011-HOLDER-DUDE"},
-		GeneralRequestHandles: []string{"DENIC-1000011-REQUEST-DUDE"},
-		AbuseContactHandles:   []string{"DENIC-1000011-ABUSE-DUDE"},
+		HolderHandles:         []DenicHandle{NewDenicHandle(1000011, "HOLDER-DUDE")},
+		GeneralRequestHandles: []DenicHandle{NewDenicHandle(1000011, "REQUEST-DUDE")},
+		AbuseContactHandles:   []DenicHandle{NewDenicHandle(1000011, "ABUSE-DUDE")},
 		NameServers:           []string{"ns1.denic.de", "ns2.denic.de"},
 	})
 	require.NotNil(t, query)
@@ -131,9 +131,9 @@ func TestNewUpdateDomainQuery(t *testing.T) {
 
 func TestNewChangeHolderQuery(t *testing.T) {
 	query := NewChangeHolderQuery("denic.de", DomainData{
-		HolderHandles:         []string{"DENIC-1000011-HOLDER-DUDE"},
-		GeneralRequestHandles: []string{"DENIC-1000011-REQUEST-DUDE"},
-		AbuseContactHandles:   []string{"DENIC-1000011-ABUSE-DUDE"},
+		HolderHandles:         []DenicHandle{NewDenicHandle(1000011, "HOLDER-DUDE")},
+		GeneralRequestHandles: []DenicHandle{NewDenicHandle(1000011, "REQUEST-DUDE")},
+		AbuseContactHandles:   []DenicHandle{NewDenicHandle(1000011, "ABUSE-DUDE")},
 		NameServers:           []string{"ns1.denic.de", "ns2.denic.de"},
 	})
 	require.NotNil(t, query)

@@ -9,8 +9,6 @@ import (
 	"strings"
 	"time"
 
-	"golang.org/x/crypto/ssh/terminal"
-
 	"github.com/DENICeG/go-rriclient/pkg/rri"
 
 	"github.com/sbreitf1/go-console"
@@ -94,7 +92,9 @@ func runCLE(confDir string, client *rri.Client, cmd []string) error {
 	var err error
 	customCommands, err = readCustomCommands(filepath.Join(confDir, "custom-commands"))
 	if err != nil {
-		return fmt.Errorf("failed to import custom commands: %s", err.Error())
+		if !os.IsNotExist(err) {
+			console.Println("Failed to import custom commands:", err.Error())
+		}
 	}
 	cle := prepareCLE()
 
@@ -198,6 +198,7 @@ func prepareCLE() *commandline.Environment {
 
 	registerSwitchCommand(cle, "create", cmdSwitches{
 		Domain:    cmdCreateDomain,
+		Handle:    cmdCreateHandle,
 		AuthInfo1: cmdCreateAuthInfo1,
 	})
 	registerSwitchCommand(cle, "check", cmdSwitches{
@@ -244,7 +245,7 @@ func cmdHelp(args []string) error {
 		{[]string{"login"}, []string{"user", "password"}, "log in to a RRI account"},
 		{[]string{"logout"}, nil, "log out from the current RRI account"},
 		{},
-		//TODO contact-create
+		{[]string{"create", "handle"}, []string{"domain"}, "send a CREATE command for a specific handle"},
 		{[]string{"check", "handle"}, []string{"domain"}, "send a CHECK command for a specific handle"},
 		{[]string{"info", "handle"}, []string{"domain"}, "send an INFO command for a specific handle"},
 		//TODO contact-update
@@ -339,7 +340,7 @@ func cmdHelp(args []string) error {
 
 	// sum of spacers and placeholders in "  NAME ARGS_SUM  -  DESC"
 	maxLineLength := 2 + maxCmdSumLen + 1 + maxArgsSumLen + 2 + 1 + 2 + maxDescLen
-	w, _, err := terminal.GetSize(int(os.Stdout.Fd()))
+	w, _, err := console.GetSize()
 	if w <= 0 || maxLineLength <= w || err != nil {
 		// nice table for wide terminals
 		for i, c := range commands {
@@ -568,22 +569,33 @@ func registerDomainCommand(cle *commandline.Environment, name string, commandHan
 }
 
 func newDomainQueryCommand(f func(domain string) *rri.Query) commandline.ExecCommandHandler {
-	return newSingleArgQueryCommand("missing domain name", histDomains, f)
-}
-
-func newHandleQueryCommand(f func(domain string) *rri.Query) commandline.ExecCommandHandler {
-	return newSingleArgQueryCommand("missing handle", histHandles, f)
-}
-
-func newSingleArgQueryCommand(missingMsg string, hist history, f func(arg string) *rri.Query) commandline.ExecCommandHandler {
 	return func(args []string) error {
 		if len(args) < 1 {
-			return fmt.Errorf(missingMsg)
+			return fmt.Errorf("missing domain name")
 		}
 
 		_, err := processQuery(f(args[0]))
-		if hist != nil {
-			hist.Put(args[0])
+		if histDomains != nil {
+			histDomains.Put(args[0])
+		}
+		return err
+	}
+}
+
+func newHandleQueryCommand(f func(handle rri.DenicHandle) *rri.Query) commandline.ExecCommandHandler {
+	return func(args []string) error {
+		if len(args) < 1 {
+			return fmt.Errorf("missing handle")
+		}
+
+		handle, err := rri.ParseDenicHandle(args[0])
+		if err != nil {
+			return err
+		}
+
+		_, err = processQuery(f(handle))
+		if histHandles != nil {
+			histHandles.Put(args[0])
 		}
 		return err
 	}
@@ -652,54 +664,50 @@ func cmdLogout(args []string) error {
 	return cleRRIClient.Logout()
 }
 
-func cmdCreateDomain(args []string) error {
-	domainName, handles, nameServers, err := readDomainData(args, 1)
+func cmdCreateHandle(args []string) error {
+	handle, contactData, err := readContactData(args, 0)
 	if err != nil {
 		return err
 	}
 
-	_, err = processQuery(rri.NewCreateDomainQuery(domainName, rri.DomainData{
-		HolderHandles:         handles[0],
-		GeneralRequestHandles: handles[1],
-		AbuseContactHandles:   handles[2],
-		NameServers:           nameServers,
-	}))
+	_, err = processQuery(rri.NewCreateContactQuery(handle, contactData))
+	histHandles.Put(handle.String())
+	return err
+}
+
+func cmdCreateDomain(args []string) error {
+	domainName, domainData, err := readDomainData(args, 1)
+	if err != nil {
+		return err
+	}
+
+	_, err = processQuery(rri.NewCreateDomainQuery(domainName, domainData))
 	histDomains.Put(domainName)
 	return err
 }
 
 func cmdUpdateDomain(args []string) error {
-	domainName, handles, nameServers, err := readDomainData(args, 1)
+	domainName, domainData, err := readDomainData(args, 1)
 	if err != nil {
 		return err
 	}
 
 	//TODO use old domain values for empty fields -> only change explicitly entered data
 
-	_, err = processQuery(rri.NewUpdateDomainQuery(domainName, rri.DomainData{
-		HolderHandles:         handles[0],
-		GeneralRequestHandles: handles[1],
-		AbuseContactHandles:   handles[2],
-		NameServers:           nameServers,
-	}))
+	_, err = processQuery(rri.NewUpdateDomainQuery(domainName, domainData))
 	histDomains.Put(domainName)
 	return err
 }
 
 func cmdChangeHolder(args []string) error {
-	domainName, handles, nameServers, err := readDomainData(args, 1)
+	domainName, domainData, err := readDomainData(args, 1)
 	if err != nil {
 		return err
 	}
 
 	//TODO use old domain values for empty fields -> only change explicitly entered data
 
-	_, err = processQuery(rri.NewChangeHolderQuery(domainName, rri.DomainData{
-		HolderHandles:         handles[0],
-		GeneralRequestHandles: handles[1],
-		AbuseContactHandles:   handles[2],
-		NameServers:           nameServers,
-	}))
+	_, err = processQuery(rri.NewChangeHolderQuery(domainName, domainData))
 	histDomains.Put(domainName)
 	return err
 }
@@ -760,17 +768,12 @@ func cmdChangeProvider(args []string) error {
 		return fmt.Errorf("missing auth info secret")
 	}
 
-	domainName, handles, nameServers, err := readDomainData(args, 2)
+	domainName, domainData, err := readDomainData(args, 2)
 	if err != nil {
 		return err
 	}
 
-	_, err = processQuery(rri.NewChangeProviderQuery(domainName, args[1], rri.DomainData{
-		HolderHandles:         handles[0],
-		GeneralRequestHandles: handles[1],
-		AbuseContactHandles:   handles[2],
-		NameServers:           nameServers,
-	}))
+	_, err = processQuery(rri.NewChangeProviderQuery(domainName, args[1], domainData))
 	histDomains.Put(domainName)
 	return err
 }
@@ -958,32 +961,41 @@ func processQuery(query *rri.Query) (bool, error) {
 	return response.IsSuccessful(), nil
 }
 
-func readDomainData(args []string, dataOffset int) (domainName string, handles [][]string, nameServers []string, err error) {
+func readDomainData(args []string, dataOffset int) (string, rri.DomainData, error) {
 	if len(args) < 1 {
-		return "", nil, nil, fmt.Errorf("missing domain name")
+		return "", rri.DomainData{}, fmt.Errorf("missing domain name")
 	}
 
-	domainName = args[0]
+	domainName := args[0]
 	if !strings.HasSuffix(strings.ToLower(domainName), ".de") {
-		return "", nil, nil, fmt.Errorf("domain name must end with .de")
+		return "", rri.DomainData{}, fmt.Errorf("domain name must end with .de")
 	}
 
 	handleNames := []string{"Holder", "GeneralRequest", "AbuseContact"}
-	handles = make([][]string, len(handleNames))
+	handles := make([]rri.DenicHandle, len(handleNames))
 	for i := 0; i < len(handleNames); i++ {
 		if len(args) >= (i + dataOffset + 1) {
-			handles[i] = []string{args[i+dataOffset]}
+			handle, err := rri.ParseDenicHandle(args[i+dataOffset])
+			if err != nil {
+				return "", rri.DomainData{}, fmt.Errorf("%q: %s", args[i+dataOffset], err.Error())
+			}
+			handles[i] = rri.DenicHandle(handle)
 		} else {
 			console.Printf("%s Handle> ", handleNames[i])
 			str, err := commandline.ReadLineWithHistory(histHandles)
 			if err != nil {
-				return "", nil, nil, err
+				return "", rri.DomainData{}, err
+			}
+			handle, err := rri.ParseDenicHandle(str)
+			if err != nil {
+				return "", rri.DomainData{}, fmt.Errorf("%q: %s", str, err.Error())
 			}
 			histHandles.Put(str)
-			handles[i] = []string{str}
+			handles[i] = rri.DenicHandle(handle)
 		}
 	}
 
+	var nameServers []string
 	if len(args) >= (dataOffset + len(handleNames)) {
 		nameServers = args[dataOffset+len(handleNames):]
 	} else {
@@ -991,7 +1003,7 @@ func readDomainData(args []string, dataOffset int) (domainName string, handles [
 			console.Printf("NameServer> ")
 			str, err := console.ReadLine()
 			if err != nil {
-				return "", nil, nil, err
+				return "", rri.DomainData{}, err
 			}
 			if len(str) == 0 {
 				break
@@ -1000,5 +1012,65 @@ func readDomainData(args []string, dataOffset int) (domainName string, handles [
 		}
 	}
 
-	return
+	return domainName, rri.DomainData{
+		HolderHandles:         []rri.DenicHandle{handles[0]},
+		GeneralRequestHandles: []rri.DenicHandle{handles[1]},
+		AbuseContactHandles:   []rri.DenicHandle{handles[2]},
+		NameServers:           nameServers,
+	}, nil
+}
+
+func readContactData(args []string, dataOffset int) (rri.DenicHandle, rri.ContactData, error) {
+	handle, err := rri.ParseDenicHandle(args[0])
+	if err != nil {
+		return rri.EmptyDenicHandle(), rri.ContactData{}, fmt.Errorf("%q: %s", args[0], err.Error())
+	}
+
+	console.Print("Type [PERSON ; ORG]> ")
+	strContactType, err := commandline.ReadLineWithHistory(contactTypeHist())
+	if err != nil {
+		return rri.EmptyDenicHandle(), rri.ContactData{}, err
+	}
+	contactType, err := rri.ParseContactType(strContactType)
+	if err != nil {
+		return rri.EmptyDenicHandle(), rri.ContactData{}, fmt.Errorf("%q: %s", strContactType, err.Error())
+	}
+
+	inputDataLabels := []string{"Name", "Address", "Postal Code", "City", "Country Code", "E-Mail"}
+	inputData := make([]string, 0)
+	for i := 0; ; i++ {
+		var label string
+		if i >= len(inputDataLabels) {
+			label = inputDataLabels[len(inputDataLabels)-1]
+		} else {
+			label = inputDataLabels[i]
+		}
+		console.Printf("%s> ", label)
+
+		str, err := console.ReadLine()
+		if err != nil {
+			return rri.EmptyDenicHandle(), rri.ContactData{}, err
+		}
+		if len(str) == 0 && i >= 5 {
+			break
+		}
+		inputData = append(inputData, str)
+	}
+
+	return handle, rri.ContactData{
+		Type:        contactType,
+		Name:        inputData[0],
+		Address:     inputData[1],
+		PostalCode:  inputData[2],
+		City:        inputData[3],
+		CountryCode: inputData[4],
+		EMail:       inputData[5:],
+	}, nil
+}
+
+func contactTypeHist() commandline.LineHistory {
+	hist := commandline.NewLineHistory(2)
+	hist.Put("ORG")
+	hist.Put("PERSON")
+	return hist
 }

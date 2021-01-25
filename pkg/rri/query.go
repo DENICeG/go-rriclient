@@ -4,6 +4,7 @@ import (
 	"crypto/sha256"
 	"encoding/hex"
 	"fmt"
+	"strconv"
 	"strings"
 	"time"
 
@@ -44,6 +45,22 @@ const (
 	QueryFieldNameAuthInfoExpire QueryFieldName = "authinfoexpire"
 	// QueryFieldNameAuthInfo denotes the query field name for auth info hash.
 	QueryFieldNameAuthInfo QueryFieldName = "authinfo"
+	// QueryFieldNameType denotes the query field name for type.
+	QueryFieldNameType QueryFieldName = "type"
+	// QueryFieldNameName denotes the query field name for name.
+	QueryFieldNameName QueryFieldName = "name"
+	// QueryFieldNameOrganisation denotes the query field name for organisation.
+	QueryFieldNameOrganisation QueryFieldName = "organisation"
+	// QueryFieldNameAddress denotes the query field name for address.
+	QueryFieldNameAddress QueryFieldName = "address"
+	// QueryFieldNamePostalCode denotes the query field name for postalcode.
+	QueryFieldNamePostalCode QueryFieldName = "postalcode"
+	// QueryFieldNameCity denotes the query field name for city.
+	QueryFieldNameCity QueryFieldName = "city"
+	// QueryFieldNameCountryCode denotes the query field name for countrycode.
+	QueryFieldNameCountryCode QueryFieldName = "countrycode"
+	// QueryFieldNameEMail denotes the query field name for email.
+	QueryFieldNameEMail QueryFieldName = "email"
 	// QueryFieldNameAuthSigFirstName denotes the first name of an authorized signatory.
 	QueryFieldNameAuthSigFirstName QueryFieldName = "authorizedsignatoryfirstname"
 	// QueryFieldNameAuthSigLastName denotes the last name of an authorized signatory.
@@ -91,6 +108,11 @@ const (
 	ActionVerify QueryAction = "VERIFY"
 	// ActionChangeProvider denotes the action value for change provider.
 	ActionChangeProvider QueryAction = "CHPROV"
+
+	// ContactTypePerson denotes a person.
+	ContactTypePerson ContactType = "PERSON"
+	// ContactTypeOrganisation denotes an organisation.
+	ContactTypeOrganisation ContactType = "ORG"
 )
 
 // Version represents the RRI protocol version.
@@ -117,19 +139,125 @@ func (q QueryFieldName) Normalize() QueryFieldName {
 	return QueryFieldName(strings.ToLower(string(q)))
 }
 
+// ContactType represents the type of a contact handle.
+type ContactType string
+
+// Normalize returns the normalized representation of the given ContactType.
+func (t ContactType) Normalize() ContactType {
+	return ContactType(strings.ToUpper(string(t)))
+}
+
+// ParseContactType parses a contact type from string.
+func ParseContactType(str string) (ContactType, error) {
+	switch strings.ToUpper(str) {
+	case "PERSON":
+		return ContactTypePerson, nil
+	case "ORG":
+		return ContactTypeOrganisation, nil
+	default:
+		return "", fmt.Errorf("invalid contact type")
+	}
+}
+
+// DenicHandle represents a handle like DENIC-1000006-SOME-CODE
+type DenicHandle struct {
+	RegAccID    int
+	ContactCode string
+}
+
+func (h DenicHandle) String() string {
+	if h.IsEmpty() {
+		return ""
+	}
+	return fmt.Sprintf("DENIC-%d-%s", h.RegAccID, strings.ToUpper(h.ContactCode))
+}
+
+// IsEmpty returns true when the given denic handle is unset.
+func (h DenicHandle) IsEmpty() bool {
+	return h.RegAccID == 0 && len(h.ContactCode) == 0
+}
+
+// NewDenicHandle assembles a new denic handle.
+func NewDenicHandle(regAccID int, contactCode string) DenicHandle {
+	return DenicHandle{regAccID, strings.ToUpper(contactCode)}
+}
+
+// EmptyDenicHandle returns an empty denic handle.
+func EmptyDenicHandle() DenicHandle {
+	return DenicHandle{}
+}
+
+// ParseDenicHandle tries to parse a handle like DENIC-1000006-SOME-CODE. Returns an empty denic handle if str is empty.
+func ParseDenicHandle(str string) (DenicHandle, error) {
+	if len(str) == 0 {
+		return EmptyDenicHandle(), nil
+	}
+
+	parts := strings.SplitN(str, "-", 3)
+	if len(parts) != 3 {
+		return DenicHandle{}, fmt.Errorf("invalid handle")
+	}
+
+	if strings.ToUpper(parts[0]) != "DENIC" {
+		return DenicHandle{}, fmt.Errorf("invalid handle")
+	}
+
+	regAccID, err := strconv.Atoi(parts[1])
+	if err != nil {
+		return DenicHandle{}, fmt.Errorf("invalid handle")
+	}
+
+	return NewDenicHandle(regAccID, strings.ToUpper(parts[2])), nil
+}
+
 // DomainData holds domain information.
 type DomainData struct {
-	HolderHandles         []string
-	GeneralRequestHandles []string
-	AbuseContactHandles   []string
+	HolderHandles         []DenicHandle
+	GeneralRequestHandles []DenicHandle
+	AbuseContactHandles   []DenicHandle
 	NameServers           []string
 }
 
 func (domainData *DomainData) putToQueryFields(fields *QueryFieldList) {
-	fields.Add(QueryFieldNameHolder, domainData.HolderHandles...)
-	fields.Add(QueryFieldNameGeneralRequest, domainData.GeneralRequestHandles...)
-	fields.Add(QueryFieldNameAbuseContact, domainData.AbuseContactHandles...)
+	putHandlesToQueryFields := func(fieldName QueryFieldName, handles []DenicHandle) {
+		for _, h := range handles {
+			if !h.IsEmpty() {
+				fields.Add(fieldName, h.String())
+			}
+		}
+	}
+
+	putHandlesToQueryFields(QueryFieldNameHolder, domainData.HolderHandles)
+	putHandlesToQueryFields(QueryFieldNameGeneralRequest, domainData.GeneralRequestHandles)
+	putHandlesToQueryFields(QueryFieldNameAbuseContact, domainData.AbuseContactHandles)
 	fields.Add(QueryFieldNameNameServer, domainData.NameServers...)
+}
+
+// ContactData holds information of a contact handle.
+type ContactData struct {
+	Type         ContactType
+	Name         string
+	Organisation string
+	Address      string
+	PostalCode   string
+	City         string
+	CountryCode  string
+	EMail        []string
+}
+
+func (contactData *ContactData) putToQueryFields(fields *QueryFieldList) {
+	fields.Add(QueryFieldNameType, string(contactData.Type.Normalize()))
+	fields.Add(QueryFieldNameName, contactData.Name)
+	fields.Add(QueryFieldNameOrganisation, splitLines(contactData.Organisation)...)
+	fields.Add(QueryFieldNameAddress, splitLines(contactData.Address)...)
+	fields.Add(QueryFieldNamePostalCode, contactData.PostalCode)
+	fields.Add(QueryFieldNameCity, contactData.City)
+	fields.Add(QueryFieldNameCountryCode, contactData.CountryCode)
+	fields.Add(QueryFieldNameEMail, contactData.EMail...)
+}
+
+func splitLines(str string) []string {
+	return strings.Split(strings.ReplaceAll(strings.ReplaceAll(str, "\r\n", "\n"), "\r", "\n"), "\n")
 }
 
 // Query represents a RRI request.
@@ -210,17 +338,25 @@ func NewLogoutQuery() *Query {
 	return NewQuery(LatestVersion, ActionLogout, nil)
 }
 
-// NewCheckHandleQuery returns a check query.
-func NewCheckHandleQuery(handle string) *Query {
+// NewCreateContactQuery returns a check query.
+func NewCreateContactQuery(handle DenicHandle, contactData ContactData) *Query {
 	fields := NewQueryFieldList()
-	fields.Add(QueryFieldNameHandle, handle)
+	fields.Add(QueryFieldNameHandle, handle.String())
+	contactData.putToQueryFields(&fields)
+	return NewQuery(LatestVersion, ActionCreate, fields)
+}
+
+// NewCheckHandleQuery returns a check query for a contact or request contact handle.
+func NewCheckHandleQuery(handle DenicHandle) *Query {
+	fields := NewQueryFieldList()
+	fields.Add(QueryFieldNameHandle, handle.String())
 	return NewQuery(LatestVersion, ActionCheck, fields)
 }
 
-// NewInfoHandleQuery returns a check query.
-func NewInfoHandleQuery(handle string) *Query {
+// NewInfoHandleQuery returns an info query for a contact or request contact handle.
+func NewInfoHandleQuery(handle DenicHandle) *Query {
 	fields := NewQueryFieldList()
-	fields.Add(QueryFieldNameHandle, handle)
+	fields.Add(QueryFieldNameHandle, handle.String())
 	return NewQuery(LatestVersion, ActionInfo, fields)
 }
 

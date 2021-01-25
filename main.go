@@ -16,7 +16,7 @@ import (
 
 const (
 	// this field is not updated automatically and needs to be set before every release!
-	version = "0.10"
+	version = "1.11.0"
 )
 
 var (

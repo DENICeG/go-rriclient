@@ -101,6 +101,7 @@ You can use the following commands in file mode and interactive mode:
 | `login {username} {password}` | Log in to a RRI account. |
 | `logout` | Log out from the current RRI account. |
 | `check handle {handle}` | Send a CHECK command for a specific handle. |
+| `create handle {handle}` | Send a CREATE command for a specific handle. |
 | `info handle {handle}` | Send an INFO command for a specific handle. |
 | `create domain {domain} {...}` | Send a CREATE command for a new domain. |
 | `check domain {domain}` | Send a CHECK command for a specific domain. |
@@ -113,7 +114,7 @@ You can use the following commands in file mode and interactive mode:
 | `create authinfo2 {domain}` | Send a CREATE-AUTHINFO2 command for a specific domain. |
 | `chprov {domain} {secret} {...}` | Send a CHPROV command for a specific domain with AuthInfo. |
 | `raw` | Enter a raw query and send to RRI. |
-| `raw {command}` | Send a command like `"version: 3.0\naction: queue-read"`. |
+| `raw {command}` | Send a command like `version: 3.0\naction: queue-read` |
 | `file {path}` | Process a query file as accepted by flag `--file`. |
 | `xml` | Toggle XML mode. **NOT implemented yet** |
 | `verbose` | Toggle verbose mode. |

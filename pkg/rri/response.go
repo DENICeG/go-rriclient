@@ -75,15 +75,16 @@ func (r ResponseEntityName) Normalize() ResponseEntityName {
 	return ResponseEntityName(strings.ToLower(string(r)))
 }
 
-type responseEntity struct {
-	Name   ResponseEntityName
-	Fields ResponseFieldList
+// ResponseEntity is used to encapsulate further information.
+type ResponseEntity struct {
+	name   ResponseEntityName
+	fields ResponseFieldList
 }
 
 // Response represents an RRI response.
 type Response struct {
 	fields   ResponseFieldList
-	entities []responseEntity
+	entities []ResponseEntity
 }
 
 // IsSuccessful returns whether the response is successfull.
@@ -159,24 +160,29 @@ func (r *Response) FirstField(fieldName ResponseFieldName) string {
 	return r.fields.FirstValue(fieldName)
 }
 
-// EntityNames returns a list of entity names contained in this response.
-func (r *Response) EntityNames() []ResponseEntityName {
-	names := make([]ResponseEntityName, len(r.entities))
-	for i, e := range r.entities {
-		names[i] = e.Name
-	}
-	return names
+// Entities returns a list of entities contained in this response.
+func (r *Response) Entities() []ResponseEntity {
+	return r.entities
 }
 
-// Entity returns the named entity of this response or nil.
-func (r *Response) Entity(entityName ResponseEntityName) ResponseFieldList {
-	entityName = entityName.Normalize()
-	for _, e := range r.entities {
-		if e.Name == entityName {
-			return e.Fields
-		}
-	}
-	return nil
+// Name return the name of this response entity.
+func (e *ResponseEntity) Name() ResponseEntityName {
+	return e.name
+}
+
+// Fields returns all additional response entity fields.
+func (e *ResponseEntity) Fields() ResponseFieldList {
+	return e.fields
+}
+
+// Field returns all values defined for a field name.
+func (e *ResponseEntity) Field(fieldName ResponseFieldName) []string {
+	return e.fields.Values(fieldName)
+}
+
+// FirstField returns the first field value or an empty string for a field name.
+func (e *ResponseEntity) FirstField(fieldName ResponseFieldName) string {
+	return e.fields.FirstValue(fieldName)
 }
 
 // NewResponse returns a new Response with the given result code.
@@ -219,14 +225,14 @@ func NewResponseWithError(result Result, fields ResponseFieldList, errors ...Bus
 func ParseResponseKV(msg string) (*Response, error) {
 	lines := strings.Split(msg, "\n")
 	fields := NewResponseFieldList()
-	entities := make([]responseEntity, 0)
+	entities := make([]ResponseEntity, 0)
 	for i, line := range lines {
 		line = strings.TrimSpace(line)
 		if len(line) > 0 {
 			parts := strings.SplitN(line, ":", 2)
 			if len(parts) == 1 && strings.HasPrefix(parts[0], "[") && strings.HasSuffix(parts[0], "]") {
 				// begin of new entity
-				entities = append(entities, responseEntity{ResponseEntityName(parts[0][1 : len(parts[0])-1]).Normalize(), NewResponseFieldList()})
+				entities = append(entities, ResponseEntity{ResponseEntityName(parts[0][1 : len(parts[0])-1]).Normalize(), NewResponseFieldList()})
 				continue
 			}
 			if len(parts) != 2 {
@@ -237,7 +243,7 @@ func ParseResponseKV(msg string) (*Response, error) {
 			value := strings.TrimSpace(parts[1])
 
 			if len(entities) > 0 {
-				entities[len(entities)-1].Fields.Add(ResponseFieldName(key), value)
+				entities[len(entities)-1].fields.Add(ResponseFieldName(key), value)
 			} else {
 				fields.Add(ResponseFieldName(key), value)
 			}

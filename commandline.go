@@ -945,11 +945,10 @@ func processQuery(query *rri.Query) (bool, error) {
 	for _, field := range response.Fields() {
 		console.Printlnf("  %s: %s", field.Name, field.Value)
 	}
-	for _, entityName := range response.EntityNames() {
+	for _, entity := range response.Entities() {
 		console.Println()
-		console.Printlnf("[%s]", entityName)
-		entity := response.Entity(entityName)
-		for _, field := range entity {
+		console.Printlnf("[%s]", entity.Name())
+		for _, field := range entity.Fields() {
 			console.Printlnf("  %s: %s", field.Name, field.Value)
 		}
 	}

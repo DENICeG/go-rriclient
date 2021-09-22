@@ -190,8 +190,41 @@ func TestNewCreateAuthInfo1Query(t *testing.T) {
 	assert.Equal(t, []string{"20200925"}, query.Field(QueryFieldNameAuthInfoExpire))
 }
 
-func TestNewVerifyDomainQuery(t *testing.T) {
-	query := NewVerifyDomainQuery("denic.de", AuthorizedSignatory{
+func TestNewVerifyLegalEntityQuery(t *testing.T) {
+	query := NewVerifyLegalEntityQuery("denic.de", "some-other-dude@dudes.de", PersonToVerify{
+		FirstName:   "Donald",
+		LastName:    "Duck",
+		EMail:       "donald@duck.de",
+		DateOfBirth: time.Date(1934, time.June, 9, 0, 0, 0, 0, time.UTC),
+		CountryCode: "DE",
+		City:        "Entenhausen",
+		PostalCode:  "12345",
+		Street:      "Gänsestraße 42",
+		Phone:       "+0123 456789",
+	}, "DERADSFAS$E$G")
+	require.NotNil(t, query)
+	assert.Equal(t, LatestVersion, query.Version())
+	assert.Equal(t, ActionVerifyLegalEntity, query.Action())
+	require.Len(t, query.Fields(), 15)
+	assert.Equal(t, []string{string(LatestVersion)}, query.Field(QueryFieldNameVersion))
+	assert.Equal(t, []string{string(ActionVerifyLegalEntity)}, query.Field(QueryFieldNameAction))
+	assert.Equal(t, []string{"denic.de"}, query.Field(QueryFieldNameDomainIDN))
+	assert.Equal(t, []string{"denic.de"}, query.Field(QueryFieldNameDomainACE))
+	assert.Equal(t, []string{"some-other-dude@dudes.de"}, query.Field(QueryFieldNameSSOEMail))
+	assert.Equal(t, []string{"Donald"}, query.Field(QueryFieldNameAuthSigFirstName))
+	assert.Equal(t, []string{"Duck"}, query.Field(QueryFieldNameAuthSigLastName))
+	assert.Equal(t, []string{"donald@duck.de"}, query.Field(QueryFieldNameAuthSigEMail))
+	assert.Equal(t, []string{"1934-06-09"}, query.Field(QueryFieldNameAuthSigDateOfBirth))
+	assert.Equal(t, []string{"DE"}, query.Field(QueryFieldNameAuthSigCountryCode))
+	assert.Equal(t, []string{"Entenhausen"}, query.Field(QueryFieldNameAuthSigCity))
+	assert.Equal(t, []string{"12345"}, query.Field(QueryFieldNameAuthSigPostalCode))
+	assert.Equal(t, []string{"Gänsestraße 42"}, query.Field(QueryFieldNameAuthSigStreet))
+	assert.Equal(t, []string{"+0123 456789"}, query.Field(QueryFieldNameAuthSigPhone))
+	assert.Equal(t, []string{"DERADSFAS$E$G"}, query.Field(QueryFieldNameBusinessNumber))
+}
+
+func TestNewVerifyNaturalPersonQuery(t *testing.T) {
+	query := NewVerifyNaturalPersonQuery("denic.de", "some-other-dude@dudes.de", PersonToVerify{
 		FirstName:   "Donald",
 		LastName:    "Duck",
 		EMail:       "donald@duck.de",
@@ -204,21 +237,43 @@ func TestNewVerifyDomainQuery(t *testing.T) {
 	})
 	require.NotNil(t, query)
 	assert.Equal(t, LatestVersion, query.Version())
-	assert.Equal(t, ActionVerify, query.Action())
-	require.Len(t, query.Fields(), 13)
+	assert.Equal(t, ActionVerifyLegalEntity, query.Action())
+	require.Len(t, query.Fields(), 14)
 	assert.Equal(t, []string{string(LatestVersion)}, query.Field(QueryFieldNameVersion))
-	assert.Equal(t, []string{string(ActionVerify)}, query.Field(QueryFieldNameAction))
+	assert.Equal(t, []string{string(ActionVerifyLegalEntity)}, query.Field(QueryFieldNameAction))
 	assert.Equal(t, []string{"denic.de"}, query.Field(QueryFieldNameDomainIDN))
 	assert.Equal(t, []string{"denic.de"}, query.Field(QueryFieldNameDomainACE))
-	assert.Equal(t, []string{"Donald"}, query.Field(QueryFieldNameAuthSigFirstName))
-	assert.Equal(t, []string{"Duck"}, query.Field(QueryFieldNameAuthSigLastName))
-	assert.Equal(t, []string{"donald@duck.de"}, query.Field(QueryFieldNameAuthSigEMail))
-	assert.Equal(t, []string{"1934-06-09"}, query.Field(QueryFieldNameAuthSigDateOfBirth))
-	assert.Equal(t, []string{"DE"}, query.Field(QueryFieldNameAuthSigCountryCode))
-	assert.Equal(t, []string{"Entenhausen"}, query.Field(QueryFieldNameAuthSigCity))
-	assert.Equal(t, []string{"12345"}, query.Field(QueryFieldNameAuthSigPostalCode))
-	assert.Equal(t, []string{"Gänsestraße 42"}, query.Field(QueryFieldNameAuthSigStreet))
-	assert.Equal(t, []string{"+0123 456789"}, query.Field(QueryFieldNameAuthSigPhone))
+	assert.Equal(t, []string{"some-other-dude@dudes.de"}, query.Field(QueryFieldNameSSOEMail))
+	assert.Equal(t, []string{"Donald"}, query.Field(QueryFieldNamePersonFirstName))
+	assert.Equal(t, []string{"Duck"}, query.Field(QueryFieldNamePersonLastName))
+	assert.Equal(t, []string{"donald@duck.de"}, query.Field(QueryFieldNamePersonEMail))
+	assert.Equal(t, []string{"1934-06-09"}, query.Field(QueryFieldNamePersonDateOfBirth))
+	assert.Equal(t, []string{"DE"}, query.Field(QueryFieldNamePersonCountryCode))
+	assert.Equal(t, []string{"Entenhausen"}, query.Field(QueryFieldNamePersonCity))
+	assert.Equal(t, []string{"12345"}, query.Field(QueryFieldNamePersonPostalCode))
+	assert.Equal(t, []string{"Gänsestraße 42"}, query.Field(QueryFieldNamePersonStreet))
+	assert.Equal(t, []string{"+0123 456789"}, query.Field(QueryFieldNamePersonPhone))
+}
+
+func TestNewVerifyQueueReadQuery(t *testing.T) {
+	query := NewVerifyQueueReadQuery()
+	require.NotNil(t, query)
+	assert.Equal(t, LatestVersion, query.Version())
+	assert.Equal(t, ActionVerifyQueueRead, query.Action())
+	require.Len(t, query.Fields(), 2)
+	assert.Equal(t, []string{string(LatestVersion)}, query.Field(QueryFieldNameVersion))
+	assert.Equal(t, []string{string(ActionVerifyQueueRead)}, query.Field(QueryFieldNameAction))
+}
+
+func TestNewVerifyQueueDeleteQuery(t *testing.T) {
+	query := NewVerifyQueueDeleteQuery("5c214b14-c919-11eb-a37b-0242ac130003")
+	require.NotNil(t, query)
+	assert.Equal(t, LatestVersion, query.Version())
+	assert.Equal(t, ActionVerifyQueueDelete, query.Action())
+	require.Len(t, query.Fields(), 3)
+	assert.Equal(t, []string{string(LatestVersion)}, query.Field(QueryFieldNameVersion))
+	assert.Equal(t, []string{string(ActionVerifyQueueDelete)}, query.Field(QueryFieldNameAction))
+	assert.Equal(t, []string{"5c214b14-c919-11eb-a37b-0242ac130003"}, query.Field(QueryFieldNameMsgID))
 }
 
 func TestQueryNormalization(t *testing.T) {

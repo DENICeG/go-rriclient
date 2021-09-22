@@ -219,6 +219,9 @@ func prepareCLE() *commandline.Environment {
 	registerDomainCommand(cle, "chholder", cmdChangeHolder)
 	registerDomainCommand(cle, "chprov", cmdChangeProvider)
 
+	registerDomainCommand(cle, "verify-queue-read", cmdVerifyQueueRead)
+	registerDomainCommand(cle, "verify-queue-delete", cmdVerifyQueueDelete)
+
 	// register custom commands
 	for _, cmd := range customCommands {
 		registerCustomCommand(cle, cmd)
@@ -263,6 +266,9 @@ func cmdHelp(args []string) error {
 		//TODO create-authinfo2
 		//TODO delete-authinfo1
 		{[]string{"chprov"}, []string{"domain", "secret"}, "send a CHPROV command for a specific domain"},
+		{},
+		{[]string{"verify-queue-read"}, nil, "send a VERIFY-QUEUE-READ command"},
+		{[]string{"verify-queue-delete"}, []string{"msgid"}, "send a VERIFY-QUEUE-DELETE command for a specific vChecked message"},
 		//TODO verify
 		// -
 		//TODO queue-read
@@ -278,9 +284,9 @@ func cmdHelp(args []string) error {
 	}
 
 	if len(customCommands) > 0 {
-		head := commands[:21]
+		head := commands[:25]
 		tail := make([]customCmd, 6)
-		copy(tail, commands[21:])
+		copy(tail, commands[25:])
 		commands = head
 		for _, cmd := range customCommands {
 			args := make([]string, 0)
@@ -419,7 +425,7 @@ func addToListRemoveDouble(list []string, new ...string) []string {
 		// filter out all values equal to one in new (ignore case)
 		found := false
 		for _, newStr := range new {
-			if strings.ToLower(str) == strings.ToLower(newStr) {
+			if strings.EqualFold(str, newStr) {
 				found = true
 				break
 			}
@@ -775,6 +781,20 @@ func cmdChangeProvider(args []string) error {
 
 	_, err = processQuery(rri.NewChangeProviderQuery(domainName, args[1], domainData))
 	histDomains.Put(domainName)
+	return err
+}
+
+func cmdVerifyQueueRead(args []string) error {
+	_, err := processQuery(rri.NewVerifyQueueReadQuery())
+	return err
+}
+
+func cmdVerifyQueueDelete(args []string) error {
+	if len(args) < 1 {
+		return fmt.Errorf("missing message id")
+	}
+
+	_, err := processQuery(rri.NewVerifyQueueDeleteQuery(args[0]))
 	return err
 }
 

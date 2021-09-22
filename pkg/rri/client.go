@@ -231,7 +231,7 @@ func (client *Client) SendQuery(query *Query) (*Response, error) {
 		// save credentials to restore session after lost connections
 		client.lastUser = client.currentUser
 		pwField := query.Field(QueryFieldNamePassword)
-		if pwField != nil && len(pwField) > 0 {
+		if len(pwField) > 0 {
 			client.lastPass = query.Field(QueryFieldNamePassword)[0]
 		} else {
 			client.lastPass = ""

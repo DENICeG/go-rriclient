@@ -61,6 +61,10 @@ const (
 	QueryFieldNameCountryCode QueryFieldName = "countrycode"
 	// QueryFieldNameEMail denotes the query field name for email.
 	QueryFieldNameEMail QueryFieldName = "email"
+	// QueryFieldNameSSOEMail denotes the e-mail address to link after CSP registration for vChecked.
+	QueryFieldNameSSOEMail QueryFieldName = "ssoemail"
+	// QueryFieldNameBusinessNumber denotes the business number of a legal entity.
+	QueryFieldNameBusinessNumber QueryFieldName = "businessnumber"
 	// QueryFieldNameAuthSigFirstName denotes the first name of an authorized signatory.
 	QueryFieldNameAuthSigFirstName QueryFieldName = "authorizedsignatoryfirstname"
 	// QueryFieldNameAuthSigLastName denotes the last name of an authorized signatory.
@@ -79,6 +83,26 @@ const (
 	QueryFieldNameAuthSigStreet QueryFieldName = "authorizedsignatorystreet"
 	// QueryFieldNameAuthSigPhone denotes the phone number of an authorized signatory.
 	QueryFieldNameAuthSigPhone QueryFieldName = "authorizedsignatoryphone"
+	// QueryFieldNamePersonFirstName denotes the first name of an authorized signatory.
+	QueryFieldNamePersonFirstName QueryFieldName = "personfirstname"
+	// QueryFieldNamePersonLastName denotes the last name of an authorized signatory.
+	QueryFieldNamePersonLastName QueryFieldName = "personlastname"
+	// QueryFieldNamePersonEMail denotes the email address of an authorized signatory.
+	QueryFieldNamePersonEMail QueryFieldName = "personemail"
+	// QueryFieldNamePersonDateOfBirth denotes the date of birth of an authorized signatory.
+	QueryFieldNamePersonDateOfBirth QueryFieldName = "persondateofbirth"
+	// QueryFieldNamePersonCountryCode denotes the country of an authorized signatory.
+	QueryFieldNamePersonCountryCode QueryFieldName = "personcountrycode"
+	// QueryFieldNamePersonCity denotes the city of an authorized signatory.
+	QueryFieldNamePersonCity QueryFieldName = "personcity"
+	// QueryFieldNamePersonPostalCode denotes the postal code of an authorized signatory.
+	QueryFieldNamePersonPostalCode QueryFieldName = "personpostalcode"
+	// QueryFieldNamePersonStreet denotes the street of an authorized signatory.
+	QueryFieldNamePersonStreet QueryFieldName = "personstreet"
+	// QueryFieldNamePersonPhone denotes the phone number of an authorized signatory.
+	QueryFieldNamePersonPhone QueryFieldName = "personphone"
+	// QueryFieldNameMsgID denotes the query field name for an message id.
+	QueryFieldNameMsgID QueryFieldName = "msgid"
 
 	// ActionLogin denotes the action value for login.
 	ActionLogin QueryAction = "LOGIN"
@@ -104,10 +128,16 @@ const (
 	ActionCreateAuthInfo1 QueryAction = "CREATE-AUTHINFO1"
 	// ActionCreateAuthInfo2 denotes the action value for create AuthInfo2.
 	ActionCreateAuthInfo2 QueryAction = "CREATE-AUTHINFO2"
-	// ActionVerify denotes the action value for verify.
-	ActionVerify QueryAction = "VERIFY"
 	// ActionChangeProvider denotes the action value for change provider.
 	ActionChangeProvider QueryAction = "CHPROV"
+	// ActionVerifyLegalEntity denotes the action value to verify a legal entity.
+	ActionVerifyLegalEntity QueryAction = "VERIFY-LEGAL-ENTITY"
+	// ActionVerifyNaturalPerson denotes the action value to verify a natural person.
+	ActionVerifyNaturalPerson QueryAction = "VERIFY-NATURAL-PERSON"
+	// ActionVerifyQueueRead denotes the action value to read from the vChecked message queue.
+	ActionVerifyQueueRead QueryAction = "VERIFY-QUEUE-READ"
+	// ActionVerifyQueueDelete denotes the action value to delete from the vChecked message queue.
+	ActionVerifyQueueDelete QueryAction = "VERIFY-QUEUE-DELETE"
 
 	// ContactTypePerson denotes a person.
 	ContactTypePerson ContactType = "PERSON"
@@ -463,8 +493,17 @@ func NewCreateAuthInfo2Query(domain string) *Query {
 	return NewQuery(LatestVersion, ActionCreateAuthInfo2, fields)
 }
 
-// AuthorizedSignatory represents the authorized signatory for a VERIFY query.
-type AuthorizedSignatory struct {
+// NewChangeProviderQuery returns a query to create a domain.
+func NewChangeProviderQuery(domain, authInfo string, domainData DomainData) *Query {
+	fields := NewQueryFieldList()
+	putDomainToQueryFields(&fields, domain)
+	domainData.putToQueryFields(&fields)
+	fields.Add(QueryFieldNameAuthInfo, authInfo)
+	return NewQuery(LatestVersion, ActionChangeProvider, fields)
+}
+
+// PersonToVerify represents the natural person that will be verified for vChecked.
+type PersonToVerify struct {
 	FirstName   string
 	LastName    string
 	EMail       string
@@ -476,8 +515,8 @@ type AuthorizedSignatory struct {
 	Phone       string
 }
 
-// NewVerifyDomainQuery returns a query to create a verify domain.
-func NewVerifyDomainQuery(domain string, authSignatory AuthorizedSignatory) *Query {
+// NewVerifyLegalEntityQuery returns a query to verify a domain that is registered for a legal entity.
+func NewVerifyLegalEntityQuery(domain string, ssoEMail string, authSignatory PersonToVerify, businessNumber string) *Query {
 	fields := NewQueryFieldList()
 	putDomainToQueryFields(&fields, domain)
 	fields.Add(QueryFieldNameAuthSigFirstName, authSignatory.FirstName)
@@ -491,16 +530,46 @@ func NewVerifyDomainQuery(domain string, authSignatory AuthorizedSignatory) *Que
 	if len(authSignatory.Phone) > 0 {
 		fields.Add(QueryFieldNameAuthSigPhone, authSignatory.Phone)
 	}
-	return NewQuery(LatestVersion, ActionVerify, fields)
+	if len(ssoEMail) > 0 {
+		fields.Add(QueryFieldNameSSOEMail, ssoEMail)
+	}
+	if len(businessNumber) > 0 {
+		fields.Add(QueryFieldNameBusinessNumber, businessNumber)
+	}
+	return NewQuery(LatestVersion, ActionVerifyLegalEntity, fields)
 }
 
-// NewChangeProviderQuery returns a query to create a domain.
-func NewChangeProviderQuery(domain, authInfo string, domainData DomainData) *Query {
+// VerifyNaturalPersonQuery returns a query to verify a domain that is registered for a natural person.
+func NewVerifyNaturalPersonQuery(domain string, ssoEMail string, person PersonToVerify) *Query {
 	fields := NewQueryFieldList()
 	putDomainToQueryFields(&fields, domain)
-	domainData.putToQueryFields(&fields)
-	fields.Add(QueryFieldNameAuthInfo, authInfo)
-	return NewQuery(LatestVersion, ActionChangeProvider, fields)
+	fields.Add(QueryFieldNamePersonFirstName, person.FirstName)
+	fields.Add(QueryFieldNamePersonLastName, person.LastName)
+	fields.Add(QueryFieldNamePersonEMail, person.EMail)
+	fields.Add(QueryFieldNamePersonDateOfBirth, person.DateOfBirth.Format("2006-01-02"))
+	fields.Add(QueryFieldNamePersonCountryCode, person.CountryCode)
+	fields.Add(QueryFieldNamePersonCity, person.City)
+	fields.Add(QueryFieldNamePersonPostalCode, person.PostalCode)
+	fields.Add(QueryFieldNamePersonStreet, person.Street)
+	if len(person.Phone) > 0 {
+		fields.Add(QueryFieldNamePersonPhone, person.Phone)
+	}
+	if len(ssoEMail) > 0 {
+		fields.Add(QueryFieldNameSSOEMail, ssoEMail)
+	}
+	return NewQuery(LatestVersion, ActionVerifyLegalEntity, fields)
+}
+
+// NewVerifyQueueReadQuery returns a query to read from the vChecked message queue.
+func NewVerifyQueueReadQuery() *Query {
+	return NewQuery(LatestVersion, ActionVerifyQueueRead, nil)
+}
+
+// NewVerifyQueueReadQuery returns a query to read from the vChecked message queue.
+func NewVerifyQueueDeleteQuery(msgID string) *Query {
+	fields := NewQueryFieldList()
+	fields.Add(QueryFieldNameMsgID, msgID)
+	return NewQuery(LatestVersion, ActionVerifyQueueDelete, fields)
 }
 
 // ParseQueryKV parses a single key-value encoded query.

@@ -56,9 +56,9 @@ func TestClientConfDefaults(t *testing.T) {
 			return nil, nil
 		},
 	})
+	require.NoError(t, err)
 	defer client.Close()
 
-	require.NoError(t, err)
 	assert.Equal(t, 1, dialCount)
 }
 
@@ -76,9 +76,9 @@ func TestClientConf(t *testing.T) {
 			return nil, nil
 		},
 	})
+	require.NoError(t, err)
 	defer client.Close()
 
-	require.NoError(t, err)
 	assert.Equal(t, 1, dialCount)
 }
 
@@ -98,8 +98,8 @@ func TestClientNoAutoRetry(t *testing.T) {
 			return conn, nil
 		},
 	})
-	defer client.Close()
 	require.NoError(t, err)
+	defer client.Close()
 
 	require.NoError(t, client.Login("DENIC-1000011-RRI", "secret"))
 	client.NoAutoRetry = true
@@ -132,8 +132,8 @@ func TestClientAutoRetry(t *testing.T) {
 			return conn, nil
 		},
 	})
-	defer client.Close()
 	require.NoError(t, err)
+	defer client.Close()
 
 	require.NoError(t, client.Login("DENIC-1000011-RRI", "secret"))
 	resp, err := client.SendQuery(NewInfoDomainQuery("denic.de"))

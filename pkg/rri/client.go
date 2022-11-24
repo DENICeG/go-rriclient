@@ -33,8 +33,6 @@ type Client struct {
 	tlsConfig          *tls.Config
 	currentUser        string
 	lastUser, lastPass string
-	// Processor is called for all queries before they are sent. The query returned by this callback function is sent to RRI instead. If nil is returned, no request is sent and a nil response without error is returned by the corresponding SendQuery call.
-	Processor QueryProcessor
 	// RawQueryPrinter is called for the raw messages sent and received by the client.
 	RawQueryPrinter RawQueryPrinter
 	// InnerErrorPrinter is called to print uncritical errors that occur internally.
@@ -186,13 +184,6 @@ func (client *Client) Logout() error {
 func (client *Client) SendQuery(query *Query) (*Response, error) {
 	if client.XMLMode {
 		return nil, fmt.Errorf("XML mode not yet supported")
-	}
-
-	if client.Processor != nil {
-		query = client.Processor(query)
-		if query == nil {
-			return nil, nil
-		}
 	}
 
 	if !client.IsLoggedIn() && query.Action() != ActionLogin {

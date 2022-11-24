@@ -3,7 +3,6 @@ package main
 import (
 	"encoding/json"
 	"fmt"
-	"io/ioutil"
 	"os"
 	"path/filepath"
 	"strings"
@@ -21,8 +20,6 @@ var (
 	colorPromptRRI             = "\033[1;34m"
 	colorPromptUser            = "\033[1;32m"
 	colorPromptHost            = "\033[1;32m"
-	colorPromptDry             = "\033[1;31m"
-	colorPrintDry              = "\033[0;29m"
 	colorSendRaw               = "\033[0;94m"
 	colorReceiveRaw            = "\033[0;96m"
 	colorSuccessResponse       = "\033[0;29m"
@@ -46,8 +43,6 @@ func disableColors() {
 	colorPromptRRI = ""
 	colorPromptUser = ""
 	colorPromptHost = ""
-	colorPromptDry = ""
-	colorPrintDry = ""
 	colorSendRaw = ""
 	colorReceiveRaw = ""
 	colorSuccessResponse = ""
@@ -68,8 +63,6 @@ func printColorsAndSigns() {
 	printColor("ColorPromptRRI", colorPromptRRI)
 	printColor("ColorPromptUser", colorPromptUser)
 	printColor("ColorPromptHost", colorPromptHost)
-	printColor("ColorPromptDry", colorPromptDry)
-	printColor("ColorPrintDry", colorPrintDry)
 	printColor("ColorSendRaw", colorSendRaw)
 	printColor("ColorReceiveRaw", colorReceiveRaw)
 	printColor("ColorSuccessResponse", colorSuccessResponse)
@@ -139,14 +132,14 @@ func (arg customCommandArg) IsInputParameter() bool {
 }
 
 func readCustomCommands(dir string) ([]customCommand, error) {
-	files, err := ioutil.ReadDir(dir)
+	files, err := os.ReadDir(dir)
 	if err != nil {
 		return nil, err
 	}
 	customCommands := make([]customCommand, 0)
 	for _, f := range files {
 		if !f.IsDir() {
-			data, err := ioutil.ReadFile(filepath.Join(dir, f.Name()))
+			data, err := os.ReadFile(filepath.Join(dir, f.Name()))
 			if err != nil {
 				return nil, err
 			}
@@ -181,9 +174,6 @@ func prepareCLE() *commandline.Environment {
 			user = fmt.Sprintf("%s%s%s@", colorPromptUser, cleRRIClient.CurrentUser(), colorEnd)
 		}
 		host = fmt.Sprintf("%s%s%s", colorPromptHost, cleRRIClient.RemoteAddress(), colorEnd)
-		if cleRRIClient.Processor != nil {
-			suffix = fmt.Sprintf("%sDRY%s", colorPromptDry, colorEnd)
-		}
 		return fmt.Sprintf("%s{%s%s}%s", prefix, user, host, suffix)
 	}
 	cle.ErrorHandler = func(cmd string, args []string, err error) error {
@@ -232,7 +222,6 @@ func prepareCLE() *commandline.Environment {
 
 	cle.RegisterCommand(commandline.NewCustomCommand("xml", nil, cmdXML))
 	cle.RegisterCommand(commandline.NewCustomCommand("verbose", nil, cmdVerbose))
-	cle.RegisterCommand(commandline.NewCustomCommand("dry", nil, cmdDry))
 	return cle
 }
 
@@ -280,7 +269,6 @@ func cmdHelp(args []string) error {
 		{},
 		{[]string{"xml"}, nil, "toggle XML mode"},
 		{[]string{"verbose"}, nil, "toggle verbose mode"},
-		{[]string{"dry"}, nil, "toggle dry mode to only print out raw queries"},
 	}
 
 	if len(customCommands) > 0 {
@@ -413,10 +401,6 @@ func cmdHelp(args []string) error {
 		}
 	}
 	return nil
-}
-
-type history interface {
-	Put(str string)
 }
 
 func addToListRemoveDouble(list []string, new ...string) []string {
@@ -839,7 +823,7 @@ func cmdFile(args []string) error {
 		return fmt.Errorf("missing query file")
 	}
 
-	data, err := ioutil.ReadFile(args[0])
+	data, err := os.ReadFile(args[0])
 	if err != nil {
 		return err
 	}
@@ -928,30 +912,15 @@ func errorPrinter(err error) {
 	console.Printlnf("%sERR: %s%s", colorInnerError, err.Error(), colorEnd)
 }
 
-func cmdDry(args []string) error {
-	if cleRRIClient.Processor == nil {
-		cleRRIClient.Processor = dryProcessor
-		console.Println("Dry mode on")
-	} else {
-		cleRRIClient.Processor = nil
-		console.Println("Dry mode off")
-	}
-	return nil
-}
-
-func dryProcessor(query *rri.Query) *rri.Query {
-	console.Printlnf("%s%s%s", colorPrintDry, query.EncodeKV(), colorEnd)
-	return nil
-}
-
 func processQuery(query *rri.Query) (bool, error) {
-	response, err := cleRRIClient.SendQuery(query)
+	rawResponse, err := cleRRIClient.SendRaw(query.EncodeKV())
 	if err != nil {
 		return false, err
 	}
 
-	if response == nil {
-		return true, nil
+	response, err := rri.ParseResponse(rawResponse)
+	if err != nil {
+		return false, err
 	}
 
 	var colorStr string
@@ -962,16 +931,7 @@ func processQuery(query *rri.Query) (bool, error) {
 	}
 
 	console.Print(colorStr)
-	for _, field := range response.Fields() {
-		console.Printlnf("  %s: %s", field.Name, field.Value)
-	}
-	for _, entity := range response.Entities() {
-		console.Println()
-		console.Printlnf("[%s]", entity.Name())
-		for _, field := range entity.Fields() {
-			console.Printlnf("  %s: %s", field.Name, field.Value)
-		}
-	}
+	console.Println(rawResponse)
 	console.Print(colorEnd)
 
 	if returnErrorOnFail && !response.IsSuccessful() {

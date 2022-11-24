@@ -3,7 +3,6 @@ package main
 import (
 	"encoding/json"
 	"fmt"
-	"io/ioutil"
 	"os"
 	"strings"
 
@@ -225,7 +224,7 @@ func enterEnvironment(envName string, env interface{}) error {
 }
 
 func getEnvTitle(envName, envFile string) string {
-	data, err := ioutil.ReadFile(envFile)
+	data, err := os.ReadFile(envFile)
 	if err != nil {
 		return envName
 	}

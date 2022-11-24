@@ -63,9 +63,9 @@ func NewClient(address string, conf *ClientConfig) (*Client, error) {
 	if !strings.ContainsRune(address, ':') {
 		address += ":51131"
 	}
-	if conf.TLSDialHandler == nil {
+	if actualConf.TLSDialHandler == nil {
 		// use tls.Dial by default to establish a tls connection
-		conf.TLSDialHandler = func(network, addr string, config *tls.Config) (TLSConnection, error) {
+		actualConf.TLSDialHandler = func(network, addr string, config *tls.Config) (TLSConnection, error) {
 			return tls.Dial(network, addr, config)
 		}
 	}
@@ -75,7 +75,7 @@ func NewClient(address string, conf *ClientConfig) (*Client, error) {
 
 	client := &Client{
 		address: address,
-		dialer:  conf.TLSDialHandler,
+		dialer:  actualConf.TLSDialHandler,
 		tlsConfig: &tls.Config{
 			MinVersion:         actualConf.MinTLSVersion,
 			InsecureSkipVerify: actualConf.Insecure,

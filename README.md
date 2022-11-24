@@ -118,7 +118,6 @@ You can use the following commands in file mode and interactive mode:
 | `file {path}` | Process a query file as accepted by flag `--file`. |
 | `xml` | Toggle XML mode. **NOT implemented yet** |
 | `verbose` | Toggle verbose mode. |
-| `dry` | Toggle dry mode to only print out raw queries. |
 
 ## RRI Request Examples
 

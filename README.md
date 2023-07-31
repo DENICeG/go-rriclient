@@ -7,8 +7,7 @@ This application is a client for the RRI with an interactive CLI developed by [D
 The DENIC RRI client is developed in GO and can be installed and built from the repository:
 
 ```
-go get -u github.com/DENICeG/go-rriclient
-go install github.com/DENICeG/go-rriclient
+go install github.com/DENICeG/go-rriclient@latest
 ```
 
 ## Connections and Credentials

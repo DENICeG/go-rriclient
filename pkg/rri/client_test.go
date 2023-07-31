@@ -189,9 +189,7 @@ func (m *mockReadWriteCloser) Read(p []byte) (int, error) {
 	if m.ReadResponses[m.ReadIndex-1].Error != nil {
 		return 0, m.ReadResponses[m.ReadIndex-1].Error
 	}
-	for i, b := range m.ReadResponses[m.ReadIndex-1].Data {
-		p[i] = b
-	}
+	copy(p, m.ReadResponses[m.ReadIndex-1].Data)
 	return len(m.ReadResponses[m.ReadIndex-1].Data), nil
 }
 

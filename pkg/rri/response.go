@@ -22,7 +22,7 @@ const (
 	ResponseFieldNameError ResponseFieldName = "ERROR"
 
 	// ResponseEntityNameHolder denotes the entity name of a holder.
-	ResponseEntityNameHolder ResponseEntityName = "Holder"
+	ResponseEntityNameHolder ResponseEntityName = "holder"
 )
 
 // Result represents the result of a query response.

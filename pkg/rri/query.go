@@ -143,6 +143,8 @@ const (
 	ContactTypePerson ContactType = "PERSON"
 	// ContactTypeOrganisation denotes an organisation.
 	ContactTypeOrganisation ContactType = "ORG"
+	// ContactTypeRequest denotes a request contact.
+	ContactTypeRequest ContactType = "REQUEST"
 )
 
 // Version represents the RRI protocol version.

@@ -121,7 +121,7 @@ func TestServerConcurrentConnections(t *testing.T) {
 
 	server.Handler = func(s *Session, q *Query) (*Response, error) {
 		if q.Action() == ActionLogin {
-			num, _ := loggedIn[q.FirstField(QueryFieldNameUser)]
+			num := loggedIn[q.FirstField(QueryFieldNameUser)]
 			loggedIn[q.FirstField(QueryFieldNameUser)] = num + 1
 			_, ok := s.GetString("user")
 			assert.False(t, ok)
@@ -130,7 +130,7 @@ func TestServerConcurrentConnections(t *testing.T) {
 		} else {
 			user, ok := s.GetString("user")
 			assert.True(t, ok)
-			num, _ := loggedOut[user]
+			num := loggedOut[user]
 			loggedOut[user] = num + 1
 		}
 

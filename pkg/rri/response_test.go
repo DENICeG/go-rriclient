@@ -114,12 +114,12 @@ func TestParseBusinessMessageKV(t *testing.T) {
 	assert.NoError(t, err)
 	assert.Equal(t, BusinessMessage{13000000011, "Request was processed in test environment - not valid in real world [testing platform]"}, bm)
 
-	bm, err = ParseBusinessMessageKV("13000000011")
+	_, err = ParseBusinessMessageKV("13000000011")
 	assert.Error(t, err)
 
-	bm, err = ParseBusinessMessageKV("Request was processed in test environment - not valid in real world [testing platform]")
+	_, err = ParseBusinessMessageKV("Request was processed in test environment - not valid in real world [testing platform]")
 	assert.Error(t, err)
 
-	bm, err = ParseBusinessMessageKV("")
+	_, err = ParseBusinessMessageKV("")
 	assert.Error(t, err)
 }

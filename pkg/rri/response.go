@@ -20,6 +20,8 @@ const (
 	ResponseFieldNameInfo ResponseFieldName = "INFO"
 	// ResponseFieldNameError denotes the response field name for error message.
 	ResponseFieldNameError ResponseFieldName = "ERROR"
+	// ResponseFieldNameWarning denotes the response field name for warning message.
+	ResponseFieldNameWarning ResponseFieldName = "WARNING"
 
 	// ResponseEntityNameHolder denotes the entity name of a holder.
 	ResponseEntityNameHolder ResponseEntityName = "holder"
@@ -113,6 +115,17 @@ func (r *Response) ErrorMessages() []BusinessMessage {
 	// ignore parse errors here, should be accounted for during response parsing
 	messages := make([]BusinessMessage, 0)
 	for _, msg := range r.Field(ResponseFieldNameError) {
+		bm, _ := ParseBusinessMessageKV(msg)
+		messages = append(messages, bm)
+	}
+	return messages
+}
+
+// WarningMessages returns all warning messages.
+func (r *Response) WarningMessages() []BusinessMessage {
+	// ignore parse errors here, should be accounted for during response parsing
+	messages := make([]BusinessMessage, 0)
+	for _, msg := range r.Field(ResponseFieldNameWarning) {
 		bm, _ := ParseBusinessMessageKV(msg)
 		messages = append(messages, bm)
 	}

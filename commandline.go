@@ -209,8 +209,8 @@ func prepareCLE() *commandline.Environment {
 	registerDomainCommand(cle, "chholder", cmdChangeHolder)
 	registerDomainCommand(cle, "chprov", cmdChangeProvider)
 
-	registerDomainCommand(cle, "verify-queue-read", cmdVerifyQueueRead)
-	registerDomainCommand(cle, "verify-queue-delete", cmdVerifyQueueDelete)
+	registerDomainCommand(cle, "queue-read", cmdQueueRead)
+	registerDomainCommand(cle, "queue-delete", cmdQueueDelete)
 
 	// register custom commands
 	for _, cmd := range customCommands {
@@ -768,17 +768,17 @@ func cmdChangeProvider(args []string) error {
 	return err
 }
 
-func cmdVerifyQueueRead(args []string) error {
-	_, err := processQuery(rri.NewVerifyQueueReadQuery())
+func cmdQueueRead(args []string) error {
+	_, err := processQuery(rri.NewQueueReadQuery(""))
 	return err
 }
 
-func cmdVerifyQueueDelete(args []string) error {
+func cmdQueueDelete(args []string) error {
 	if len(args) < 1 {
 		return fmt.Errorf("missing message id")
 	}
 
-	_, err := processQuery(rri.NewVerifyQueueDeleteQuery(args[0]))
+	_, err := processQuery(rri.NewQueueDeleteQuery(args[0], ""))
 	return err
 }
 

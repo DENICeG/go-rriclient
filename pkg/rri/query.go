@@ -61,48 +61,10 @@ const (
 	QueryFieldNameCountryCode QueryFieldName = "countrycode"
 	// QueryFieldNameEMail denotes the query field name for email.
 	QueryFieldNameEMail QueryFieldName = "email"
-	// QueryFieldNameSSOEMail denotes the e-mail address to link after CSP registration for vChecked.
-	QueryFieldNameSSOEMail QueryFieldName = "ssoemail"
-	// QueryFieldNameBusinessNumber denotes the business number of a legal entity.
-	QueryFieldNameBusinessNumber QueryFieldName = "businessnumber"
-	// QueryFieldNameAuthSigFirstName denotes the first name of an authorized signatory.
-	QueryFieldNameAuthSigFirstName QueryFieldName = "authorizedsignatoryfirstname"
-	// QueryFieldNameAuthSigLastName denotes the last name of an authorized signatory.
-	QueryFieldNameAuthSigLastName QueryFieldName = "authorizedsignatorylastname"
-	// QueryFieldNameAuthSigEMail denotes the email address of an authorized signatory.
-	QueryFieldNameAuthSigEMail QueryFieldName = "authorizedsignatoryemail"
-	// QueryFieldNameAuthSigDateOfBirth denotes the date of birth of an authorized signatory.
-	QueryFieldNameAuthSigDateOfBirth QueryFieldName = "authorizedsignatorydateofbirth"
-	// QueryFieldNameAuthSigCountryCode denotes the country of an authorized signatory.
-	QueryFieldNameAuthSigCountryCode QueryFieldName = "authorizedsignatorycountrycode"
-	// QueryFieldNameAuthSigCity denotes the city of an authorized signatory.
-	QueryFieldNameAuthSigCity QueryFieldName = "authorizedsignatorycity"
-	// QueryFieldNameAuthSigPostalCode denotes the postal code of an authorized signatory.
-	QueryFieldNameAuthSigPostalCode QueryFieldName = "authorizedsignatorypostalcode"
-	// QueryFieldNameAuthSigStreet denotes the street of an authorized signatory.
-	QueryFieldNameAuthSigStreet QueryFieldName = "authorizedsignatorystreet"
-	// QueryFieldNameAuthSigPhone denotes the phone number of an authorized signatory.
-	QueryFieldNameAuthSigPhone QueryFieldName = "authorizedsignatoryphone"
-	// QueryFieldNamePersonFirstName denotes the first name of an authorized signatory.
-	QueryFieldNamePersonFirstName QueryFieldName = "personfirstname"
-	// QueryFieldNamePersonLastName denotes the last name of an authorized signatory.
-	QueryFieldNamePersonLastName QueryFieldName = "personlastname"
-	// QueryFieldNamePersonEMail denotes the email address of an authorized signatory.
-	QueryFieldNamePersonEMail QueryFieldName = "personemail"
-	// QueryFieldNamePersonDateOfBirth denotes the date of birth of an authorized signatory.
-	QueryFieldNamePersonDateOfBirth QueryFieldName = "persondateofbirth"
-	// QueryFieldNamePersonCountryCode denotes the country of an authorized signatory.
-	QueryFieldNamePersonCountryCode QueryFieldName = "personcountrycode"
-	// QueryFieldNamePersonCity denotes the city of an authorized signatory.
-	QueryFieldNamePersonCity QueryFieldName = "personcity"
-	// QueryFieldNamePersonPostalCode denotes the postal code of an authorized signatory.
-	QueryFieldNamePersonPostalCode QueryFieldName = "personpostalcode"
-	// QueryFieldNamePersonStreet denotes the street of an authorized signatory.
-	QueryFieldNamePersonStreet QueryFieldName = "personstreet"
-	// QueryFieldNamePersonPhone denotes the phone number of an authorized signatory.
-	QueryFieldNamePersonPhone QueryFieldName = "personphone"
-	// QueryFieldNameMsgID denotes the query field name for an message id.
+	// QueryFieldNameMsgID denotes the query field name for a message id.
 	QueryFieldNameMsgID QueryFieldName = "msgid"
+	// QueryFieldNameMsgType denotes the query field name for a message type.
+	QueryFieldNameMsgType QueryFieldName = "msgtype"
 
 	// ActionLogin denotes the action value for login.
 	ActionLogin QueryAction = "LOGIN"
@@ -130,14 +92,10 @@ const (
 	ActionCreateAuthInfo2 QueryAction = "CREATE-AUTHINFO2"
 	// ActionChangeProvider denotes the action value for change provider.
 	ActionChangeProvider QueryAction = "CHPROV"
-	// ActionVerifyLegalEntity denotes the action value to verify a legal entity.
-	ActionVerifyLegalEntity QueryAction = "VERIFY-LEGAL-ENTITY"
-	// ActionVerifyNaturalPerson denotes the action value to verify a natural person.
-	ActionVerifyNaturalPerson QueryAction = "VERIFY-NATURAL-PERSON"
-	// ActionVerifyQueueRead denotes the action value to read from the vChecked message queue.
-	ActionVerifyQueueRead QueryAction = "VERIFY-QUEUE-READ"
-	// ActionVerifyQueueDelete denotes the action value to delete from the vChecked message queue.
-	ActionVerifyQueueDelete QueryAction = "VERIFY-QUEUE-DELETE"
+	// ActionQueueRead denotes the action value to read from the registry message queue.
+	ActionQueueRead QueryAction = "QUEUE-READ"
+	// ActionQueueDelete denotes the action value to delete from the registry message queue.
+	ActionQueueDelete QueryAction = "QUEUE-DELETE"
 
 	// ContactTypePerson denotes a person.
 	ContactTypePerson ContactType = "PERSON"
@@ -504,74 +462,23 @@ func NewChangeProviderQuery(domain, authInfo string, domainData DomainData) *Que
 	return NewQuery(LatestVersion, ActionChangeProvider, fields)
 }
 
-// PersonToVerify represents the natural person that will be verified for vChecked.
-type PersonToVerify struct {
-	FirstName   string
-	LastName    string
-	EMail       string
-	DateOfBirth time.Time
-	CountryCode string
-	City        string
-	PostalCode  string
-	Street      string
-	Phone       string
-}
-
-// NewVerifyLegalEntityQuery returns a query to verify a domain that is registered for a legal entity.
-func NewVerifyLegalEntityQuery(domain string, ssoEMail string, authSignatory PersonToVerify, businessNumber string) *Query {
+// NewQueueReadQuery returns a query to read from the registry message queue. Use msgType to filter for specific message types or use an empty string to process all message types.
+func NewQueueReadQuery(msgType string) *Query {
 	fields := NewQueryFieldList()
-	putDomainToQueryFields(&fields, domain)
-	fields.Add(QueryFieldNameAuthSigFirstName, authSignatory.FirstName)
-	fields.Add(QueryFieldNameAuthSigLastName, authSignatory.LastName)
-	fields.Add(QueryFieldNameAuthSigEMail, authSignatory.EMail)
-	fields.Add(QueryFieldNameAuthSigDateOfBirth, authSignatory.DateOfBirth.Format("2006-01-02"))
-	fields.Add(QueryFieldNameAuthSigCountryCode, authSignatory.CountryCode)
-	fields.Add(QueryFieldNameAuthSigCity, authSignatory.City)
-	fields.Add(QueryFieldNameAuthSigPostalCode, authSignatory.PostalCode)
-	fields.Add(QueryFieldNameAuthSigStreet, authSignatory.Street)
-	if len(authSignatory.Phone) > 0 {
-		fields.Add(QueryFieldNameAuthSigPhone, authSignatory.Phone)
+	if len(msgType) > 0 {
+		fields.Add(QueryFieldNameMsgType, msgType)
 	}
-	if len(ssoEMail) > 0 {
-		fields.Add(QueryFieldNameSSOEMail, ssoEMail)
-	}
-	if len(businessNumber) > 0 {
-		fields.Add(QueryFieldNameBusinessNumber, businessNumber)
-	}
-	return NewQuery(LatestVersion, ActionVerifyLegalEntity, fields)
+	return NewQuery(LatestVersion, ActionQueueRead, fields)
 }
 
-// VerifyNaturalPersonQuery returns a query to verify a domain that is registered for a natural person.
-func NewVerifyNaturalPersonQuery(domain string, ssoEMail string, person PersonToVerify) *Query {
-	fields := NewQueryFieldList()
-	putDomainToQueryFields(&fields, domain)
-	fields.Add(QueryFieldNamePersonFirstName, person.FirstName)
-	fields.Add(QueryFieldNamePersonLastName, person.LastName)
-	fields.Add(QueryFieldNamePersonEMail, person.EMail)
-	fields.Add(QueryFieldNamePersonDateOfBirth, person.DateOfBirth.Format("2006-01-02"))
-	fields.Add(QueryFieldNamePersonCountryCode, person.CountryCode)
-	fields.Add(QueryFieldNamePersonCity, person.City)
-	fields.Add(QueryFieldNamePersonPostalCode, person.PostalCode)
-	fields.Add(QueryFieldNamePersonStreet, person.Street)
-	if len(person.Phone) > 0 {
-		fields.Add(QueryFieldNamePersonPhone, person.Phone)
-	}
-	if len(ssoEMail) > 0 {
-		fields.Add(QueryFieldNameSSOEMail, ssoEMail)
-	}
-	return NewQuery(LatestVersion, ActionVerifyLegalEntity, fields)
-}
-
-// NewVerifyQueueReadQuery returns a query to read from the vChecked message queue.
-func NewVerifyQueueReadQuery() *Query {
-	return NewQuery(LatestVersion, ActionVerifyQueueRead, nil)
-}
-
-// NewVerifyQueueReadQuery returns a query to read from the vChecked message queue.
-func NewVerifyQueueDeleteQuery(msgID string) *Query {
+// NewQueueReadQuery returns a query to read from the registry message queue. Use msgType to delete only specific message types or use an empty string to process all message types. This is required if you want to delete the oldest message of a specific type that is not the oldest in your full queue.
+func NewQueueDeleteQuery(msgID, msgType string) *Query {
 	fields := NewQueryFieldList()
 	fields.Add(QueryFieldNameMsgID, msgID)
-	return NewQuery(LatestVersion, ActionVerifyQueueDelete, fields)
+	if len(msgType) > 0 {
+		fields.Add(QueryFieldNameMsgType, msgType)
+	}
+	return NewQuery(LatestVersion, ActionQueueDelete, fields)
 }
 
 // ParseQueryKV parses a single key-value encoded query.

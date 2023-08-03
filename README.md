@@ -112,6 +112,8 @@ You can use the following commands in file mode and interactive mode:
 | `create authinfo1 {domain} {secret}` | Send a CREATE-AUTHINFO1 command for a specific domain with AuthInfo. |
 | `create authinfo2 {domain}` | Send a CREATE-AUTHINFO2 command for a specific domain. |
 | `chprov {domain} {secret} {...}` | Send a CHPROV command for a specific domain with AuthInfo. |
+| `queue-read` | Send a QUEUE-READ command. |
+| `queue-delete {msgid}` | Send a QUEUE-DELETE command for a specific message id. |
 | `raw` | Enter a raw query and send to RRI. |
 | `raw {command}` | Send a command like `version: 3.0\naction: queue-read` |
 | `file {path}` | Process a query file as accepted by flag `--file`. |
@@ -145,3 +147,15 @@ This repository also provides the Go package `github.com/DENICeG/go-rriclient/pk
 ## Thanks
 
 Thanks to [sebidude](https://github.com/sebidude) for the [protocol implementation](https://github.com/sebidude/go-rri).
+
+# Changelog
+
+## v1.17.0 (2023-08-03)
+
+- removed all Verify-related fields and methods
+- added support for QUEUE-READ and QUEUE-DELETE in pkg and cli
+- added support for WARNING response
+
+## v1.16.0 (2023-07-31)
+
+- added `ContactTypeRequest`

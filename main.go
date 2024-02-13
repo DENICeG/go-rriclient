@@ -9,8 +9,8 @@ import (
 	"github.com/DENICeG/go-rriclient/internal/env"
 	"github.com/DENICeG/go-rriclient/pkg/rri"
 
+	"github.com/alecthomas/kingpin/v2"
 	"github.com/sbreitf1/go-console"
-	"gopkg.in/alecthomas/kingpin.v2"
 )
 
 const (

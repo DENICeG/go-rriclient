@@ -13,7 +13,7 @@ import (
 
 const (
 	// LatestVersion denotes the latest RRI version supported by the client.
-	LatestVersion Version = "3.0"
+	LatestVersion Version = "4.0"
 
 	// QueryFieldNameVersion denotes the query field name for version.
 	QueryFieldNameVersion QueryFieldName = "version"

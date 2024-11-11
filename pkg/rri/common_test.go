@@ -28,13 +28,13 @@ func b64enc(data []byte) string {
 }
 
 func TestPrepareMessage(t *testing.T) {
-	// hardcoded RRI packet with size prefix and query "version: 4.0\naction: LOGIN\nuser: user\npassword: secret"
-	expected := b64("AAAANnZlcnNpb246IDQuMAphY3Rpb246IExPR0lOCnVzZXI6IHVzZXIKcGFzc3dvcmQ6IHNlY3JldA==")
-	assert.Equal(t, expected, prepareMessage("version: 4.0\naction: LOGIN\nuser: user\npassword: secret"))
+	// hardcoded RRI packet with size prefix and query "version: 5.0\naction: LOGIN\nuser: user\npassword: secret"
+	expected := b64("AAAANnZlcnNpb246IDUuMAphY3Rpb246IExPR0lOCnVzZXI6IHVzZXIKcGFzc3dvcmQ6IHNlY3JldA==")
+	assert.Equal(t, expected, prepareMessage("version: 5.0\naction: LOGIN\nuser: user\npassword: secret"))
 }
 
 func TestReadMessage(t *testing.T) {
-	expectedMsg := "version: 4.0\naction: LOGIN\nuser: user\npassword: secret"
+	expectedMsg := "version: 5.0\naction: LOGIN\nuser: user\npassword: secret"
 	r := bytes.NewReader(prepareMessage(expectedMsg))
 	msg, err := readMessage(r)
 	require.NoError(t, err)
@@ -83,11 +83,11 @@ func TestReadBytes(t *testing.T) {
 }
 
 func TestCensorRawMessage(t *testing.T) {
-	assert.Equal(t, "version: 4.0\naction: info\ndomain: denic.de", CensorRawMessage("version: 4.0\naction: info\ndomain: denic.de"))
-	assert.Equal(t, "version: 4.0\naction: info\nno-password: foobar\ndomain: denic.de", CensorRawMessage("version: 4.0\naction: info\nno-password: foobar\ndomain: denic.de"))
-	assert.Equal(t, "version: 4.0\naction: info\npassword:\ndomain: denic.de", CensorRawMessage("version: 4.0\naction: info\npassword:\ndomain: denic.de"))
-	assert.Equal(t, "password: ******\nversion: 4.0\naction: LOGIN\nuser: DENIC-1000011-RRI", CensorRawMessage("password: secret-password\nversion: 4.0\naction: LOGIN\nuser: DENIC-1000011-RRI"))
-	assert.Equal(t, "version: 4.0\naction: LOGIN\npassword: ******\nuser: DENIC-1000011-RRI", CensorRawMessage("version: 4.0\naction: LOGIN\npassword: secret-password\nuser: DENIC-1000011-RRI"))
-	assert.Equal(t, "version: 4.0\naction: LOGIN\nuser: DENIC-1000011-RRI\npassword: ******", CensorRawMessage("version: 4.0\naction: LOGIN\nuser: DENIC-1000011-RRI\npassword: secret-password"))
-	assert.Equal(t, "password: ******\nversion: 4.0\npassword: ******\naction: LOGIN\nuser: DENIC-1000011-RRI\npassword: ******", CensorRawMessage("password: secret-password\nversion: 4.0\npassword: secret-password\naction: LOGIN\nuser: DENIC-1000011-RRI\npassword: secret-password"))
+	assert.Equal(t, "version: 5.0\naction: info\ndomain: denic.de", CensorRawMessage("version: 5.0\naction: info\ndomain: denic.de"))
+	assert.Equal(t, "version: 5.0\naction: info\nno-password: foobar\ndomain: denic.de", CensorRawMessage("version: 5.0\naction: info\nno-password: foobar\ndomain: denic.de"))
+	assert.Equal(t, "version: 5.0\naction: info\npassword:\ndomain: denic.de", CensorRawMessage("version: 5.0\naction: info\npassword:\ndomain: denic.de"))
+	assert.Equal(t, "password: ******\nversion: 5.0\naction: LOGIN\nuser: DENIC-1000011-RRI", CensorRawMessage("password: secret-password\nversion: 5.0\naction: LOGIN\nuser: DENIC-1000011-RRI"))
+	assert.Equal(t, "version: 5.0\naction: LOGIN\npassword: ******\nuser: DENIC-1000011-RRI", CensorRawMessage("version: 5.0\naction: LOGIN\npassword: secret-password\nuser: DENIC-1000011-RRI"))
+	assert.Equal(t, "version: 5.0\naction: LOGIN\nuser: DENIC-1000011-RRI\npassword: ******", CensorRawMessage("version: 5.0\naction: LOGIN\nuser: DENIC-1000011-RRI\npassword: secret-password"))
+	assert.Equal(t, "password: ******\nversion: 5.0\npassword: ******\naction: LOGIN\nuser: DENIC-1000011-RRI\npassword: ******", CensorRawMessage("password: secret-password\nversion: 5.0\npassword: secret-password\naction: LOGIN\nuser: DENIC-1000011-RRI\npassword: secret-password"))
 }

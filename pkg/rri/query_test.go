@@ -23,10 +23,10 @@ func TestQueryToString(t *testing.T) {
 }
 
 func TestQueryEncodeKV(t *testing.T) {
-	query, err := ParseQuery("Version: 4.0\nAction: update\naddress: foo\nDomain: denic.de\nAddress: bar")
+	query, err := ParseQuery("Version: 5.0\nAction: update\naddress: foo\nDomain: denic.de\nAddress: bar")
 	require.NoError(t, err)
 	require.NotNil(t, query)
-	assert.Equal(t, "version: 4.0\naction: update\naddress: foo\ndomain: denic.de\naddress: bar", query.EncodeKV())
+	assert.Equal(t, "version: 5.0\naction: update\naddress: foo\ndomain: denic.de\naddress: bar", query.EncodeKV())
 }
 
 func TestNewLoginQuery(t *testing.T) {
@@ -75,13 +75,13 @@ func TestNewInfoHandleQuery(t *testing.T) {
 
 func TestPutDomainToQueryFields(t *testing.T) {
 	fieldsFromIDN := NewQueryFieldList()
-	putDomainToQueryFields(&fieldsFromIDN, "dönic.de")
+	PutDomainToQueryFields(&fieldsFromIDN, "dönic.de")
 	require.Len(t, fieldsFromIDN, 2)
 	assert.Equal(t, []string{"dönic.de"}, fieldsFromIDN.Values(QueryFieldNameDomainIDN))
 	assert.Equal(t, []string{"xn--dnic-5qa.de"}, fieldsFromIDN.Values(QueryFieldNameDomainACE))
 
 	fieldsFromACE := NewQueryFieldList()
-	putDomainToQueryFields(&fieldsFromACE, "xn--dnic-5qa.de")
+	PutDomainToQueryFields(&fieldsFromACE, "xn--dnic-5qa.de")
 	require.Len(t, fieldsFromACE, 2)
 	assert.Equal(t, []string{"dönic.de"}, fieldsFromACE.Values(QueryFieldNameDomainIDN))
 	assert.Equal(t, []string{"xn--dnic-5qa.de"}, fieldsFromACE.Values(QueryFieldNameDomainACE))
@@ -235,19 +235,19 @@ func TestNewQueueDeleteQueryWithType(t *testing.T) {
 }
 
 func TestQueryNormalization(t *testing.T) {
-	query, err := ParseQuery("Version:   4.0   \nAction: iNfO\ndIsCoNnEcT: tRuE")
+	query, err := ParseQuery("Version:   5.0   \nAction: iNfO\ndIsCoNnEcT: tRuE")
 	require.NoError(t, err)
 	require.NotNil(t, query)
 	assert.Equal(t, LatestVersion, query.Version())
 	assert.Equal(t, ActionInfo, query.Action())
 	require.Len(t, query.Fields(), 3)
-	assert.Equal(t, []string{"4.0"}, query.Field(QueryFieldNameVersion))
+	assert.Equal(t, []string{"5.0"}, query.Field(QueryFieldNameVersion))
 	assert.Equal(t, []string{"iNfO"}, query.Field(QueryFieldNameAction))
 	assert.Equal(t, []string{"tRuE"}, query.Field(QueryFieldNameDisconnect))
 }
 
 func TestParseQueryCasing(t *testing.T) {
-	query, err := ParseQuery("Version: 4.0\nAction: login\nUser: DENIC-1000042-TEST\nPassword: very-secure")
+	query, err := ParseQuery("Version: 5.0\nAction: login\nUser: DENIC-1000042-TEST\nPassword: very-secure")
 	require.NoError(t, err)
 	require.NotNil(t, query)
 	assert.Equal(t, LatestVersion, query.Version())
@@ -260,7 +260,7 @@ func TestParseQueryCasing(t *testing.T) {
 }
 
 func TestParseQueryWhitespaces(t *testing.T) {
-	query, err := ParseQuery("  version: \t4.0  \n\n\naction:    LOGIN\n   user: DENIC-1000042-TEST\npassword: very-secure    \n")
+	query, err := ParseQuery("  version: \t5.0  \n\n\naction:    LOGIN\n   user: DENIC-1000042-TEST\npassword: very-secure    \n")
 	require.NoError(t, err)
 	require.NotNil(t, query)
 	assert.Equal(t, LatestVersion, query.Version())
@@ -273,7 +273,7 @@ func TestParseQueryWhitespaces(t *testing.T) {
 }
 
 func TestParseQueryOrder(t *testing.T) {
-	query, err := ParseQuery("action: LOGIN\ncustom: 1\nversion: 4.0\nuser: DENIC-1000042-TEST\nstuff: foobar\npassword: very-secure\ncustom: 2")
+	query, err := ParseQuery("action: LOGIN\ncustom: 1\nversion: 5.0\nuser: DENIC-1000042-TEST\nstuff: foobar\npassword: very-secure\ncustom: 2")
 	require.NoError(t, err)
 	require.NotNil(t, query)
 	assert.Equal(t, LatestVersion, query.Version())

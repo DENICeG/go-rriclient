@@ -88,8 +88,8 @@ func TestClientNoAutoRetry(t *testing.T) {
 		{[]byte{0, 0, 0, 15}, nil},
 		{[]byte("RESULT: success"), nil},
 	}, []writeResponse{
-		{b64("AAAAQ3ZlcnNpb246IDQuMAphY3Rpb246IExPR0lOCnVzZXI6IERFTklDLTEwMDAwMTEtUlJJCnBhc3N3b3JkOiBzZWNyZXQ="), nil},
-		{b64("AAAAP3ZlcnNpb246IDQuMAphY3Rpb246IElORk8KZG9tYWluOiBkZW5pYy5kZQpkb21haW4tYWNlOiBkZW5pYy5kZQ=="), fmt.Errorf("broken pipe")},
+		{b64("AAAAQ3ZlcnNpb246IDUuMAphY3Rpb246IExPR0lOCnVzZXI6IERFTklDLTEwMDAwMTEtUlJJCnBhc3N3b3JkOiBzZWNyZXQ="), nil},
+		{b64("AAAAP3ZlcnNpb246IDUuMAphY3Rpb246IElORk8KZG9tYWluOiBkZW5pYy5kZQpkb21haW4tYWNlOiBkZW5pYy5kZQ=="), fmt.Errorf("broken pipe")},
 	})
 
 	client, err := NewClient("localhost", &ClientConfig{
@@ -120,10 +120,10 @@ func TestClientAutoRetry(t *testing.T) {
 		{[]byte{0, 0, 0, 39}, nil},
 		{[]byte("RESULT: success\nINFO: 12345 only a test"), nil},
 	}, []writeResponse{
-		{b64("AAAAQ3ZlcnNpb246IDQuMAphY3Rpb246IExPR0lOCnVzZXI6IERFTklDLTEwMDAwMTEtUlJJCnBhc3N3b3JkOiBzZWNyZXQ="), nil},
-		{b64("AAAAP3ZlcnNpb246IDQuMAphY3Rpb246IElORk8KZG9tYWluOiBkZW5pYy5kZQpkb21haW4tYWNlOiBkZW5pYy5kZQ=="), fmt.Errorf("broken pipe")},
-		{b64("AAAAQ3ZlcnNpb246IDQuMAphY3Rpb246IExPR0lOCnVzZXI6IERFTklDLTEwMDAwMTEtUlJJCnBhc3N3b3JkOiBzZWNyZXQ="), nil},
-		{b64("AAAAP3ZlcnNpb246IDQuMAphY3Rpb246IElORk8KZG9tYWluOiBkZW5pYy5kZQpkb21haW4tYWNlOiBkZW5pYy5kZQ=="), nil},
+		{b64("AAAAQ3ZlcnNpb246IDUuMAphY3Rpb246IExPR0lOCnVzZXI6IERFTklDLTEwMDAwMTEtUlJJCnBhc3N3b3JkOiBzZWNyZXQ="), nil},
+		{b64("AAAAP3ZlcnNpb246IDUuMAphY3Rpb246IElORk8KZG9tYWluOiBkZW5pYy5kZQpkb21haW4tYWNlOiBkZW5pYy5kZQ=="), fmt.Errorf("broken pipe")},
+		{b64("AAAAQ3ZlcnNpb246IDUuMAphY3Rpb246IExPR0lOCnVzZXI6IERFTklDLTEwMDAwMTEtUlJJCnBhc3N3b3JkOiBzZWNyZXQ="), nil},
+		{b64("AAAAP3ZlcnNpb246IDUuMAphY3Rpb246IElORk8KZG9tYWluOiBkZW5pYy5kZQpkb21haW4tYWNlOiBkZW5pYy5kZQ=="), nil},
 	})
 
 	client, err := NewClient("localhost", &ClientConfig{

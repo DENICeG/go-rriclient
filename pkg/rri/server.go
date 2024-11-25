@@ -64,8 +64,8 @@ func (s *Session) GetBool(key string) (bool, bool) {
 // Server represents a basic RRI client to receive RRI queries and send responses.
 type Server struct {
 	listener net.Listener
-	isClosed bool
 	Handler  QueryHandler
+	isClosed bool
 }
 
 // NewServer returns a new RRI server for the given TLS config listening on the given port.
@@ -75,7 +75,7 @@ func NewServer(listenAddress string, tlsConfig *tls.Config) (*Server, error) {
 		return nil, err
 	}
 
-	return &Server{listener, false, nil}, nil
+	return &Server{listener: listener, isClosed: false, Handler: nil}, nil
 }
 
 // Close gracefully shuts down the server.

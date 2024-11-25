@@ -62,9 +62,9 @@ type MockQueryHandler func(user string, session *Session, query *Query) (*Respon
 // MockServer represents a mock RRI server with mocked user authentication.
 type MockServer struct {
 	server  *Server
-	address string
 	users   map[string]string
 	Handler MockQueryHandler
+	address string
 }
 
 // Run starts the underlying RRI server.
@@ -132,7 +132,7 @@ func NewMockServer(port int) (*MockServer, error) {
 		return nil, err
 	}
 
-	return &MockServer{server, fmt.Sprintf("localhost:%d", port), make(map[string]string), nil}, nil
+	return &MockServer{server: server, address: fmt.Sprintf("localhost:%d", port), users: make(map[string]string), Handler: nil}, nil
 }
 
 // WithMockServer initializes and starts a mock server for the execution of f.

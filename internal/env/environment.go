@@ -21,8 +21,8 @@ const (
 )
 
 type envOrder struct {
-	Fixed bool     `json:"fixed"`
 	Order []string `json:"order"`
+	Fixed bool     `json:"fixed"`
 }
 
 // GetKeyHandler returns the encryption key for encryption or decryption.
@@ -36,10 +36,10 @@ type GetEnvFileTitleHandler func(envName, envFile string) string
 
 // Reader represents a reader object for environments.
 type Reader struct {
-	dir             string
 	KeySource       GetKeyHandler
 	EnterEnvHandler EnterEnvHandler
 	GetEnvFileTitle GetEnvFileTitleHandler
+	dir             string
 }
 
 // Dir returns the configuration directory.
@@ -218,12 +218,12 @@ func (e *Reader) GetEnvironmentFiles() ([]os.FileInfo, error) {
 func (e *Reader) readEnvOrder() (envOrder, error) {
 	orderData, err := ioutil.ReadFile(filepath.Join(e.dir, envOrderFileName))
 	if err != nil {
-		return envOrder{false, []string{}}, nil
+		return envOrder{Fixed: false, Order: []string{}}, nil
 	}
 
 	var order envOrder
 	if err := json.Unmarshal(orderData, &order); err != nil {
-		return envOrder{false, []string{}}, nil
+		return envOrder{Fixed: false, Order: []string{}}, nil
 	}
 
 	return order, nil

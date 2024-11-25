@@ -27,20 +27,17 @@ type ErrorPrinter func(err error)
 
 // Client represents a stateful connection to a specific RRI Server.
 type Client struct {
-	address            string
-	dialer             TLSDialer
-	connection         TLSConnection
-	tlsConfig          *tls.Config
-	currentUser        string
-	lastUser, lastPass string
-	// RawQueryPrinter is called for the raw messages sent and received by the client.
-	RawQueryPrinter RawQueryPrinter
-	// InnerErrorPrinter is called to print uncritical errors that occur internally.
+	connection        TLSConnection
+	dialer            TLSDialer
+	tlsConfig         *tls.Config
+	RawQueryPrinter   RawQueryPrinter
 	InnerErrorPrinter ErrorPrinter
-	// XMLMode controls whether the queries are sent in KeyValue or XML encoding.
-	XMLMode bool
-	// NoAutoRetry can be used to disable automatic retry and login after connection errors.
-	NoAutoRetry bool
+	address           string
+	currentUser       string
+	lastUser          string
+	lastPass          string
+	XMLMode           bool
+	NoAutoRetry       bool
 }
 
 // ClientConfig can be used to further configure the RRI client.

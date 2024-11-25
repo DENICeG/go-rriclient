@@ -187,8 +187,8 @@ func ParseContactType(str string) (ContactType, error) {
 
 // DenicHandle represents a handle like DENIC-1000006-SOME-CODE
 type DenicHandle struct {
-	RegAccID    int
 	ContactCode string
+	RegAccID    int
 }
 
 func (h DenicHandle) String() string {
@@ -205,7 +205,7 @@ func (h DenicHandle) IsEmpty() bool {
 
 // NewDenicHandle assembles a new denic handle.
 func NewDenicHandle(regAccID int, contactCode string) DenicHandle {
-	return DenicHandle{regAccID, strings.ToUpper(contactCode)}
+	return DenicHandle{RegAccID: regAccID, ContactCode: strings.ToUpper(contactCode)}
 }
 
 // EmptyDenicHandle returns an empty denic handle.

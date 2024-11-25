@@ -227,48 +227,49 @@ func prepareCLE() *commandline.Environment {
 
 func cmdHelp(args []string) error {
 	type customCmd struct {
-		Cmd, Args []string
-		Desc      string
+		Desc string
+		Cmd  []string
+		Args []string
 	}
 	commands := []customCmd{
-		{[]string{"exit"}, nil, "exit application"},
-		{[]string{"help"}, nil, "show this help"},
+		{Cmd: []string{"exit"}, Args: nil, Desc: "exit application"},
+		{Cmd: []string{"help"}, Args: nil, Desc: "show this help"},
 		{},
-		{[]string{"login"}, []string{"user", "password"}, "log in to a RRI account"},
-		{[]string{"logout"}, nil, "log out from the current RRI account"},
+		{Cmd: []string{"login"}, Args: []string{"user", "password"}, Desc: "log in to a RRI account"},
+		{Cmd: []string{"logout"}, Args: nil, Desc: "log out from the current RRI account"},
 		{},
-		{[]string{"create", "handle"}, []string{"domain"}, "send a CREATE command for a specific handle"},
-		{[]string{"check", "handle"}, []string{"domain"}, "send a CHECK command for a specific handle"},
-		{[]string{"info", "handle"}, []string{"domain"}, "send an INFO command for a specific handle"},
+		{Cmd: []string{"create", "handle"}, Args: []string{"domain"}, Desc: "send a CREATE command for a specific handle"},
+		{Cmd: []string{"check", "handle"}, Args: []string{"domain"}, Desc: "send a CHECK command for a specific handle"},
+		{Cmd: []string{"info", "handle"}, Args: []string{"domain"}, Desc: "send an INFO command for a specific handle"},
 		//TODO contact-update
 		{},
-		{[]string{"create", "domain"}, []string{"domain"}, "send a CREATE command for a new domain"},
-		{[]string{"check", "domain"}, []string{"domain"}, "send a CHECK command for a specific domain"},
-		{[]string{"info", "domain"}, []string{"domain"}, "send an INFO command for a specific domain"},
-		{[]string{"update", "domain"}, []string{"domain"}, "send an UPDATE command for a specific domain"},
-		{[]string{"chholder", "domain"}, []string{"domain"}, "send an CHHOLDER command for a specific domain"},
+		{Cmd: []string{"create", "domain"}, Args: []string{"domain"}, Desc: "send a CREATE command for a new domain"},
+		{Cmd: []string{"check", "domain"}, Args: []string{"domain"}, Desc: "send a CHECK command for a specific domain"},
+		{Cmd: []string{"info", "domain"}, Args: []string{"domain"}, Desc: "send an INFO command for a specific domain"},
+		{Cmd: []string{"update", "domain"}, Args: []string{"domain"}, Desc: "send an UPDATE command for a specific domain"},
+		{Cmd: []string{"chholder", "domain"}, Args: []string{"domain"}, Desc: "send an CHHOLDER command for a specific domain"},
 		{},
-		{[]string{"delete"}, []string{"domain"}, "send a DELETE command for a specific domain"},
-		{[]string{"restore"}, []string{"domain"}, "send a RESTORE command for a specific domain"},
-		{[]string{"transit"}, []string{"domain"}, "send a TRANSIT command for a specific domain"},
-		{[]string{"create", "authinfo1"}, []string{"domain", "secret", "expire"}, "send a CREATE-AUTHINFO1 command for a specific domain"},
+		{Cmd: []string{"delete"}, Args: []string{"domain"}, Desc: "send a DELETE command for a specific domain"},
+		{Cmd: []string{"restore"}, Args: []string{"domain"}, Desc: "send a RESTORE command for a specific domain"},
+		{Cmd: []string{"transit"}, Args: []string{"domain"}, Desc: "send a TRANSIT command for a specific domain"},
+		{Cmd: []string{"create", "authinfo1"}, Args: []string{"domain", "secret", "expire"}, Desc: "send a CREATE-AUTHINFO1 command for a specific domain"},
 		//TODO create-authinfo2
 		//TODO delete-authinfo1
-		{[]string{"chprov"}, []string{"domain", "secret"}, "send a CHPROV command for a specific domain"},
+		{Cmd: []string{"chprov"}, Args: []string{"domain", "secret"}, Desc: "send a CHPROV command for a specific domain"},
 		{},
-		{[]string{"verify-queue-read"}, nil, "send a VERIFY-QUEUE-READ command"},
-		{[]string{"verify-queue-delete"}, []string{"msgid"}, "send a VERIFY-QUEUE-DELETE command for a specific vChecked message"},
+		{Cmd: []string{"verify-queue-read"}, Args: nil, Desc: "send a VERIFY-QUEUE-READ command"},
+		{Cmd: []string{"verify-queue-delete"}, Args: []string{"msgid"}, Desc: "send a VERIFY-QUEUE-DELETE command for a specific vChecked message"},
 		//TODO verify
 		// -
 		//TODO queue-read
 		//TODO queue-delete
 		//TODO regacc-info
 		{},
-		{[]string{"raw"}, nil, "enter a raw query and send it"},
-		{[]string{"file"}, []string{"path"}, "process a query file as accepted by flag --file"},
+		{Cmd: []string{"raw"}, Args: nil, Desc: "enter a raw query and send it"},
+		{Cmd: []string{"file"}, Args: []string{"path"}, Desc: "process a query file as accepted by flag --file"},
 		{},
-		{[]string{"xml"}, nil, "toggle XML mode"},
-		{[]string{"verbose"}, nil, "toggle verbose mode"},
+		{Cmd: []string{"xml"}, Args: nil, Desc: "toggle XML mode"},
+		{Cmd: []string{"verbose"}, Args: nil, Desc: "toggle verbose mode"},
 	}
 
 	if len(customCommands) > 0 {
@@ -283,7 +284,7 @@ func cmdHelp(args []string) error {
 					args = append(args, arg.Name)
 				}
 			}
-			commands = append(commands, customCmd{[]string{cmd.Cmd}, args, cmd.Description})
+			commands = append(commands, customCmd{Cmd: []string{cmd.Cmd}, Args: args, Desc: cmd.Description})
 		}
 		commands = append(commands, customCmd{})
 		commands = append(commands, tail...)

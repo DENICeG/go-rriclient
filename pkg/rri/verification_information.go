@@ -10,13 +10,13 @@ const VerificationInformationTimestampFormat = "2006-01-02T15:04:05-07:00"
 
 // VerificationInformation holds verification information.
 type VerificationInformation struct {
-	VerifiedClaim         []VerificationClaim
+	VerificationTimestamp time.Time
 	VerificationResult    VerificationResult
 	VerificationReference string
-	VerificationTimestamp time.Time
 	VerificationEvidence  VerificationEvidence
 	VerificationMethod    VerificationMethod
 	TrustFramework        TrustFramework
+	VerifiedClaim         []VerificationClaim
 }
 
 func (verificationInformation *VerificationInformation) PutToQueryFields(fields *QueryFieldList) {

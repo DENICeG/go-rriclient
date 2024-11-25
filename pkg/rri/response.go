@@ -46,13 +46,13 @@ func (r ResponseFieldName) Normalize() ResponseFieldName {
 
 // BusinessMessage represents a response message with id as returned in INFO and ERROR.
 type BusinessMessage struct {
-	id      int64
 	message string
+	id      int64
 }
 
 // NewBusinessMessage creates a new BusinessMessage with id and message.
 func NewBusinessMessage(id int64, msg string) BusinessMessage {
-	return BusinessMessage{id, msg}
+	return BusinessMessage{id: id, message: msg}
 }
 
 // ID returns the message id.
@@ -302,7 +302,7 @@ func ParseBusinessMessageKV(str string) (BusinessMessage, error) {
 	if err != nil {
 		return BusinessMessage{}, err
 	}
-	return BusinessMessage{id, parts[1]}, nil
+	return BusinessMessage{id: id, message: parts[1]}, nil
 }
 
 // ParseResponse tries to detect the response format (KV or XML) and returns the parsed response.

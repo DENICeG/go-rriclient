@@ -73,7 +73,7 @@ func printColorsAndSigns() {
 	printSign("SignReceive", signReceive)
 }
 
-func runCLE(confDir string, client *rri.Client, cmd []string) error {
+func runCLI(confDir string, client *rri.Client, cmd []string) error {
 	cleRRIClient = client
 	histDomains = &domainHistory{make([]string, 0)}
 	histHandles = &handleHistory{make([]string, 0)}
@@ -89,11 +89,11 @@ func runCLE(confDir string, client *rri.Client, cmd []string) error {
 			console.Println("Failed to import custom commands:", err.Error())
 		}
 	}
-	cle := prepareCLE()
+	cli := prepareCLI()
 
 	if len(cmd) > 0 {
 		// exec command that has been passed via command line and return result
-		return cle.ExecCommand(cmd[0], cmd[1:])
+		return cli.ExecCommand(cmd[0], cmd[1:])
 	}
 
 	console.Println("Interactive RRI Command Line")
@@ -101,7 +101,7 @@ func runCLE(confDir string, client *rri.Client, cmd []string) error {
 	console.Println("  use tab for auto-completion and arrow keys for history")
 
 	// start interactive command line loop
-	if err := cle.Run(); err != nil {
+	if err := cli.Run(); err != nil {
 		if commandline.IsErrCtrlC(err) {
 			console.Println()
 			return nil
@@ -165,7 +165,7 @@ func readCustomCommands(dir string) ([]customCommand, error) {
 	return customCommands, nil
 }
 
-func prepareCLE() *commandline.Environment {
+func prepareCLI() *commandline.Environment {
 	cle := commandline.NewEnvironment()
 	cle.Prompt = func() string {
 		var prefix, user, host, suffix string

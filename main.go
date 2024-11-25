@@ -131,7 +131,7 @@ func main() {
 		}
 
 		returnErrorOnFail = *argFail
-		return runCLE(envReader.Dir(), client, *argCmd)
+		return runCLI(envReader.Dir(), client, *argCmd)
 
 	}(); err != nil {
 		console.Printlnf("FATAL: %s", err.Error())

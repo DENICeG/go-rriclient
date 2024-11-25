@@ -87,6 +87,10 @@ func NewClient(address string, conf *ClientConfig) (*Client, error) {
 	return client, nil
 }
 
+func (client *Client) Connection() TLSConnection {
+	return client.connection
+}
+
 func (client *Client) setupConnection() error {
 	if client.connection == nil {
 		var err error
@@ -239,7 +243,7 @@ func (client *Client) SendRaw(msg string) (string, error) {
 		return "", err
 	}
 
-	buffer := prepareMessage(msg)
+	buffer := PrepareMessage(msg)
 
 	if client.RawQueryPrinter != nil {
 		client.RawQueryPrinter(msg, true)
@@ -292,5 +296,5 @@ func (client *Client) sendAndReceive(msg []byte) (string, error) {
 	if n != len(msg) {
 		return "", fmt.Errorf("failed to send %d bytes", len(msg))
 	}
-	return readMessage(client.connection)
+	return ReadMessage(client.connection)
 }

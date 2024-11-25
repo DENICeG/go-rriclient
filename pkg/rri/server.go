@@ -100,7 +100,7 @@ func (srv *Server) Run() error {
 
 			if err := func() error {
 				for {
-					msg, err := readMessage(conn)
+					msg, err := ReadMessage(conn)
 					if err != nil {
 						return err
 					}
@@ -117,7 +117,7 @@ func (srv *Server) Run() error {
 						}
 
 						// TODO answer in same type as the query (KV or XML)
-						responseMsg := prepareMessage(response.EncodeKV())
+						responseMsg := PrepareMessage(response.EncodeKV())
 						if _, err := conn.Write(responseMsg); err != nil {
 							return err
 						}

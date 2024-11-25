@@ -1,4 +1,4 @@
-package rri
+package rri_test
 
 import (
 	"crypto/tls"
@@ -6,19 +6,20 @@ import (
 	"sync"
 	"testing"
 
+	"github.com/DENICeG/go-rriclient/pkg/rri"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
 
 func TestClient(t *testing.T) {
-	mustWithMockServer(func(server *MockServer) {
+	rri.MustWithMockServer(func(server *rri.MockServer) {
 		server.AddUser("DENIC-1000011-TEST", "secret")
 
-		var client *Client
+		var client *rri.Client
 
 		t.Run("NewClient", func(t *testing.T) {
 			var err error
-			client, err = NewClient(server.Address(), &ClientConfig{Insecure: true})
+			client, err = rri.NewClient(server.Address(), &rri.ClientConfig{Insecure: true})
 			require.NoError(t, err)
 			assert.Equal(t, server.Address(), client.RemoteAddress())
 			assert.False(t, client.IsLoggedIn())
@@ -27,7 +28,7 @@ func TestClient(t *testing.T) {
 		require.NotNil(t, client)
 
 		t.Run("QueryBeforeLogin", func(t *testing.T) {
-			_, err := client.SendQuery(NewInfoDomainQuery("denic.de"))
+			_, err := client.SendQuery(rri.NewInfoDomainQuery("denic.de"))
 			assert.Error(t, err)
 		})
 
@@ -46,8 +47,8 @@ func TestClient(t *testing.T) {
 
 func TestClientConfDefaults(t *testing.T) {
 	dialCount := 0
-	client, err := NewClient("localhost", &ClientConfig{
-		TLSDialHandler: func(network, addr string, config *tls.Config) (TLSConnection, error) {
+	client, err := rri.NewClient("localhost", &rri.ClientConfig{
+		TLSDialHandler: func(network, addr string, config *tls.Config) (rri.TLSConnection, error) {
 			assert.Equal(t, "tcp", network)
 			assert.Equal(t, "localhost:51131", addr)
 			assert.Equal(t, uint16(tls.VersionTLS13), config.MinVersion)
@@ -64,10 +65,10 @@ func TestClientConfDefaults(t *testing.T) {
 
 func TestClientConf(t *testing.T) {
 	dialCount := 0
-	client, err := NewClient("localhost:12345", &ClientConfig{
+	client, err := rri.NewClient("localhost:12345", &rri.ClientConfig{
 		Insecure:      true,
 		MinTLSVersion: tls.VersionTLS12,
-		TLSDialHandler: func(network, addr string, config *tls.Config) (TLSConnection, error) {
+		TLSDialHandler: func(network, addr string, config *tls.Config) (rri.TLSConnection, error) {
 			assert.Equal(t, "tcp", network)
 			assert.Equal(t, "localhost:12345", addr)
 			assert.Equal(t, uint16(tls.VersionTLS12), config.MinVersion)
@@ -92,8 +93,8 @@ func TestClientNoAutoRetry(t *testing.T) {
 		{b64("AAAAP3ZlcnNpb246IDUuMAphY3Rpb246IElORk8KZG9tYWluOiBkZW5pYy5kZQpkb21haW4tYWNlOiBkZW5pYy5kZQ=="), fmt.Errorf("broken pipe")},
 	})
 
-	client, err := NewClient("localhost", &ClientConfig{
-		TLSDialHandler: func(network, addr string, config *tls.Config) (TLSConnection, error) {
+	client, err := rri.NewClient("localhost", &rri.ClientConfig{
+		TLSDialHandler: func(network, addr string, config *tls.Config) (rri.TLSConnection, error) {
 			dialCount++
 			return conn, nil
 		},
@@ -103,7 +104,7 @@ func TestClientNoAutoRetry(t *testing.T) {
 
 	require.NoError(t, client.Login("DENIC-1000011-RRI", "secret"))
 	client.NoAutoRetry = true
-	_, err = client.SendQuery(NewInfoDomainQuery("denic.de"))
+	_, err = client.SendQuery(rri.NewInfoDomainQuery("denic.de"))
 	require.Error(t, err)
 
 	assert.Equal(t, 1, dialCount, "unexpected number of tls connections")
@@ -126,8 +127,8 @@ func TestClientAutoRetry(t *testing.T) {
 		{b64("AAAAP3ZlcnNpb246IDUuMAphY3Rpb246IElORk8KZG9tYWluOiBkZW5pYy5kZQpkb21haW4tYWNlOiBkZW5pYy5kZQ=="), nil},
 	})
 
-	client, err := NewClient("localhost", &ClientConfig{
-		TLSDialHandler: func(network, addr string, config *tls.Config) (TLSConnection, error) {
+	client, err := rri.NewClient("localhost", &rri.ClientConfig{
+		TLSDialHandler: func(network, addr string, config *tls.Config) (rri.TLSConnection, error) {
 			dialCount++
 			return conn, nil
 		},
@@ -136,11 +137,11 @@ func TestClientAutoRetry(t *testing.T) {
 	defer client.Close()
 
 	require.NoError(t, client.Login("DENIC-1000011-RRI", "secret"))
-	resp, err := client.SendQuery(NewInfoDomainQuery("denic.de"))
+	resp, err := client.SendQuery(rri.NewInfoDomainQuery("denic.de"))
 	require.NoError(t, err)
 	require.Equal(t, 2, resp.Fields().Size())
-	assert.Equal(t, []string{"success"}, resp.Field(ResponseFieldNameResult))
-	assert.Equal(t, []string{"12345 only a test"}, resp.Field(ResponseFieldNameInfo))
+	assert.Equal(t, []string{"success"}, resp.Field(rri.ResponseFieldNameResult))
+	assert.Equal(t, []string{"12345 only a test"}, resp.Field(rri.ResponseFieldNameInfo))
 
 	assert.Equal(t, 2, dialCount, "unexpected number of tls connections")
 	conn.AssertComplete()

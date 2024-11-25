@@ -157,7 +157,7 @@ func WithMockServer(port int, f func(server *MockServer) error) error {
 	return runError
 }
 
-func mustWithMockServer(f func(server *MockServer)) {
+func MustWithMockServer(f func(server *MockServer)) {
 	if err := WithMockServer(31298, func(server *MockServer) error {
 		f(server)
 		return nil

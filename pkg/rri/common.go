@@ -7,7 +7,7 @@ import (
 	"regexp"
 )
 
-func prepareMessage(msg string) []byte {
+func PrepareMessage(msg string) []byte {
 	// prepare data packet: 4 byte message length + actual message
 	data := []byte(msg)
 	buffer := make([]byte, 4+len(data))
@@ -16,8 +16,8 @@ func prepareMessage(msg string) []byte {
 	return buffer
 }
 
-func readMessage(r io.Reader) (string, error) {
-	lenBuffer, err := readBytes(r, 4)
+func ReadMessage(r io.Reader) (string, error) {
+	lenBuffer, err := ReadBytes(r, 4)
 	if err != nil {
 		return "", err
 	}
@@ -31,7 +31,7 @@ func readMessage(r io.Reader) (string, error) {
 		return "", fmt.Errorf("message too large")
 	}
 
-	buffer, err := readBytes(r, int(bytesRead))
+	buffer, err := ReadBytes(r, int(bytesRead))
 	if err != nil {
 		return "", err
 	}
@@ -39,7 +39,7 @@ func readMessage(r io.Reader) (string, error) {
 	return string(buffer), nil
 }
 
-func readBytes(r io.Reader, count int) ([]byte, error) {
+func ReadBytes(r io.Reader, count int) ([]byte, error) {
 	buffer := make([]byte, count)
 	received := 0
 

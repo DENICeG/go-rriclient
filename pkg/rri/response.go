@@ -10,7 +10,7 @@ import (
 const (
 	// ResultSuccess denotes a successful result.
 	ResultSuccess Result = "success"
-	// ResultFailure dontes a failed result.
+	// ResultFailure denotes a failed result.
 	ResultFailure Result = "failure"
 
 	// ResponseFieldNameResult denotes the response field name for result.

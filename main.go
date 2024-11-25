@@ -88,7 +88,7 @@ func main() {
 		}
 
 		if len(*argDeleteEnv) > 0 {
-			if err := envReader.DeleteEnvironment(*argDeleteEnv); err != nil {
+			if err = envReader.DeleteEnvironment(*argDeleteEnv); err != nil {
 				return err
 			}
 			console.Printlnf("environment %q has been deleted", *argDeleteEnv)

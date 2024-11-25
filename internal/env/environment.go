@@ -29,9 +29,9 @@ type envOrder struct {
 type GetKeyHandler jcrypt.KeySource
 
 // EnterEnvHandler prepares the environment defined by env.
-type EnterEnvHandler func(envName string, env interface{}) error
+type EnterEnvHandler func(envName string, env any) error
 
-// GetEnvFileTitleHandler returns a humand readable title for the given env file.
+// GetEnvFileTitleHandler returns a human readable title for the given env file.
 type GetEnvFileTitleHandler func(envName, envFile string) string
 
 // Reader represents a reader object for environments.
@@ -63,16 +63,16 @@ func (e *Reader) getEnvFilePath(envName string) string {
 }
 
 // ReadEnvironment reads an existing environment.
-func (e *Reader) ReadEnvironment(envName string, env interface{}) error {
+func (e *Reader) ReadEnvironment(envName string, env any) error {
 	return e.createOrReadEnvironment(envName, env, nil)
 }
 
 // CreateOrReadEnvironment reads an existing environment with the given name or calls the enter environment reader.
-func (e *Reader) CreateOrReadEnvironment(envName string, env interface{}) error {
+func (e *Reader) CreateOrReadEnvironment(envName string, env any) error {
 	return e.createOrReadEnvironment(envName, env, e.EnterEnvHandler)
 }
 
-func (e *Reader) createOrReadEnvironment(envName string, env interface{}, enterEnvHandler EnterEnvHandler) error {
+func (e *Reader) createOrReadEnvironment(envName string, env any, enterEnvHandler EnterEnvHandler) error {
 	file := e.getEnvFilePath(envName)
 	exists, err := isFile(file)
 	if err != nil {
@@ -118,7 +118,7 @@ func (e *Reader) createOrReadEnvironment(envName string, env interface{}, enterE
 }
 
 // SelectEnvironment displays all configured environments in specified order and prompts the user.
-func (e *Reader) SelectEnvironment(env interface{}) error {
+func (e *Reader) SelectEnvironment(env any) error {
 	envFiles, err := e.GetEnvironmentFiles()
 	if err != nil {
 		return err

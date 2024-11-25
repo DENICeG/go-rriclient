@@ -112,6 +112,7 @@ func main() {
 			}
 			return err
 		}
+
 		defer client.Close()
 		if *argVerbose {
 			client.RawQueryPrinter = rawQueryPrinter
@@ -190,7 +191,7 @@ func retrieveEnvironment(envReader *env.Reader) (environment, error) {
 	return env, nil
 }
 
-func enterEnvironment(envName string, env interface{}) error {
+func enterEnvironment(envName string, env any) error {
 	e, ok := env.(*environment)
 	if !ok {
 		panic(fmt.Sprintf("environment has unexpected type %T", env))

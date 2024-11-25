@@ -17,16 +17,16 @@ type QueryHandler func(*Session, *Query) (*Response, error)
 
 // Session is used to keep the state of an RRI connection.
 type Session struct {
-	values map[string]interface{}
+	values map[string]any
 }
 
 // Set sets a value for the current session across multiple queries.
-func (s *Session) Set(key string, value interface{}) {
+func (s *Session) Set(key string, value any) {
 	s.values[key] = value
 }
 
 // Get returns a value previously set for the current session.
-func (s *Session) Get(key string) (interface{}, bool) {
+func (s *Session) Get(key string) (any, bool) {
 	value, ok := s.values[key]
 	return value, ok
 }
@@ -96,7 +96,7 @@ func (srv *Server) Run() error {
 		}
 
 		go func() {
-			session := &Session{make(map[string]interface{})}
+			session := &Session{make(map[string]any)}
 
 			if err := func() error {
 				for {

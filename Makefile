@@ -70,3 +70,9 @@ unit-test:
 
 run:
 	@go run . --insecure
+
+install-vulncheck:
+	golang.org/x/vuln/cmd/govulncheck@latest
+
+run-vulncheck:
+	govulncheck ./...

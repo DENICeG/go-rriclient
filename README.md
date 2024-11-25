@@ -1,4 +1,4 @@
-[![Go](https://github.com/DENICeG/go-rriclient/actions/workflows/go.yml/badge.svg)](https://github.com/DENICeG/go-rriclient/actions/workflows/go.yml)
+[![Build](https://github.com/DENICeG/go-rriclient/actions/workflows/go.yml/badge.svg)](https://github.com/DENICeG/go-rriclient/actions/workflows/go.yml)
 
 # DENIC RRI Client
 

@@ -113,6 +113,7 @@ func (e *Reader) createOrReadEnvironment(envName string, env any, enterEnvHandle
 	}); err != nil {
 		return err
 	}
+
 	e.envOrderBringToFront(envName)
 	return nil
 }
@@ -194,7 +195,7 @@ func (e *Reader) GetEnvironmentFiles() ([]os.FileInfo, error) {
 	}
 
 	order, _ := e.readEnvOrder()
-	if order.Order != nil && len(order.Order) > 0 {
+	if len(order.Order) > 0 {
 		orderMap := make(map[string]int)
 		for i, name := range order.Order {
 			orderMap[name] = i

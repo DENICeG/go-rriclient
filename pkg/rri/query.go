@@ -101,11 +101,11 @@ const (
 	ActionUpdate QueryAction = "UPDATE"
 	// ActionChangeHolder denotes the action value for change holder.
 	ActionChangeHolder QueryAction = "CHHOLDER"
-	// ActionDelete deontes the action value for delete.
+	// ActionDelete denotes the action value for delete.
 	ActionDelete QueryAction = "DELETE"
-	// ActionRestore deontes the action value for restore.
+	// ActionRestore denotes the action value for restore.
 	ActionRestore QueryAction = "RESTORE"
-	// ActionTransit deontes the action value for transit.
+	// ActionTransit denotes the action value for transit.
 	ActionTransit QueryAction = "TRANSIT"
 	// ActionCreateAuthInfo1 denotes the action value for create AuthInfo1.
 	ActionCreateAuthInfo1 QueryAction = "CREATE-AUTHINFO1"

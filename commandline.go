@@ -656,7 +656,7 @@ func cmdLogout(args []string) error {
 }
 
 func cmdCreateHandle(args []string) error {
-	handle, contactData, err := readContactData(args, 0)
+	handle, contactData, err := readContactData(args)
 	if err != nil {
 		return err
 	}
@@ -1000,7 +1000,7 @@ func readDomainData(args []string, dataOffset int) (string, rri.DomainData, erro
 	}, nil
 }
 
-func readContactData(args []string, dataOffset int) (rri.DenicHandle, rri.ContactData, error) {
+func readContactData(args []string) (rri.DenicHandle, rri.ContactData, error) {
 	handle, err := rri.ParseDenicHandle(args[0])
 	if err != nil {
 		return rri.EmptyDenicHandle(), rri.ContactData{}, fmt.Errorf("%q: %s", args[0], err.Error())

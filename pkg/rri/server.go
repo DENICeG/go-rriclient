@@ -11,8 +11,8 @@ var (
 	ErrCloseConnection = fmt.Errorf("gracefully shutdown connection to client")
 )
 
-// QueryHandler is called for incoming RRI queryies by the server and expects a result as return value.
-// If an error is returned instead, it is written to log and the connection is closed immmediately.
+// QueryHandler is called for incoming RRI queries by the server and expects a result as return value.
+// If an error is returned instead, it is written to log and the connection is closed immediately.
 type QueryHandler func(*Session, *Query) (*Response, error)
 
 // Session is used to keep the state of an RRI connection.
@@ -106,7 +106,7 @@ func (srv *Server) Run() error {
 					}
 
 					if srv.Handler != nil {
-						query, err := ParseQuery(string(msg))
+						query, err := ParseQuery(msg)
 						if err != nil {
 							return err
 						}
@@ -118,7 +118,7 @@ func (srv *Server) Run() error {
 
 						//TODO answer in same type as the query (KV or XML)
 						responseMsg := prepareMessage(response.EncodeKV())
-						if _, err := conn.Write([]byte(responseMsg)); err != nil {
+						if _, err := conn.Write(responseMsg); err != nil {
 							return err
 						}
 					} else {

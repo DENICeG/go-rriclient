@@ -90,7 +90,7 @@ type Response struct {
 	entities []ResponseEntity
 }
 
-// IsSuccessful returns whether the response is successfull.
+// IsSuccessful returns whether the response is successful.
 func (r *Response) IsSuccessful() bool {
 	return r.Result() == ResultSuccess
 }

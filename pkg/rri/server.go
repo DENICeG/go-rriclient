@@ -116,7 +116,7 @@ func (srv *Server) Run() error {
 							return err
 						}
 
-						//TODO answer in same type as the query (KV or XML)
+						// TODO answer in same type as the query (KV or XML)
 						responseMsg := prepareMessage(response.EncodeKV())
 						if _, err := conn.Write(responseMsg); err != nil {
 							return err
@@ -126,7 +126,7 @@ func (srv *Server) Run() error {
 					}
 				}
 			}(); err != nil {
-				//TODO handle error
+				// TODO handle error
 			}
 
 			conn.Close()

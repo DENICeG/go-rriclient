@@ -148,23 +148,23 @@ func retrieveEnvironment(envReader *env.Reader) (environment, error) {
 			addressFromCommandLine += ":51131"
 		}
 
-	} else {
-		if len(*argCmd) >= 1 && strings.Contains((*argCmd)[0], ":") {
-			// consume first command part as address for backwards compatibility
-			addressFromCommandLine = (*argCmd)[0]
-			*argCmd = (*argCmd)[1:]
-		}
+	} else if len(*argCmd) >= 1 && strings.Contains((*argCmd)[0], ":") {
+		// consume first command part as address for backwards compatibility
+		addressFromCommandLine = (*argCmd)[0]
+		*argCmd = (*argCmd)[1:]
 	}
 
-	var err error
 	var env environment
 	if len(*argEnvironment) > 0 {
-		err = envReader.CreateOrReadEnvironment(*argEnvironment, &env)
+		err := envReader.CreateOrReadEnvironment(*argEnvironment, &env)
+		if err != nil {
+			return environment{}, err
+		}
 	} else if len(addressFromCommandLine) == 0 {
-		err = envReader.SelectEnvironment(&env)
-	}
-	if err != nil {
-		return environment{}, err
+		err := envReader.SelectEnvironment(&env)
+		if err != nil {
+			return environment{}, err
+		}
 	}
 
 	if len(addressFromCommandLine) > 0 {

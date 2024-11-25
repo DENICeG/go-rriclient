@@ -16,7 +16,7 @@ import (
 //
 // DO NOT USE IN PRODUCTION!
 func NewMockTLSConfig() (*tls.Config, error) {
-	privKey, err := rsa.GenerateKey(rand.Reader, 1024)
+	privKey, err := rsa.GenerateKey(rand.Reader, 2048)
 	if err != nil {
 		return nil, fmt.Errorf("failed to generate RSA key: %s", err)
 	}

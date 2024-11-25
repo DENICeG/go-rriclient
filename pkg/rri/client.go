@@ -58,7 +58,8 @@ func NewClient(address string, conf *ClientConfig) (*Client, error) {
 		actualConf = *conf
 	}
 	if !strings.ContainsRune(address, ':') {
-		address += ":51131"
+		const defaultPort = ":51131"
+		address += defaultPort
 	}
 	if actualConf.TLSDialHandler == nil {
 		// use tls.Dial by default to establish a tls connection
@@ -127,7 +128,7 @@ func (client *Client) CurrentRegAccID() (int, error) {
 // Close closes the underlying connection.
 func (client *Client) Close() error {
 	if client.connection != nil {
-		//TODO send LOGOUT while connected?
+		// TODO send LOGOUT while connected?
 		return client.closeConnection()
 	}
 	return nil
@@ -258,12 +259,12 @@ func (client *Client) SendRaw(msg string) (string, error) {
 			// ignore close errors (connection will be discarded anyway)
 			client.closeConnection()
 		}
-		if err := client.setupConnection(); err != nil {
+		if err = client.setupConnection(); err != nil {
 			return "", fmt.Errorf("failed to restore lost connection: %s", err.Error())
 		}
 		// restore authenticated session if it existed before
 		if len(client.lastUser) > 0 && len(client.lastPass) > 0 {
-			if err := client.Login(client.lastUser, client.lastPass); err != nil {
+			if err = client.Login(client.lastUser, client.lastPass); err != nil {
 				return "", fmt.Errorf("failed to restore session: %s", err.Error())
 			}
 		}

@@ -21,15 +21,17 @@ func readMessage(r io.Reader) (string, error) {
 	if err != nil {
 		return "", err
 	}
-	len := binary.BigEndian.Uint32(lenBuffer)
-	if len == 0 {
+
+	bytesRead := binary.BigEndian.Uint32(lenBuffer)
+	if bytesRead == 0 {
 		return "", fmt.Errorf("message is empty")
 	}
-	if len > 65536 || int(len) < 0 {
+
+	if bytesRead > 65536 || int(bytesRead) < 0 {
 		return "", fmt.Errorf("message too large")
 	}
 
-	buffer, err := readBytes(r, int(len))
+	buffer, err := readBytes(r, int(bytesRead))
 	if err != nil {
 		return "", err
 	}
@@ -42,15 +44,15 @@ func readBytes(r io.Reader, count int) ([]byte, error) {
 	received := 0
 
 	for received < count {
-		len, err := r.Read(buffer[received:])
+		bytesRead, err := r.Read(buffer[received:])
 		if err != nil {
 			return nil, err
 		}
-		if len == 0 {
+		if bytesRead == 0 {
 			return nil, fmt.Errorf("failed to read %d bytes from connection", count)
 		}
 
-		received += len
+		received += bytesRead
 	}
 
 	return buffer, nil
@@ -58,14 +60,14 @@ func readBytes(r io.Reader, count int) ([]byte, error) {
 
 // IsXML returns whether the message seems to contain a XML encoded query or response.
 func IsXML(msg string) bool {
-	//TODO xml detection
+	// TODO xml detection
 	return false
 }
 
 // CensorRawMessage replaces passwords in a raw query with '******'.
 func CensorRawMessage(msg string) string {
 	if IsXML(msg) {
-		//TODO censor xml
+		// TODO censor xml
 		return msg
 
 	}

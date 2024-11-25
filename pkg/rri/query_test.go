@@ -19,7 +19,7 @@ func TestNewQueryNil(t *testing.T) {
 func TestQueryToString(t *testing.T) {
 	assert.Equal(t, "LOGIN{\"DENIC-1000011-TEST\"}", NewLoginQuery("DENIC-1000011-TEST", "secret").String())
 	assert.Equal(t, "LOGOUT{}", NewLogoutQuery().String())
-	//TODO other actions
+	// TODO other actions
 }
 
 func TestQueryEncodeKV(t *testing.T) {

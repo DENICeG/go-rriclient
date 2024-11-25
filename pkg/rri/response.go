@@ -140,7 +140,7 @@ func (r *Response) STID() string {
 
 // String returns a human readable representation of the response.
 func (r *Response) String() string {
-	//TODO shortened, single line representation
+	// TODO shortened, single line representation
 	return r.EncodeKV()
 }
 
@@ -155,7 +155,7 @@ func (r *Response) EncodeKV() string {
 		sb.WriteString(": ")
 		sb.WriteString(f.Value)
 	}
-	//TODO encode entities
+	// TODO encode entities
 	return sb.String()
 }
 
@@ -307,7 +307,7 @@ func ParseBusinessMessageKV(str string) (BusinessMessage, error) {
 
 // ParseResponse tries to detect the response format (KV or XML) and returns the parsed response.
 func ParseResponse(str string) (*Response, error) {
-	//TODO detect type
+	// TODO detect type
 	return ParseResponseKV(str)
 }
 

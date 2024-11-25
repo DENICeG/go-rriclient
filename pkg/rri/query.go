@@ -408,7 +408,7 @@ func PutDomainToQueryFields(fields *QueryFieldList, domain string) {
 	} else {
 		fields.Add(QueryFieldNameDomainIDN, domain)
 		if ace, err := idna.ToASCII(domain); err == nil {
-			//TODO only add ace string if it differs from idn
+			// TODO only add ace string if it differs from idn
 			fields.Add(QueryFieldNameDomainACE, ace)
 		}
 	}
@@ -572,6 +572,6 @@ func ParseQueryKV(str string) (*Query, error) {
 
 // ParseQuery tries to detect the query format (KV or XML) and returns the parsed query.
 func ParseQuery(str string) (*Query, error) {
-	//TODO detect type
+	// TODO detect type
 	return ParseQueryKV(str)
 }

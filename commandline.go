@@ -16,7 +16,7 @@ import (
 )
 
 var (
-	//TODO configure colors and signs from external file
+	// TODO configure colors and signs from external file
 	colorPromptRRI             = "\033[1;34m"
 	colorPromptUser            = "\033[1;32m"
 	colorPromptHost            = "\033[1;32m"
@@ -241,7 +241,7 @@ func cmdHelp(args []string) error {
 		{Cmd: []string{"create", "handle"}, Args: []string{"domain"}, Desc: "send a CREATE command for a specific handle"},
 		{Cmd: []string{"check", "handle"}, Args: []string{"domain"}, Desc: "send a CHECK command for a specific handle"},
 		{Cmd: []string{"info", "handle"}, Args: []string{"domain"}, Desc: "send an INFO command for a specific handle"},
-		//TODO contact-update
+		// TODO contact-update
 		{},
 		{Cmd: []string{"create", "domain"}, Args: []string{"domain"}, Desc: "send a CREATE command for a new domain"},
 		{Cmd: []string{"check", "domain"}, Args: []string{"domain"}, Desc: "send a CHECK command for a specific domain"},
@@ -253,17 +253,17 @@ func cmdHelp(args []string) error {
 		{Cmd: []string{"restore"}, Args: []string{"domain"}, Desc: "send a RESTORE command for a specific domain"},
 		{Cmd: []string{"transit"}, Args: []string{"domain"}, Desc: "send a TRANSIT command for a specific domain"},
 		{Cmd: []string{"create", "authinfo1"}, Args: []string{"domain", "secret", "expire"}, Desc: "send a CREATE-AUTHINFO1 command for a specific domain"},
-		//TODO create-authinfo2
-		//TODO delete-authinfo1
+		// TODO create-authinfo2
+		// TODO delete-authinfo1
 		{Cmd: []string{"chprov"}, Args: []string{"domain", "secret"}, Desc: "send a CHPROV command for a specific domain"},
 		{},
 		{Cmd: []string{"verify-queue-read"}, Args: nil, Desc: "send a VERIFY-QUEUE-READ command"},
 		{Cmd: []string{"verify-queue-delete"}, Args: []string{"msgid"}, Desc: "send a VERIFY-QUEUE-DELETE command for a specific vChecked message"},
-		//TODO verify
+		// TODO verify
 		// -
-		//TODO queue-read
-		//TODO queue-delete
-		//TODO regacc-info
+		// TODO queue-read
+		// TODO queue-delete
+		// TODO regacc-info
 		{},
 		{Cmd: []string{"raw"}, Args: nil, Desc: "enter a raw query and send it"},
 		{Cmd: []string{"file"}, Args: []string{"path"}, Desc: "process a query file as accepted by flag --file"},
@@ -620,7 +620,7 @@ func registerCustomCommand(cle *commandline.Environment, cmd customCommand) {
 				fields.Add(rri.QueryFieldName(arg.Field), arg.Value)
 			}
 		}
-		//TODO fill history
+		// TODO fill history
 		query := rri.NewQuery(rri.LatestVersion, rri.QueryAction(cmd.Action), fields)
 		_, err := processQuery(query)
 		return err
@@ -683,7 +683,7 @@ func cmdUpdateDomain(args []string) error {
 		return err
 	}
 
-	//TODO use old domain values for empty fields -> only change explicitly entered data
+	// TODO use old domain values for empty fields -> only change explicitly entered data
 
 	_, err = processQuery(rri.NewUpdateDomainQuery(domainName, domainData))
 	histDomains.Put(domainName)
@@ -696,7 +696,7 @@ func cmdChangeHolder(args []string) error {
 		return err
 	}
 
-	//TODO use old domain values for empty fields -> only change explicitly entered data
+	// TODO use old domain values for empty fields -> only change explicitly entered data
 
 	_, err = processQuery(rri.NewChangeHolderQuery(domainName, domainData))
 	histDomains.Put(domainName)
@@ -851,7 +851,7 @@ func cmdFile(args []string) error {
 	}
 
 	if skipAuthQueries && hasLoginLogoutQueries {
-		//TODO colored orange
+		// TODO colored orange
 		console.Println("Currently logged in. Auth queries will be skipped")
 	}
 
@@ -859,12 +859,12 @@ func cmdFile(args []string) error {
 		if skipAuthQueries {
 			if query.Action() == rri.ActionLogin || query.Action() == rri.ActionLogout {
 				// skip authorization queries
-				console.Println("Skip query", query) //TODO colored orange
+				console.Println("Skip query", query) // TODO colored orange
 				continue
 			}
 		}
 
-		//TODO colored in send color
+		// TODO colored in send color
 		console.Println("Exec query", query)
 		success, err := processQuery(query)
 		if err != nil {

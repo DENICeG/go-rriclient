@@ -58,7 +58,7 @@ func NewReader(homeDirName string) (*Reader, error) {
 }
 
 func (e *Reader) getEnvFilePath(envName string) string {
-	//TODO conditional escaping
+	// TODO conditional escaping
 	return filepath.Join(e.dir, envName+".json")
 }
 
@@ -195,7 +195,7 @@ func (e *Reader) GetEnvironmentFiles() ([]os.FileInfo, error) {
 	}
 
 	order, _ := e.readEnvOrder()
-	if len(order.Order) > 0 {
+	if order.Order != nil && len(order.Order) > 0 {
 		orderMap := make(map[string]int)
 		for i, name := range order.Order {
 			orderMap[name] = i

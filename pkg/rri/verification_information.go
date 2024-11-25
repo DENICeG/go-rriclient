@@ -134,6 +134,7 @@ const (
 	VerificationEvidenceDigitalAttestation      VerificationEvidence = "digital_attestation"
 	VerificationEvidencePostalVerTransactionLog VerificationEvidence = "postal_ver_transaction_log"
 	VerificationEvidenceEmailVerTransactionLog  VerificationEvidence = "email_ver_transaction_log"
+	VerificationEvidenceAddressDatabase         VerificationEvidence = "address_database"
 )
 
 // ParseVerificationEvidence parses a verification evidence from string.
@@ -173,6 +174,8 @@ func ParseVerificationEvidence(s string) (VerificationEvidence, error) {
 		return VerificationEvidencePostalVerTransactionLog, nil
 	case string(VerificationEvidenceEmailVerTransactionLog):
 		return VerificationEvidenceEmailVerTransactionLog, nil
+	case string(VerificationEvidenceAddressDatabase):
+		return VerificationEvidenceAddressDatabase, nil
 	default:
 		return "", fmt.Errorf("invalid verification evidence")
 	}

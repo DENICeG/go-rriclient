@@ -43,7 +43,7 @@ func TestServer(t *testing.T) {
 
 	client.connection, err = tls.Dial("tcp", client.address, client.tlsConfig)
 	require.NoError(t, err)
-	client.connection.Write(prepareMessage("version: 4.0\naction: LOGIN\nuser: user\npassword: secret"))
+	client.connection.Write(prepareMessage("version: 5.0\naction: LOGIN\nuser: user\npassword: secret"))
 
 	// let some time pass for the query to be processed
 	time.Sleep(50 * time.Millisecond)

@@ -13,8 +13,13 @@ import (
 
 const (
 	// LatestVersion denotes the latest RRI version supported by the client.
-	LatestVersion Version = "4.0"
+	LatestVersion Version = "5.0"
 
+	// QueryEntityVerificationInformation denotes the query entity name for verification information.
+	QueryEntityVerificationInformation QueryFieldEntity = "VerificationInformation"
+
+	// QueryFieldNameEntity denotes the query field name for an entity.
+	QueryFieldNameEntity QueryFieldName = "entity"
 	// QueryFieldNameVersion denotes the query field name for version.
 	QueryFieldNameVersion QueryFieldName = "version"
 	// QueryFieldNameAction denotes the query field name for action.
@@ -65,6 +70,22 @@ const (
 	QueryFieldNameMsgID QueryFieldName = "msgid"
 	// QueryFieldNameMsgType denotes the query field name for a message type.
 	QueryFieldNameMsgType QueryFieldName = "msgtype"
+	// QueryFieldNamePhone denotes the query field name for phone.
+	QueryFieldNamePhone QueryFieldName = "phone"
+	// QueryFieldNameVerifiedClaim denotes the query field name for verified claim.
+	QueryFieldNameVerifiedClaim QueryFieldName = "verifiedclaim"
+	// QueryFieldNameVerificationResult denotes the query field name for verification result.
+	QueryFieldNameVerificationResult QueryFieldName = "verificationresult"
+	// QueryFieldNameVerificationReference denotes the query field name for verification reference.
+	QueryFieldNameVerificationReference QueryFieldName = "verificationreference"
+	// QueryFieldNameVerificationTimestamp denotes the query field name for verification timestamp.
+	QueryFieldNameVerificationTimestamp QueryFieldName = "verificationtimestamp"
+	// QueryFieldNameVerificationEvidence denotes the query field name for verification evidence.
+	QueryFieldNameVerificationEvidence QueryFieldName = "verificationevidence"
+	// QueryFieldNameVerificationMethod denotes the query field name for verification method.
+	QueryFieldNameVerificationMethod QueryFieldName = "verificationmethod"
+	// QueryFieldNameTrustFramework denotes the query field name for trust framework.
+	QueryFieldNameTrustFramework QueryFieldName = "trustframework"
 
 	// ActionLogin denotes the action value for login.
 	ActionLogin QueryAction = "LOGIN"
@@ -127,6 +148,21 @@ type QueryFieldName string
 // Normalize returns the normalized representation of the given QueryFieldName.
 func (q QueryFieldName) Normalize() QueryFieldName {
 	return QueryFieldName(strings.ToLower(string(q)))
+}
+
+// QueryFieldEntity represents an entity field of a query
+type QueryFieldEntity string
+
+func (q QueryFieldEntity) String() string {
+	if q == "" {
+		return ""
+	}
+	return fmt.Sprintf("[%s]", string(q))
+}
+
+// Normalize returns the normalized representation of the given QueryFieldEntity.
+func (q QueryFieldEntity) Normalize() QueryFieldEntity {
+	return QueryFieldEntity(strings.ToLower(string(q)))
 }
 
 // ContactType represents the type of a contact handle.
@@ -208,7 +244,7 @@ type DomainData struct {
 	NameServers           []string
 }
 
-func (domainData *DomainData) putToQueryFields(fields *QueryFieldList) {
+func (domainData *DomainData) PutToQueryFields(fields *QueryFieldList) {
 	putHandlesToQueryFields := func(fieldName QueryFieldName, handles []DenicHandle) {
 		for _, h := range handles {
 			if !h.IsEmpty() {
@@ -233,9 +269,12 @@ type ContactData struct {
 	City         string
 	CountryCode  string
 	EMail        []string
+	Phone        string
+
+	VerificationInformation []VerificationInformation
 }
 
-func (contactData *ContactData) putToQueryFields(fields *QueryFieldList) {
+func (contactData *ContactData) PutToQueryFields(fields *QueryFieldList) {
 	fields.Add(QueryFieldNameType, string(contactData.Type.Normalize()))
 	fields.Add(QueryFieldNameName, contactData.Name)
 	fields.Add(QueryFieldNameOrganisation, splitLines(contactData.Organisation)...)
@@ -244,6 +283,11 @@ func (contactData *ContactData) putToQueryFields(fields *QueryFieldList) {
 	fields.Add(QueryFieldNameCity, contactData.City)
 	fields.Add(QueryFieldNameCountryCode, contactData.CountryCode)
 	fields.Add(QueryFieldNameEMail, contactData.EMail...)
+	fields.Add(QueryFieldNamePhone, contactData.Phone)
+
+	for _, verificationInfo := range contactData.VerificationInformation {
+		verificationInfo.PutToQueryFields(fields)
+	}
 }
 
 func splitLines(str string) []string {
@@ -282,8 +326,12 @@ func (q *Query) EncodeKV() string {
 		if sb.Len() > 0 {
 			sb.WriteString("\n")
 		}
-		sb.WriteString(string(f.Name))
-		sb.WriteString(": ")
+
+		if f.Name != QueryFieldNameEntity {
+			sb.WriteString(string(f.Name))
+			sb.WriteString(": ")
+		}
+
 		sb.WriteString(f.Value)
 	}
 	return sb.String()
@@ -332,7 +380,7 @@ func NewLogoutQuery() *Query {
 func NewCreateContactQuery(handle DenicHandle, contactData ContactData) *Query {
 	fields := NewQueryFieldList()
 	fields.Add(QueryFieldNameHandle, handle.String())
-	contactData.putToQueryFields(&fields)
+	contactData.PutToQueryFields(&fields)
 	return NewQuery(LatestVersion, ActionCreate, fields)
 }
 
@@ -350,7 +398,7 @@ func NewInfoHandleQuery(handle DenicHandle) *Query {
 	return NewQuery(LatestVersion, ActionInfo, fields)
 }
 
-func putDomainToQueryFields(fields *QueryFieldList, domain string) {
+func PutDomainToQueryFields(fields *QueryFieldList, domain string) {
 	if strings.HasPrefix(strings.ToLower(domain), "xn--") {
 		fields.Add(QueryFieldNameDomainACE, domain)
 		if idn, err := idna.ToUnicode(domain); err == nil {
@@ -369,59 +417,59 @@ func putDomainToQueryFields(fields *QueryFieldList, domain string) {
 // NewCreateDomainQuery returns a query to create a domain.
 func NewCreateDomainQuery(domain string, domainData DomainData) *Query {
 	fields := NewQueryFieldList()
-	putDomainToQueryFields(&fields, domain)
-	domainData.putToQueryFields(&fields)
+	PutDomainToQueryFields(&fields, domain)
+	domainData.PutToQueryFields(&fields)
 	return NewQuery(LatestVersion, ActionCreate, fields)
 }
 
 // NewCheckDomainQuery returns a check query.
 func NewCheckDomainQuery(domain string) *Query {
 	fields := NewQueryFieldList()
-	putDomainToQueryFields(&fields, domain)
+	PutDomainToQueryFields(&fields, domain)
 	return NewQuery(LatestVersion, ActionCheck, fields)
 }
 
 // NewInfoDomainQuery returns an info query.
 func NewInfoDomainQuery(domain string) *Query {
 	fields := NewQueryFieldList()
-	putDomainToQueryFields(&fields, domain)
+	PutDomainToQueryFields(&fields, domain)
 	return NewQuery(LatestVersion, ActionInfo, fields)
 }
 
 // NewUpdateDomainQuery returns a query to update a domain.
 func NewUpdateDomainQuery(domain string, domainData DomainData) *Query {
 	fields := NewQueryFieldList()
-	putDomainToQueryFields(&fields, domain)
-	domainData.putToQueryFields(&fields)
+	PutDomainToQueryFields(&fields, domain)
+	domainData.PutToQueryFields(&fields)
 	return NewQuery(LatestVersion, ActionUpdate, fields)
 }
 
 // NewChangeHolderQuery returns a query to update a domain.
 func NewChangeHolderQuery(domain string, domainData DomainData) *Query {
 	fields := NewQueryFieldList()
-	putDomainToQueryFields(&fields, domain)
-	domainData.putToQueryFields(&fields)
+	PutDomainToQueryFields(&fields, domain)
+	domainData.PutToQueryFields(&fields)
 	return NewQuery(LatestVersion, ActionChangeHolder, fields)
 }
 
 // NewDeleteDomainQuery returns a delete query.
 func NewDeleteDomainQuery(domain string) *Query {
 	fields := NewQueryFieldList()
-	putDomainToQueryFields(&fields, domain)
+	PutDomainToQueryFields(&fields, domain)
 	return NewQuery(LatestVersion, ActionDelete, fields)
 }
 
 // NewRestoreDomainQuery returns a restore query.
 func NewRestoreDomainQuery(domain string) *Query {
 	fields := NewQueryFieldList()
-	putDomainToQueryFields(&fields, domain)
+	PutDomainToQueryFields(&fields, domain)
 	return NewQuery(LatestVersion, ActionRestore, fields)
 }
 
 // NewTransitDomainQuery returns a restore query.
 func NewTransitDomainQuery(domain string, disconnect bool) *Query {
 	fields := NewQueryFieldList()
-	putDomainToQueryFields(&fields, domain)
+	PutDomainToQueryFields(&fields, domain)
 	if disconnect {
 		fields.Add(QueryFieldNameDisconnect, "true")
 	} else {
@@ -433,7 +481,7 @@ func NewTransitDomainQuery(domain string, disconnect bool) *Query {
 // NewCreateAuthInfo1Query returns a create AuthInfo1 query.
 func NewCreateAuthInfo1Query(domain, authInfo string, expireDay time.Time) *Query {
 	fields := NewQueryFieldList()
-	putDomainToQueryFields(&fields, domain)
+	PutDomainToQueryFields(&fields, domain)
 	fields.Add(QueryFieldNameAuthInfoHash, computeHashSHA256(authInfo))
 	fields.Add(QueryFieldNameAuthInfoExpire, expireDay.Format("20060102"))
 	return NewQuery(LatestVersion, ActionCreateAuthInfo1, fields)
@@ -449,15 +497,15 @@ func computeHashSHA256(str string) string {
 // NewCreateAuthInfo2Query returns a create AuthInfo2 query.
 func NewCreateAuthInfo2Query(domain string) *Query {
 	fields := NewQueryFieldList()
-	putDomainToQueryFields(&fields, domain)
+	PutDomainToQueryFields(&fields, domain)
 	return NewQuery(LatestVersion, ActionCreateAuthInfo2, fields)
 }
 
 // NewChangeProviderQuery returns a query to create a domain.
 func NewChangeProviderQuery(domain, authInfo string, domainData DomainData) *Query {
 	fields := NewQueryFieldList()
-	putDomainToQueryFields(&fields, domain)
-	domainData.putToQueryFields(&fields)
+	PutDomainToQueryFields(&fields, domain)
+	domainData.PutToQueryFields(&fields)
 	fields.Add(QueryFieldNameAuthInfo, authInfo)
 	return NewQuery(LatestVersion, ActionChangeProvider, fields)
 }

@@ -84,11 +84,23 @@ func TestReadBytes(t *testing.T) {
 }
 
 func TestCensorRawMessage(t *testing.T) {
-	assert.Equal(t, "version: 5.0\naction: info\ndomain: denic.de", rri.CensorRawMessage("version: 5.0\naction: info\ndomain: denic.de"))
-	assert.Equal(t, "version: 5.0\naction: info\nno-password: foobar\ndomain: denic.de", rri.CensorRawMessage("version: 5.0\naction: info\nno-password: foobar\ndomain: denic.de"))
-	assert.Equal(t, "version: 5.0\naction: info\npassword:\ndomain: denic.de", rri.CensorRawMessage("version: 5.0\naction: info\npassword:\ndomain: denic.de"))
-	assert.Equal(t, "password: ******\nversion: 5.0\naction: LOGIN\nuser: DENIC-1000011-RRI", rri.CensorRawMessage("password: secret-password\nversion: 5.0\naction: LOGIN\nuser: DENIC-1000011-RRI"))
-	assert.Equal(t, "version: 5.0\naction: LOGIN\npassword: ******\nuser: DENIC-1000011-RRI", rri.CensorRawMessage("version: 5.0\naction: LOGIN\npassword: secret-password\nuser: DENIC-1000011-RRI"))
-	assert.Equal(t, "version: 5.0\naction: LOGIN\nuser: DENIC-1000011-RRI\npassword: ******", rri.CensorRawMessage("version: 5.0\naction: LOGIN\nuser: DENIC-1000011-RRI\npassword: secret-password"))
-	assert.Equal(t, "password: ******\nversion: 5.0\npassword: ******\naction: LOGIN\nuser: DENIC-1000011-RRI\npassword: ******", rri.CensorRawMessage("password: secret-password\nversion: 5.0\npassword: secret-password\naction: LOGIN\nuser: DENIC-1000011-RRI\npassword: secret-password"))
+	tt := []struct {
+		description string
+		input       string
+		expected    string
+	}{
+		{description: "no sensitive data", input: "version: 5.0\naction: info\ndomain: denic.de", expected: "version: 5.0\naction: info\ndomain: denic.de"},
+		{description: "no sensitive data - keyword", input: "version: 5.0\naction: info\nno-password: foobar\ndomain: denic.de", expected: "version: 5.0\naction: info\nno-password: foobar\ndomain: denic.de"},
+		{description: "empty password", input: "version: 5.0\naction: info\npassword:\ndomain: denic.de", expected: "version: 5.0\naction: info\npassword:\ndomain: denic.de"},
+		{description: "actual password", input: "password: secret-password\nversion: 5.0\naction: LOGIN\nuser: DENIC-1000011-RRI", expected: "password: ******\nversion: 5.0\naction: LOGIN\nuser: DENIC-1000011-RRI"},
+		{description: "actual password 2", input: "version: 5.0\naction: LOGIN\npassword: secret-password\nuser: DENIC-1000011-RRI", expected: "version: 5.0\naction: LOGIN\npassword: ******\nuser: DENIC-1000011-RRI"},
+		{description: "actual password 3", input: "version: 5.0\naction: LOGIN\nuser: DENIC-1000011-RRI\npassword: secret-password", expected: "version: 5.0\naction: LOGIN\nuser: DENIC-1000011-RRI\npassword: ******"},
+		{description: "actual password 4", input: "password: secret-password\nversion: 5.0\npassword: secret-password\naction: LOGIN\nuser: DENIC-1000011-RRI\npassword: secret-password", expected: "password: ******\nversion: 5.0\npassword: ******\naction: LOGIN\nuser: DENIC-1000011-RRI\npassword: ******"},
+	}
+
+	for _, tc := range tt {
+		t.Run(tc.description, func(t *testing.T) {
+			assert.Equal(t, tc.expected, rri.CensorRawMessage(tc.input))
+		})
+	}
 }

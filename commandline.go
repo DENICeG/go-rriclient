@@ -1,6 +1,7 @@
 package main
 
 import (
+	"bytes"
 	"encoding/json"
 	"fmt"
 	"os"
@@ -829,7 +830,12 @@ func cmdFile(args []string) error {
 		return err
 	}
 
-	queries, err := parseQueries(string(data))
+	isXMLFile := bytes.Contains(data, []byte("<"))
+	if isXMLFile {
+		println("Found xml file")
+	}
+
+	queries, err := parseQueriesKV(string(data))
 	if err != nil {
 		return err
 	}

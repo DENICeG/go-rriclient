@@ -191,7 +191,7 @@ func retrieveEnvironment(envReader *env.Reader) (environment, error) {
 	return env, nil
 }
 
-func enterEnvironment(envName string, env any) error {
+func enterEnvironment(env any) error {
 	e, ok := env.(*environment)
 	if !ok {
 		panic(fmt.Sprintf("environment has unexpected type %T", env))
@@ -248,8 +248,8 @@ func getEnvTitle(envName, envFile string) string {
 	return fmt.Sprintf("%s%s", envName, suffix)
 }
 
-// parseQueries parses multiple queries separated by a =-= line from a string.
-func parseQueries(str string) ([]*rri.Query, error) {
+// parseQueriesKV parses multiple queries separated by a =-= line from a string.
+func parseQueriesKV(str string) ([]*rri.Query, error) {
 	lines := strings.Split(str, "\n")
 
 	// each string in queryStrings contains a single, unparsed query

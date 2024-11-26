@@ -445,7 +445,6 @@ func PutDomainToQueryFields(fields *QueryFieldList, domain string) {
 		if idn, err := idna.ToUnicode(domain); err == nil {
 			fields.Add(QueryFieldNameDomainIDN, idn)
 		}
-
 	} else {
 		fields.Add(QueryFieldNameDomainIDN, domain)
 		if ace, err := idna.ToASCII(domain); err == nil {
@@ -607,9 +606,10 @@ func ParseQueryKV(str string) (*Query, error) {
 
 		if currentSection != nil {
 			currentSection.fields.Add(QueryFieldName(key), value)
-		} else {
-			fields.Add(QueryFieldName(key), value)
+			continue
 		}
+
+		fields.Add(QueryFieldName(key), value)
 	}
 
 	if currentSection != nil {

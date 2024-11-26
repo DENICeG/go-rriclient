@@ -92,12 +92,18 @@ func (client *Client) Connection() TLSConnection {
 }
 
 func (client *Client) setupConnection() error {
-	if client.connection == nil {
-		var err error
-		client.connection, err = client.dialer("tcp", client.address, client.tlsConfig)
-		client.currentUser = ""
+	if client.connection != nil {
+		return nil
+	}
+
+	conn, err := client.dialer("tcp", client.address, client.tlsConfig)
+	if err != nil {
 		return err
 	}
+
+	client.connection = conn
+	client.currentUser = ""
+
 	return nil
 }
 
@@ -122,10 +128,12 @@ func (client *Client) CurrentRegAccID() (int, error) {
 	if len(parts) < 2 {
 		return 0, fmt.Errorf("malformed login name")
 	}
+
 	regAccID, err := strconv.Atoi(parts[1])
 	if err != nil {
 		return 0, fmt.Errorf("malformed login name")
 	}
+
 	return regAccID, nil
 }
 
@@ -156,6 +164,7 @@ func (client *Client) closeConnection() error {
 
 		err = client.connection.Close()
 	}()
+
 	client.connection = nil
 	return err
 }
@@ -191,6 +200,7 @@ func (client *Client) SendQuery(query *Query) (*Response, error) {
 	if !client.IsLoggedIn() && query.Action() != ActionLogin {
 		return nil, fmt.Errorf("need to log in before sending action %s", query.Action())
 	}
+
 	if client.IsLoggedIn() && query.Action() == ActionLogin {
 		return nil, fmt.Errorf("already logged in")
 	}
@@ -211,6 +221,7 @@ func (client *Client) SendQuery(query *Query) (*Response, error) {
 			// the server will immediately close the connection once LOGOUT is received
 			return nil, nil
 		}
+
 		return nil, err
 	}
 
@@ -224,10 +235,10 @@ func (client *Client) SendQuery(query *Query) (*Response, error) {
 		// save credentials to restore session after lost connections
 		client.lastUser = client.currentUser
 		pwField := query.Field(QueryFieldNamePassword)
+
+		client.lastPass = ""
 		if len(pwField) > 0 {
 			client.lastPass = query.Field(QueryFieldNamePassword)[0]
-		} else {
-			client.lastPass = ""
 		}
 	}
 
@@ -248,6 +259,7 @@ func (client *Client) SendRaw(msg string) (string, error) {
 	if client.RawQueryPrinter != nil {
 		client.RawQueryPrinter(msg, true)
 	}
+
 	response, err := client.sendAndReceive(buffer)
 	if err != nil {
 		if client.NoAutoRetry {
@@ -263,19 +275,23 @@ func (client *Client) SendRaw(msg string) (string, error) {
 			// ignore close errors (connection will be discarded anyway)
 			client.closeConnection()
 		}
+
 		if err = client.setupConnection(); err != nil {
 			return "", fmt.Errorf("failed to restore lost connection: %s", err.Error())
 		}
+
 		// restore authenticated session if it existed before
 		if len(client.lastUser) > 0 && len(client.lastPass) > 0 {
 			if err = client.Login(client.lastUser, client.lastPass); err != nil {
 				return "", fmt.Errorf("failed to restore session: %s", err.Error())
 			}
 		}
+
 		// retry sending request once
 		if client.RawQueryPrinter != nil {
 			client.RawQueryPrinter(msg, true)
 		}
+
 		response, err = client.sendAndReceive(buffer)
 		if err != nil {
 			return "", err
@@ -285,6 +301,7 @@ func (client *Client) SendRaw(msg string) (string, error) {
 	if client.RawQueryPrinter != nil {
 		client.RawQueryPrinter(response, false)
 	}
+
 	return response, nil
 }
 
@@ -293,8 +310,10 @@ func (client *Client) sendAndReceive(msg []byte) (string, error) {
 	if err != nil {
 		return "", err
 	}
+
 	if n != len(msg) {
 		return "", fmt.Errorf("failed to send %d bytes", len(msg))
 	}
+
 	return ReadMessage(client.connection)
 }

@@ -5,6 +5,9 @@ import (
 	"fmt"
 	"io"
 	"regexp"
+	"strings"
+
+	"github.com/beevik/etree"
 )
 
 func PrepareMessage(msg string) []byte {
@@ -48,6 +51,7 @@ func ReadBytes(r io.Reader, count int) ([]byte, error) {
 		if err != nil {
 			return nil, err
 		}
+
 		if bytesRead == 0 {
 			return nil, fmt.Errorf("failed to read %d bytes from connection", count)
 		}
@@ -58,18 +62,14 @@ func ReadBytes(r io.Reader, count int) ([]byte, error) {
 	return buffer, nil
 }
 
-// IsXML returns whether the message seems to contain a XML encoded query or response.
-func IsXML(msg string) bool {
-	// TODO xml detection
-	return false
-}
-
 // CensorRawMessage replaces passwords in a raw query with '******'.
 func CensorRawMessage(msg string) string {
-	if IsXML(msg) {
-		// TODO censor xml
-		return msg
-
+	if strings.Contains(msg, "<xml") {
+		doc := etree.NewDocument()
+		err := doc.ReadFromString(msg)
+		if err == nil {
+			return DocToString(doc)
+		}
 	}
 
 	pattern := regexp.MustCompile("([\r\n]|^)(password:[ \t]+)([^\r\n]*)([\r\n]|$)")
@@ -77,4 +77,16 @@ func CensorRawMessage(msg string) string {
 		m := pattern.FindStringSubmatch(matchStr)
 		return m[1] + m[2] + "******" + m[4]
 	})
+}
+
+// DocToString converts an XML document to a string, replacing passwords with 'XXX'.
+func DocToString(doc *etree.Document) string {
+	results := doc.FindElements("//password")
+	for _, result := range results {
+		result.SetText("XXX")
+	}
+
+	result, _ := doc.WriteToString()
+
+	return result
 }

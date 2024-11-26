@@ -28,7 +28,7 @@ type envOrder struct {
 type GetKeyHandler jcrypt.KeySource
 
 // EnterEnvHandler prepares the environment defined by env.
-type EnterEnvHandler func(envName string, env any) error
+type EnterEnvHandler func(env any) error
 
 // GetEnvFileTitleHandler returns a human readable title for the given env file.
 type GetEnvFileTitleHandler func(envName, envFile string) string
@@ -85,19 +85,19 @@ func (e *Reader) createOrReadEnvironment(envName string, env any, enterEnvHandle
 
 	if !exists {
 		if enterEnvHandler != nil {
-			console.Printlnf("Environment %q does not exist yet, pleaser enter below:", envName)
-			err := enterEnvHandler(envName, env)
+			console.Printlnf("Environment %q does not exist yet, pleaser enter below:", envName) //nolint
+			err := enterEnvHandler(env)
 			if err != nil {
 				return err
 			}
 
 			if err := os.MkdirAll(e.dir, os.ModePerm); err != nil {
-				console.Printlnf("WARNING: failed to save environment: %s", err.Error())
+				console.Printlnf("WARNING: failed to save environment: %s", err.Error()) //nolint
 			} else {
 				if err := jcrypt.MarshalToFile(file, env, &jcrypt.Options{
 					GetKeyHandler: keySource,
 				}); err != nil {
-					console.Printlnf("WARNING: failed to save environment: %s", err.Error())
+					console.Printlnf("WARNING: failed to save environment: %s", err.Error()) //nolint
 				}
 			}
 
@@ -156,6 +156,7 @@ func (e *Reader) ListEnvironments() ([]string, error) {
 	if err != nil {
 		return nil, err
 	}
+
 	if len(envFiles) == 0 {
 		return []string{}, nil
 	}
@@ -163,16 +164,14 @@ func (e *Reader) ListEnvironments() ([]string, error) {
 	envTitles := make([]string, len(envFiles))
 	for i, fi := range envFiles {
 		name := fi.Name()
-		if strings.HasSuffix(name, ".json") {
-			name = name[:len(name)-5]
-		}
+		name = strings.TrimSuffix(name, ".json")
 
+		envTitles[i] = name
 		if e.GetEnvFileTitle != nil {
 			envTitles[i] = e.GetEnvFileTitle(name, filepath.Join(e.dir, fi.Name()))
-		} else {
-			envTitles[i] = name
 		}
 	}
+
 	return envTitles, nil
 }
 
@@ -183,6 +182,7 @@ func (e *Reader) GetEnvironmentFiles() ([]os.DirEntry, error) {
 		if os.IsNotExist(err) {
 			return []os.DirEntry{}, nil
 		}
+
 		return nil, err
 	}
 
@@ -194,20 +194,23 @@ func (e *Reader) GetEnvironmentFiles() ([]os.DirEntry, error) {
 	}
 
 	order, _ := e.readEnvOrder()
-	if order.Order != nil && len(order.Order) > 0 {
+	if len(order.Order) > 0 {
 		orderMap := make(map[string]int)
 		for i, name := range order.Order {
 			orderMap[name] = i
 		}
+
 		sort.SliceStable(envFiles, func(i, j int) bool {
 			iVal, iOk := orderMap[envFiles[i].Name()]
 			jVal, jOk := orderMap[envFiles[j].Name()]
 			if !iOk {
 				iVal = math.MaxInt32
 			}
+
 			if !jOk {
 				jVal = math.MaxInt32
 			}
+
 			return iVal < jVal
 		})
 	}
@@ -295,7 +298,9 @@ func isFile(file string) (bool, error) {
 		if os.IsNotExist(err) {
 			return false, nil
 		}
+
 		return false, err
 	}
+
 	return !fi.IsDir(), nil
 }

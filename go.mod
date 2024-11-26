@@ -1,6 +1,8 @@
 module github.com/DENICeG/go-rriclient
 
-go 1.19
+go 1.21.0
+
+toolchain go1.23.2
 
 require (
 	github.com/alecthomas/kingpin/v2 v2.4.0
@@ -13,6 +15,7 @@ require (
 
 require (
 	github.com/alecthomas/units v0.0.0-20240927000941-0f3dac36c52b // indirect
+	github.com/beevik/etree v1.4.1
 	github.com/chzyer/readline v1.5.1 // indirect
 	github.com/davecgh/go-spew v1.1.1 // indirect
 	github.com/eiannone/keyboard v0.0.0-20220611211555-0d226195f203 // indirect

@@ -294,9 +294,29 @@ func splitLines(str string) []string {
 	return strings.Split(strings.ReplaceAll(strings.ReplaceAll(str, "\r\n", "\n"), "\r", "\n"), "\n")
 }
 
+// kvSection represents a section of Key-Value pairs.
+type kvSection struct {
+	header string
+	fields QueryFieldList
+}
+
 // Query represents a RRI request.
 type Query struct {
-	fields QueryFieldList
+	fields   QueryFieldList
+	sections []*kvSection
+}
+
+// GetSections returns all sections for a given key ignoring the key character casing.
+func (q *Query) GetSections(key string) []*kvSection {
+	var result []*kvSection
+
+	for _, s := range q.sections {
+		if strings.EqualFold(key, s.header) {
+			result = append(result, s)
+		}
+	}
+
+	return result
 }
 
 // Version returns the query version.
@@ -334,6 +354,24 @@ func (q *Query) EncodeKV() string {
 
 		sb.WriteString(f.Value)
 	}
+
+	for _, s := range q.sections {
+		sb.WriteString("\n")
+		sb.WriteString(fmt.Sprintf("[%s]", s.header))
+		for _, f := range s.fields {
+			if sb.Len() > 0 {
+				sb.WriteString("\n")
+			}
+
+			if f.Name != QueryFieldNameEntity {
+				sb.WriteString(string(f.Name))
+				sb.WriteString(": ")
+			}
+
+			sb.WriteString(f.Value)
+		}
+	}
+
 	return sb.String()
 }
 
@@ -353,14 +391,16 @@ func (q *Query) FirstField(fieldName QueryFieldName) string {
 }
 
 // NewQuery returns a query with the given parameters.
-func NewQuery(version Version, action QueryAction, fields QueryFieldList) *Query {
+func NewQuery(version Version, action QueryAction, fields QueryFieldList, sections []*kvSection) *Query {
 	newFields := NewQueryFieldList()
 	newFields.Add(QueryFieldNameVersion, string(version.Normalize()))
 	newFields.Add(QueryFieldNameAction, string(action.Normalize()))
+
 	if fields != nil {
 		fields.CopyTo(&newFields)
 	}
-	return &Query{newFields}
+
+	return &Query{fields: newFields, sections: sections}
 }
 
 // NewLoginQuery returns a login query for the given credentials.
@@ -368,12 +408,13 @@ func NewLoginQuery(username, password string) *Query {
 	fields := NewQueryFieldList()
 	fields.Add(QueryFieldNameUser, username)
 	fields.Add(QueryFieldNamePassword, password)
-	return NewQuery(LatestVersion, ActionLogin, fields)
+
+	return NewQuery(LatestVersion, ActionLogin, fields, nil)
 }
 
 // NewLogoutQuery returns a logout query.
 func NewLogoutQuery() *Query {
-	return NewQuery(LatestVersion, ActionLogout, nil)
+	return NewQuery(LatestVersion, ActionLogout, nil, nil)
 }
 
 // NewCreateContactQuery returns a check query.
@@ -381,21 +422,21 @@ func NewCreateContactQuery(handle DenicHandle, contactData ContactData) *Query {
 	fields := NewQueryFieldList()
 	fields.Add(QueryFieldNameHandle, handle.String())
 	contactData.PutToQueryFields(&fields)
-	return NewQuery(LatestVersion, ActionCreate, fields)
+	return NewQuery(LatestVersion, ActionCreate, fields, nil)
 }
 
 // NewCheckHandleQuery returns a check query for a contact or request contact handle.
 func NewCheckHandleQuery(handle DenicHandle) *Query {
 	fields := NewQueryFieldList()
 	fields.Add(QueryFieldNameHandle, handle.String())
-	return NewQuery(LatestVersion, ActionCheck, fields)
+	return NewQuery(LatestVersion, ActionCheck, fields, nil)
 }
 
 // NewInfoHandleQuery returns an info query for a contact or request contact handle.
 func NewInfoHandleQuery(handle DenicHandle) *Query {
 	fields := NewQueryFieldList()
 	fields.Add(QueryFieldNameHandle, handle.String())
-	return NewQuery(LatestVersion, ActionInfo, fields)
+	return NewQuery(LatestVersion, ActionInfo, fields, nil)
 }
 
 func PutDomainToQueryFields(fields *QueryFieldList, domain string) {
@@ -419,21 +460,21 @@ func NewCreateDomainQuery(domain string, domainData DomainData) *Query {
 	fields := NewQueryFieldList()
 	PutDomainToQueryFields(&fields, domain)
 	domainData.PutToQueryFields(&fields)
-	return NewQuery(LatestVersion, ActionCreate, fields)
+	return NewQuery(LatestVersion, ActionCreate, fields, nil)
 }
 
 // NewCheckDomainQuery returns a check query.
 func NewCheckDomainQuery(domain string) *Query {
 	fields := NewQueryFieldList()
 	PutDomainToQueryFields(&fields, domain)
-	return NewQuery(LatestVersion, ActionCheck, fields)
+	return NewQuery(LatestVersion, ActionCheck, fields, nil)
 }
 
 // NewInfoDomainQuery returns an info query.
 func NewInfoDomainQuery(domain string) *Query {
 	fields := NewQueryFieldList()
 	PutDomainToQueryFields(&fields, domain)
-	return NewQuery(LatestVersion, ActionInfo, fields)
+	return NewQuery(LatestVersion, ActionInfo, fields, nil)
 }
 
 // NewUpdateDomainQuery returns a query to update a domain.
@@ -441,7 +482,7 @@ func NewUpdateDomainQuery(domain string, domainData DomainData) *Query {
 	fields := NewQueryFieldList()
 	PutDomainToQueryFields(&fields, domain)
 	domainData.PutToQueryFields(&fields)
-	return NewQuery(LatestVersion, ActionUpdate, fields)
+	return NewQuery(LatestVersion, ActionUpdate, fields, nil)
 }
 
 // NewChangeHolderQuery returns a query to update a domain.
@@ -449,21 +490,21 @@ func NewChangeHolderQuery(domain string, domainData DomainData) *Query {
 	fields := NewQueryFieldList()
 	PutDomainToQueryFields(&fields, domain)
 	domainData.PutToQueryFields(&fields)
-	return NewQuery(LatestVersion, ActionChangeHolder, fields)
+	return NewQuery(LatestVersion, ActionChangeHolder, fields, nil)
 }
 
 // NewDeleteDomainQuery returns a delete query.
 func NewDeleteDomainQuery(domain string) *Query {
 	fields := NewQueryFieldList()
 	PutDomainToQueryFields(&fields, domain)
-	return NewQuery(LatestVersion, ActionDelete, fields)
+	return NewQuery(LatestVersion, ActionDelete, fields, nil)
 }
 
 // NewRestoreDomainQuery returns a restore query.
 func NewRestoreDomainQuery(domain string) *Query {
 	fields := NewQueryFieldList()
 	PutDomainToQueryFields(&fields, domain)
-	return NewQuery(LatestVersion, ActionRestore, fields)
+	return NewQuery(LatestVersion, ActionRestore, fields, nil)
 }
 
 // NewTransitDomainQuery returns a restore query.
@@ -475,7 +516,7 @@ func NewTransitDomainQuery(domain string, disconnect bool) *Query {
 	} else {
 		fields.Add(QueryFieldNameDisconnect, "false")
 	}
-	return NewQuery(LatestVersion, ActionTransit, fields)
+	return NewQuery(LatestVersion, ActionTransit, fields, nil)
 }
 
 // NewCreateAuthInfo1Query returns a create AuthInfo1 query.
@@ -484,7 +525,7 @@ func NewCreateAuthInfo1Query(domain, authInfo string, expireDay time.Time) *Quer
 	PutDomainToQueryFields(&fields, domain)
 	fields.Add(QueryFieldNameAuthInfoHash, computeHashSHA256(authInfo))
 	fields.Add(QueryFieldNameAuthInfoExpire, expireDay.Format("20060102"))
-	return NewQuery(LatestVersion, ActionCreateAuthInfo1, fields)
+	return NewQuery(LatestVersion, ActionCreateAuthInfo1, fields, nil)
 }
 
 func computeHashSHA256(str string) string {
@@ -498,7 +539,7 @@ func computeHashSHA256(str string) string {
 func NewCreateAuthInfo2Query(domain string) *Query {
 	fields := NewQueryFieldList()
 	PutDomainToQueryFields(&fields, domain)
-	return NewQuery(LatestVersion, ActionCreateAuthInfo2, fields)
+	return NewQuery(LatestVersion, ActionCreateAuthInfo2, fields, nil)
 }
 
 // NewChangeProviderQuery returns a query to create a domain.
@@ -507,7 +548,7 @@ func NewChangeProviderQuery(domain, authInfo string, domainData DomainData) *Que
 	PutDomainToQueryFields(&fields, domain)
 	domainData.PutToQueryFields(&fields)
 	fields.Add(QueryFieldNameAuthInfo, authInfo)
-	return NewQuery(LatestVersion, ActionChangeProvider, fields)
+	return NewQuery(LatestVersion, ActionChangeProvider, fields, nil)
 }
 
 // NewQueueReadQuery returns a query to read from the registry message queue. Use msgType to filter for specific message types or use an empty string to process all message types.
@@ -516,7 +557,7 @@ func NewQueueReadQuery(msgType string) *Query {
 	if len(msgType) > 0 {
 		fields.Add(QueryFieldNameMsgType, msgType)
 	}
-	return NewQuery(LatestVersion, ActionQueueRead, fields)
+	return NewQuery(LatestVersion, ActionQueueRead, fields, nil)
 }
 
 // NewQueueReadQuery returns a query to read from the registry message queue. Use msgType to delete only specific message types or use an empty string to process all message types. This is required if you want to delete the oldest message of a specific type that is not the oldest in your full queue.
@@ -526,17 +567,33 @@ func NewQueueDeleteQuery(msgID, msgType string) *Query {
 	if len(msgType) > 0 {
 		fields.Add(QueryFieldNameMsgType, msgType)
 	}
-	return NewQuery(LatestVersion, ActionQueueDelete, fields)
+	return NewQuery(LatestVersion, ActionQueueDelete, fields, nil)
 }
 
 // ParseQueryKV parses a single key-value encoded query.
 func ParseQueryKV(str string) (*Query, error) {
 	lines := strings.Split(str, "\n")
 	fields := NewQueryFieldList()
+	var sections []*kvSection
+
+	var currentSection *kvSection
+
 	for _, line := range lines {
 		// trim spaces and ignore empty lines
 		line = strings.TrimSpace(line)
 		if len(line) == 0 {
+			continue
+		}
+
+		if strings.HasPrefix(line, "[") && strings.HasSuffix(line, "]") {
+			if currentSection != nil {
+				sections = append(sections, currentSection)
+				currentSection = nil
+			}
+
+			line = strings.TrimPrefix(line, "[")
+			line = strings.TrimSuffix(line, "]")
+			currentSection = &kvSection{header: line}
 			continue
 		}
 
@@ -548,13 +605,22 @@ func ParseQueryKV(str string) (*Query, error) {
 		key := strings.TrimSpace(parts[0])
 		value := strings.TrimSpace(parts[1])
 
-		fields.Add(QueryFieldName(key), value)
+		if currentSection != nil {
+			currentSection.fields.Add(QueryFieldName(key), value)
+		} else {
+			fields.Add(QueryFieldName(key), value)
+		}
+	}
+
+	if currentSection != nil {
+		sections = append(sections, currentSection)
 	}
 
 	versionValues := fields.Values(QueryFieldNameVersion)
 	if len(versionValues) == 0 {
 		return nil, fmt.Errorf("%s key is missing", QueryFieldNameVersion)
 	}
+
 	if len(versionValues) > 1 {
 		return nil, fmt.Errorf("multiple %s values", QueryFieldNameVersion)
 	}
@@ -563,11 +629,12 @@ func ParseQueryKV(str string) (*Query, error) {
 	if len(actionValues) == 0 {
 		return nil, fmt.Errorf("%s key is missing", QueryFieldNameAction)
 	}
+
 	if len(actionValues) > 1 {
 		return nil, fmt.Errorf("multiple %s values", QueryFieldNameAction)
 	}
 
-	return &Query{fields}, nil
+	return &Query{fields: fields, sections: sections}, nil
 }
 
 // ParseQuery tries to detect the query format (KV or XML) and returns the parsed query.

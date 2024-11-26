@@ -13,7 +13,7 @@ import (
 func TestNewQueryNil(t *testing.T) {
 	var qry *rri.Query
 	require.NotPanics(t, func() {
-		qry = rri.NewQuery(rri.LatestVersion, rri.ActionLogout, nil)
+		qry = rri.NewQuery(rri.LatestVersion, rri.ActionLogout, nil, nil)
 	})
 	assert.Equal(t, 2, qry.Fields().Size())
 }

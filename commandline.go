@@ -621,7 +621,7 @@ func registerCustomCommand(cle *commandline.Environment, cmd customCommand) {
 			}
 		}
 		// TODO fill history
-		query := rri.NewQuery(rri.LatestVersion, rri.QueryAction(cmd.Action), fields)
+		query := rri.NewQuery(rri.LatestVersion, rri.QueryAction(cmd.Action), fields, nil)
 		_, err := processQuery(query)
 		return err
 	}))

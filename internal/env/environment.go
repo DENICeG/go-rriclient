@@ -3,7 +3,6 @@ package env
 import (
 	"encoding/json"
 	"fmt"
-	"io/ioutil"
 	"math"
 	"os"
 	"os/user"
@@ -178,16 +177,16 @@ func (e *Reader) ListEnvironments() ([]string, error) {
 }
 
 // GetEnvironmentFiles returns an ordered list of files that contain environments.
-func (e *Reader) GetEnvironmentFiles() ([]os.FileInfo, error) {
-	files, err := ioutil.ReadDir(e.dir)
+func (e *Reader) GetEnvironmentFiles() ([]os.DirEntry, error) {
+	files, err := os.ReadDir(e.dir)
 	if err != nil {
 		if os.IsNotExist(err) {
-			return []os.FileInfo{}, nil
+			return []os.DirEntry{}, nil
 		}
 		return nil, err
 	}
 
-	envFiles := make([]os.FileInfo, 0)
+	envFiles := make([]os.DirEntry, 0)
 	for _, fi := range files {
 		if !fi.IsDir() && strings.HasSuffix(fi.Name(), ".json") && fi.Name() != envOrderFileName {
 			envFiles = append(envFiles, fi)
@@ -217,7 +216,7 @@ func (e *Reader) GetEnvironmentFiles() ([]os.FileInfo, error) {
 }
 
 func (e *Reader) readEnvOrder() (envOrder, error) {
-	orderData, err := ioutil.ReadFile(filepath.Join(e.dir, envOrderFileName))
+	orderData, err := os.ReadFile(filepath.Join(e.dir, envOrderFileName))
 	if err != nil {
 		return envOrder{Fixed: false, Order: []string{}}, nil
 	}
@@ -236,7 +235,7 @@ func (e *Reader) writeEnvOrder(order envOrder) error {
 		return err
 	}
 
-	return ioutil.WriteFile(filepath.Join(e.dir, envOrderFileName), orderData, os.ModePerm)
+	return os.WriteFile(filepath.Join(e.dir, envOrderFileName), orderData, os.ModePerm)
 }
 
 func (e *Reader) envOrderBringToFront(name string) error {

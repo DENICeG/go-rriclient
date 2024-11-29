@@ -82,7 +82,7 @@ func (e *Reader) createOrReadEnvironment(envName string, env any, enterEnvHandle
 				}
 			}
 
-			e.envOrderBringToFront(envName)
+			e.envOrderBringToFront(envName) //nolint
 			return nil
 		}
 		return fmt.Errorf("environment %q not found", envName)
@@ -94,7 +94,7 @@ func (e *Reader) createOrReadEnvironment(envName string, env any, enterEnvHandle
 		return err
 	}
 
-	e.envOrderBringToFront(envName)
+	e.envOrderBringToFront(envName) //nolint
 	return nil
 }
 
@@ -111,16 +111,14 @@ func (e *Reader) SelectEnvironment(env any) error {
 	envTitles := make([]string, len(envFiles))
 	for i, fi := range envFiles {
 		name := fi.Name()
-		if strings.HasSuffix(name, ".json") {
-			name = name[:len(name)-5]
-		}
+		name = strings.TrimSuffix(name, ".json")
 
+		envTitles[i] = name
 		if e.GetEnvFileTitle != nil {
 			envTitles[i] = e.GetEnvFileTitle(name, filepath.Join(e.dir, fi.Name()))
-		} else {
-			envTitles[i] = name
 		}
 	}
+
 	ui := promptui.Select{Label: "Select environment", Items: envTitles, HideSelected: true}
 	index, _, err := ui.Run()
 	if err != nil {

@@ -1,96 +1,109 @@
-package main
+package cli
 
 import (
-	"bytes"
 	"encoding/json"
 	"fmt"
 	"os"
 	"path/filepath"
 	"strings"
-	"time"
 
+	"github.com/DENICeG/go-rriclient/internal/env"
 	"github.com/DENICeG/go-rriclient/pkg/rri"
 
 	"github.com/sbreitf1/go-console"
 	"github.com/sbreitf1/go-console/commandline"
-	"github.com/sbreitf1/go-console/input"
 )
 
-var (
-	// TODO configure colors and signs from external file
-	colorPromptRRI             = "\033[1;34m"
-	colorPromptUser            = "\033[1;32m"
-	colorPromptHost            = "\033[1;32m"
-	colorSendRaw               = "\033[0;94m"
-	colorReceiveRaw            = "\033[0;96m"
-	colorSuccessResponse       = "\033[0;29m"
-	colorErrorResponseMessage  = "\033[0;91m"
-	colorTechnicalErrorMessage = "\033[1;91m"
-	colorInnerError            = "\033[2;91m"
-	colorEnd                   = "\033[0m"
-	signSend                   = "-->"
-	signReceive                = "<--"
-
-	cleRRIClient *rri.Client
-	histDomains  *domainHistory
-	histHandles  *handleHistory
-
-	returnErrorOnFail = false
-
-	customCommands []customCommand
-)
-
-func disableColors() {
-	colorPromptRRI = ""
-	colorPromptUser = ""
-	colorPromptHost = ""
-	colorSendRaw = ""
-	colorReceiveRaw = ""
-	colorSuccessResponse = ""
-	colorErrorResponseMessage = ""
-	colorTechnicalErrorMessage = ""
-	colorInnerError = ""
-	colorEnd = ""
+type Service struct {
+	rriClient                  *rri.Client
+	completion                 *domainOrHandleCompletion
+	ReturnErrorOnFail          bool
+	customCommands             []customCommand
+	colorPromptRRI             string
+	colorPromptUser            string
+	colorPromptHost            string
+	colorSendRaw               string
+	colorReceiveRaw            string
+	colorSuccessResponse       string
+	colorErrorResponseMessage  string
+	colorTechnicalErrorMessage string
+	colorInnerError            string
+	colorEnd                   string
+	signSend                   string
+	signReceive                string
 }
 
-func printColorsAndSigns() {
-	printColor := func(name, colorStr string) {
-		console.Printlnf("  %s%s%s", colorStr, name, colorEnd)
+// New returns a new Service instance.
+func New(client *rri.Client) *Service {
+	result := &Service{
+		rriClient:                  client,
+		completion:                 NewCompletion(),
+		colorPromptRRI:             "\033[1;34m",
+		colorPromptUser:            "\033[1;32m",
+		colorPromptHost:            "\033[1;32m",
+		colorSendRaw:               "\033[0;94m",
+		colorReceiveRaw:            "\033[0;96m",
+		colorSuccessResponse:       "\033[0;29m",
+		colorErrorResponseMessage:  "\033[0;91m",
+		colorTechnicalErrorMessage: "\033[1;91m",
+		colorInnerError:            "\033[2;91m",
+		colorEnd:                   "\033[0m",
+		signSend:                   "-->",
+		signReceive:                "<--",
 	}
-	printSign := func(name, sign string) {
-		console.Printlnf("  %s: %q", name, sign)
-	}
-	printColor("ColorDefault", colorEnd)
-	printColor("ColorPromptRRI", colorPromptRRI)
-	printColor("ColorPromptUser", colorPromptUser)
-	printColor("ColorPromptHost", colorPromptHost)
-	printColor("ColorSendRaw", colorSendRaw)
-	printColor("ColorReceiveRaw", colorReceiveRaw)
-	printColor("ColorSuccessResponse", colorSuccessResponse)
-	printColor("ColorErrorResponseMessage", colorErrorResponseMessage)
-	printColor("ColorTechnicalErrorMessage", colorTechnicalErrorMessage)
-	printColor("ColorInnerError", colorInnerError)
-	printSign("SignSend", signSend)
-	printSign("SignReceive", signReceive)
-}
-
-func runCLI(confDir string, client *rri.Client, cmd []string) error {
-	cleRRIClient = client
-	histDomains = &domainHistory{make([]string, 0)}
-	histHandles = &handleHistory{make([]string, 0)}
 
 	if !console.SupportsColors() {
-		disableColors()
+		result.disableColors()
 	}
 
+	return result
+}
+
+func (s *Service) disableColors() {
+	s.colorPromptRRI = ""
+	s.colorPromptUser = ""
+	s.colorPromptHost = ""
+	s.colorSendRaw = ""
+	s.colorReceiveRaw = ""
+	s.colorSuccessResponse = ""
+	s.colorErrorResponseMessage = ""
+	s.colorTechnicalErrorMessage = ""
+	s.colorInnerError = ""
+	s.colorEnd = ""
+}
+
+func (s *Service) PrintColorsAndSigns() {
+	printColor := func(name, colorStr string) {
+		console.Printlnf("  %s%s%s", colorStr, name, s.colorEnd) //nolint
+	}
+	printSign := func(name, sign string) {
+		console.Printlnf("  %s: %q", name, sign) //nolint
+	}
+
+	printColor("ColorDefault", s.colorEnd)
+	printColor("ColorPromptRRI", s.colorPromptRRI)
+	printColor("ColorPromptUser", s.colorPromptUser)
+	printColor("ColorPromptHost", s.colorPromptHost)
+	printColor("ColorSendRaw", s.colorSendRaw)
+	printColor("ColorReceiveRaw", s.colorReceiveRaw)
+	printColor("ColorSuccessResponse", s.colorSuccessResponse)
+	printColor("ColorErrorResponseMessage", s.colorErrorResponseMessage)
+	printColor("ColorTechnicalErrorMessage", s.colorTechnicalErrorMessage)
+	printColor("ColorInnerError", s.colorInnerError)
+	printSign("SignSend", s.signSend)
+	printSign("SignReceive", s.signReceive)
+}
+
+func (s *Service) Run(confDir string, cmd []string) error {
 	var err error
-	customCommands, err = readCustomCommands(filepath.Join(confDir, "custom-commands"))
+	s.customCommands, err = readCustomCommands(filepath.Join(confDir, "custom-commands"))
 	if err != nil {
 		if !os.IsNotExist(err) {
 			console.Println("Failed to import custom commands:", err.Error())
 		}
 	}
-	cli := prepareCLI()
+
+	cli := s.prepareCLI()
 
 	if len(cmd) > 0 {
 		// exec command that has been passed via command line and return result
@@ -137,7 +150,8 @@ func readCustomCommands(dir string) ([]customCommand, error) {
 	if err != nil {
 		return nil, err
 	}
-	customCommands := make([]customCommand, 0)
+
+	result := make([]customCommand, 0)
 	for _, f := range files {
 		if !f.IsDir() {
 			data, err := os.ReadFile(filepath.Join(dir, f.Name()))
@@ -148,85 +162,92 @@ func readCustomCommands(dir string) ([]customCommand, error) {
 			if err := json.Unmarshal(data, &cmd); err != nil {
 				return nil, fmt.Errorf("could not import %q: %s", f.Name(), err.Error())
 			}
+
 			if len(cmd.Name) == 0 {
 				cmd.Name = f.Name()
 			}
+
 			if len(cmd.Cmd) == 0 {
 				cmd.Cmd = f.Name()
 			}
+
 			for i := range cmd.Args {
 				if strings.ToLower(cmd.Args[i].Type) == "domain" && len(cmd.Args[i].Field) == 0 {
 					cmd.Args[i].Field = "domain"
 					cmd.Args[i].Name = "domain"
 				}
 			}
-			customCommands = append(customCommands, cmd)
+			result = append(result, cmd)
 		}
 	}
-	return customCommands, nil
+
+	return result, nil
 }
 
-func prepareCLI() *commandline.Environment {
-	cle := commandline.NewEnvironment()
-	cle.Prompt = func() string {
+func (s *Service) prepareCLI() *commandline.Environment {
+	cli := commandline.NewEnvironment()
+	cli.Prompt = func() string {
 		var prefix, user, host, suffix string
-		prefix = fmt.Sprintf("%sRRI%s", colorPromptRRI, colorEnd)
-		if cleRRIClient.IsLoggedIn() {
-			user = fmt.Sprintf("%s%s%s@", colorPromptUser, cleRRIClient.CurrentUser(), colorEnd)
+		prefix = fmt.Sprintf("%sRRI%s", s.colorPromptRRI, s.colorEnd)
+		if s.rriClient.IsLoggedIn() {
+			user = fmt.Sprintf("%s%s%s@", s.colorPromptUser, s.rriClient.CurrentUser(), s.colorEnd)
 		}
-		host = fmt.Sprintf("%s%s%s", colorPromptHost, cleRRIClient.RemoteAddress(), colorEnd)
+		host = fmt.Sprintf("%s%s%s", s.colorPromptHost, s.rriClient.RemoteAddress(), s.colorEnd)
 		return fmt.Sprintf("%s{%s%s}%s", prefix, user, host, suffix)
 	}
-	cle.ErrorHandler = func(cmd string, args []string, err error) error {
-		console.Printlnf("%sERROR: %s%s", colorTechnicalErrorMessage, err.Error(), colorEnd)
+
+	cli.ErrorHandler = func(_ string, _ []string, err error) error {
+		console.Printlnf("%sERROR: %s%s", s.colorTechnicalErrorMessage, err.Error(), s.colorEnd) //nolint
 		return nil
 	}
-	cle.RegisterCommand(commandline.NewExitCommand("exit"))
-	cle.RegisterCommand(commandline.NewCustomCommand("help", nil, cmdHelp))
 
-	cle.RegisterCommand(commandline.NewCustomCommand("login", nil, cmdLogin))
-	cle.RegisterCommand(commandline.NewCustomCommand("logout", nil, cmdLogout))
+	cli.RegisterCommand(commandline.NewExitCommand("exit"))
+	cli.RegisterCommand(commandline.NewCustomCommand("help", nil, s.cmdHelp))
 
-	registerSwitchCommand(cle, "create", cmdSwitches{
-		Domain:    cmdCreateDomain,
-		Handle:    cmdCreateHandle,
-		AuthInfo1: cmdCreateAuthInfo1,
+	cli.RegisterCommand(commandline.NewCustomCommand("login", nil, s.cmdLogin))
+	cli.RegisterCommand(commandline.NewCustomCommand("logout", nil, s.cmdLogout))
+
+	s.registerSwitchCommand(cli, "create", cmdSwitches{
+		Domain:    s.cmdCreateDomain,
+		Handle:    s.cmdCreateHandle,
+		AuthInfo1: s.cmdCreateAuthInfo1,
 	})
-	registerSwitchCommand(cle, "check", cmdSwitches{
-		Domain: newDomainQueryCommand(rri.NewCheckDomainQuery),
-		Handle: newHandleQueryCommand(rri.NewCheckHandleQuery),
+	s.registerSwitchCommand(cli, "check", cmdSwitches{
+		Domain: s.newDomainQueryCommand(rri.NewCheckDomainQuery),
+		Handle: s.newHandleQueryCommand(rri.NewCheckHandleQuery),
 	})
-	registerSwitchCommand(cle, "info", cmdSwitches{
-		Domain: newDomainQueryCommand(rri.NewInfoDomainQuery),
-		Handle: newHandleQueryCommand(rri.NewInfoHandleQuery),
+	s.registerSwitchCommand(cli, "info", cmdSwitches{
+		Domain: s.newDomainQueryCommand(rri.NewInfoDomainQuery),
+		Handle: s.newHandleQueryCommand(rri.NewInfoHandleQuery),
 	})
-	registerSwitchCommand(cle, "update", cmdSwitches{
-		Domain: cmdUpdateDomain,
+	s.registerSwitchCommand(cli, "update", cmdSwitches{
+		Domain: s.cmdUpdateDomain,
 	})
 
-	registerDomainCommand(cle, "delete", newDomainQueryCommand(rri.NewDeleteDomainQuery))
-	registerDomainCommand(cle, "restore", newDomainQueryCommand(rri.NewRestoreDomainQuery))
-	registerDomainCommand(cle, "transit", cmdTransit, commandline.NewOneOfArgCompletion("disconnect", "connect"))
-	registerDomainCommand(cle, "chholder", cmdChangeHolder)
-	registerDomainCommand(cle, "chprov", cmdChangeProvider)
+	s.registerDomainCommand(cli, "delete", s.newDomainQueryCommand(rri.NewDeleteDomainQuery))
+	s.registerDomainCommand(cli, "restore", s.newDomainQueryCommand(rri.NewRestoreDomainQuery))
+	s.registerDomainCommand(cli, "transit", s.cmdTransit, commandline.NewOneOfArgCompletion("disconnect", "connect"))
+	s.registerDomainCommand(cli, "chholder", s.cmdChangeHolder)
+	s.registerDomainCommand(cli, "chprov", s.cmdChangeProvider)
 
-	registerDomainCommand(cle, "queue-read", cmdQueueRead)
-	registerDomainCommand(cle, "queue-delete", cmdQueueDelete)
+	s.registerDomainCommand(cli, "queue-read", s.cmdQueueRead)
+	s.registerDomainCommand(cli, "queue-delete", s.cmdQueueDelete)
 
 	// register custom commands
-	for _, cmd := range customCommands {
-		registerCustomCommand(cle, cmd)
+	for _, cmd := range s.customCommands {
+		s.registerCustomCommand(cli, cmd)
 	}
 
-	cle.RegisterCommand(commandline.NewCustomCommand("raw", nil, cmdRaw))
-	cle.RegisterCommand(commandline.NewCustomCommand("file", commandline.NewFixedArgCompletion(commandline.NewLocalFileSystemArgCompletion(true)), cmdFile))
+	cli.RegisterCommand(commandline.NewCustomCommand("raw", nil, s.cmdRaw))
+	cli.RegisterCommand(commandline.NewCustomCommand("file", commandline.NewFixedArgCompletion(commandline.NewLocalFileSystemArgCompletion(true)), s.HandleFile))
 
-	cle.RegisterCommand(commandline.NewCustomCommand("xml", nil, cmdXML))
-	cle.RegisterCommand(commandline.NewCustomCommand("verbose", nil, cmdVerbose))
-	return cle
+	cli.RegisterCommand(commandline.NewCustomCommand("xml", nil, s.cmdXML))
+	cli.RegisterCommand(commandline.NewCustomCommand("verbose", nil, s.cmdVerbose))
+
+	return cli
 }
 
-func cmdHelp(args []string) error {
+func (s *Service) cmdHelp(args []string) error {
 	type customCmd struct {
 		Desc string
 		Cmd  []string
@@ -273,12 +294,12 @@ func cmdHelp(args []string) error {
 		{Cmd: []string{"verbose"}, Args: nil, Desc: "toggle verbose mode"},
 	}
 
-	if len(customCommands) > 0 {
+	if len(s.customCommands) > 0 {
 		head := commands[:25]
 		tail := make([]customCmd, 6)
 		copy(tail, commands[25:])
 		commands = head
-		for _, cmd := range customCommands {
+		for _, cmd := range s.customCommands {
 			args := make([]string, 0)
 			for _, arg := range cmd.Args {
 				if arg.IsInputParameter() {
@@ -405,82 +426,13 @@ func cmdHelp(args []string) error {
 	return nil
 }
 
-func addToListRemoveDouble(list []string, new ...string) []string {
-	newList := make([]string, 0)
-	for _, str := range list {
-		// filter out all values equal to one in new (ignore case)
-		found := false
-		for _, newStr := range new {
-			if strings.EqualFold(str, newStr) {
-				found = true
-				break
-			}
-		}
-		if !found {
-			newList = append(newList, str)
-		}
-	}
-	return append(new, newList...)
-}
-
-type domainHistory struct {
-	list []string
-}
-
-func (h *domainHistory) Put(domain string) {
-	h.list = addToListRemoveDouble(h.list, domain)
-}
-
-func (h *domainHistory) GetCompletionOptions(currentCommand []string, entryIndex int) []commandline.CompletionOption {
-	return commandline.PrepareCompletionOptions(h.list, false)
-}
-
-type handleHistory struct {
-	list []string
-}
-
-func (h *handleHistory) Put(handle string) {
-	h.list = addToListRemoveDouble(h.list, handle)
-}
-
-func (h *handleHistory) GetCompletionOptions(currentCommand []string, entryIndex int) []commandline.CompletionOption {
-	options := commandline.PrepareCompletionOptions(h.list, false)
-	regAccID, err := cleRRIClient.CurrentRegAccID()
-	if err == nil {
-		return append(options, commandline.PrepareCompletionOptions([]string{fmt.Sprintf("DENIC-%d-", regAccID)}, true)...)
-	}
-	return options
-}
-
-func (h *handleHistory) GetHistoryEntry(index int) (string, bool) {
-	if index >= len(h.list) {
-		return "", false
-	}
-	return h.list[index], true
-}
-
-type domainOrHandleCompletion struct{}
-
-func (domainOrHandleCompletion) GetCompletionOptions(currentCommand []string, entryIndex int) []commandline.CompletionOption {
-	if len(currentCommand) >= 2 && entryIndex == 2 {
-		if currentCommand[1] == "domain" || currentCommand[1] == "authinfo1" {
-			return histDomains.GetCompletionOptions(currentCommand, entryIndex)
-		}
-
-		if currentCommand[1] == "handle" {
-			return histHandles.GetCompletionOptions(currentCommand, entryIndex)
-		}
-	}
-	return nil
-}
-
 type cmdSwitches struct {
 	Domain    commandline.ExecCommandHandler
 	Handle    commandline.ExecCommandHandler
 	AuthInfo1 commandline.ExecCommandHandler
 }
 
-func registerSwitchCommand(cle *commandline.Environment, name string, switches cmdSwitches) {
+func (s *Service) registerSwitchCommand(cle *commandline.Environment, name string, switches cmdSwitches) {
 	// assemble arg completion
 	types := make([]string, 0)
 	if switches.Domain != nil {
@@ -496,7 +448,7 @@ func registerSwitchCommand(cle *commandline.Environment, name string, switches c
 	cle.RegisterCommand(commandline.NewCustomCommand(name,
 		commandline.NewFixedArgCompletion(
 			commandline.NewOneOfArgCompletion(types...),
-			domainOrHandleCompletion{},
+			s.completion,
 		),
 		func(args []string) error {
 			if len(args) == 0 {
@@ -542,6 +494,7 @@ func registerSwitchCommand(cle *commandline.Environment, name string, switches c
 					str += ", '" + t + "'"
 				}
 			}
+
 			return fmt.Errorf("unknown command type. expect %s", str)
 		}))
 }
@@ -554,27 +507,25 @@ func isHandle(str string) bool {
 	return strings.HasPrefix(str, "DENIC-")
 }
 
-func registerDomainCommand(cle *commandline.Environment, name string, commandHandler commandline.ExecCommandHandler, additionalCompletionHandlers ...commandline.ArgCompletion) {
-	argCompletionHandlers := []commandline.ArgCompletion{histDomains}
+func (s *Service) registerDomainCommand(cle *commandline.Environment, name string, commandHandler commandline.ExecCommandHandler, additionalCompletionHandlers ...commandline.ArgCompletion) {
+	argCompletionHandlers := []commandline.ArgCompletion{s.completion.histDomains}
 	argCompletionHandlers = append(argCompletionHandlers, additionalCompletionHandlers...)
 	cle.RegisterCommand(commandline.NewCustomCommand(name, commandline.NewFixedArgCompletion(argCompletionHandlers...), commandHandler))
 }
 
-func newDomainQueryCommand(f func(domain string) *rri.Query) commandline.ExecCommandHandler {
+func (s *Service) newDomainQueryCommand(f func(domain string) *rri.Query) commandline.ExecCommandHandler {
 	return func(args []string) error {
 		if len(args) < 1 {
 			return fmt.Errorf("missing domain name")
 		}
 
-		_, err := processQuery(f(args[0]))
-		if histDomains != nil {
-			histDomains.Put(args[0])
-		}
+		_, err := s.processQuery(f(args[0]))
+		s.completion.PutDomain(args[0])
 		return err
 	}
 }
 
-func newHandleQueryCommand(f func(handle rri.DenicHandle) *rri.Query) commandline.ExecCommandHandler {
+func (s *Service) newHandleQueryCommand(f func(handle rri.DenicHandle) *rri.Query) commandline.ExecCommandHandler {
 	return func(args []string) error {
 		if len(args) < 1 {
 			return fmt.Errorf("missing handle")
@@ -585,23 +536,21 @@ func newHandleQueryCommand(f func(handle rri.DenicHandle) *rri.Query) commandlin
 			return err
 		}
 
-		_, err = processQuery(f(handle))
-		if histHandles != nil {
-			histHandles.Put(args[0])
-		}
+		_, err = s.processQuery(f(handle))
+		s.completion.PutHandle(args[0])
 		return err
 	}
 }
 
-func registerCustomCommand(cle *commandline.Environment, cmd customCommand) {
+func (s *Service) registerCustomCommand(cli *commandline.Environment, cmd customCommand) {
 	clArgs := make([]commandline.ArgCompletion, 0)
 	for _, arg := range cmd.Args {
-		switch strings.ToLower(arg.Type) {
-		case "domain":
-			clArgs = append(clArgs, histDomains)
+		if strings.EqualFold(arg.Type, "domain") {
+			clArgs = append(clArgs, s.completion.histDomains)
 		}
 	}
-	cle.RegisterCommand(commandline.NewCustomCommand(cmd.Cmd, commandline.NewFixedArgCompletion(clArgs...), func(args []string) error {
+
+	cli.RegisterCommand(commandline.NewCustomCommand(cmd.Cmd, commandline.NewFixedArgCompletion(clArgs...), func(args []string) error {
 		fields := rri.NewQueryFieldList()
 		argIndex := 0
 		for _, arg := range cmd.Args {
@@ -623,304 +572,25 @@ func registerCustomCommand(cle *commandline.Environment, cmd customCommand) {
 		}
 		// TODO fill history
 		query := rri.NewQuery(rri.LatestVersion, rri.QueryAction(cmd.Action), fields, nil)
-		_, err := processQuery(query)
+		_, err := s.processQuery(query)
 		return err
 	}))
 }
 
-func cmdLogin(args []string) error {
-	var pass string
-	if len(args) < 1 {
-		return fmt.Errorf("missing RRI username and password")
-	} else if len(args) < 2 {
-		console.Println("Enter RRI password:")
-		console.Print("> ")
-		var err error
-		pass, err = console.ReadPassword()
-		if err != nil {
-			return err
-		}
-	} else {
-		pass = args[1]
-	}
-
-	if cleRRIClient.IsLoggedIn() {
-		console.Println("Exiting current session")
-		cleRRIClient.Logout()
-	}
-
-	return cleRRIClient.Login(args[0], pass)
-}
-
-func cmdLogout(args []string) error {
-	return cleRRIClient.Logout()
-}
-
-func cmdCreateHandle(args []string) error {
-	handle, contactData, err := readContactData(args)
-	if err != nil {
-		return err
-	}
-
-	_, err = processQuery(rri.NewCreateContactQuery(handle, contactData))
-	histHandles.Put(handle.String())
-	return err
-}
-
-func cmdCreateDomain(args []string) error {
-	domainName, domainData, err := readDomainData(args, 1)
-	if err != nil {
-		return err
-	}
-
-	_, err = processQuery(rri.NewCreateDomainQuery(domainName, domainData))
-	histDomains.Put(domainName)
-	return err
-}
-
-func cmdUpdateDomain(args []string) error {
-	domainName, domainData, err := readDomainData(args, 1)
-	if err != nil {
-		return err
-	}
-
-	// TODO use old domain values for empty fields -> only change explicitly entered data
-
-	_, err = processQuery(rri.NewUpdateDomainQuery(domainName, domainData))
-	histDomains.Put(domainName)
-	return err
-}
-
-func cmdChangeHolder(args []string) error {
-	domainName, domainData, err := readDomainData(args, 1)
-	if err != nil {
-		return err
-	}
-
-	// TODO use old domain values for empty fields -> only change explicitly entered data
-
-	_, err = processQuery(rri.NewChangeHolderQuery(domainName, domainData))
-	histDomains.Put(domainName)
-	return err
-}
-
-func cmdTransit(args []string) error {
-	if len(args) < 1 {
-		return fmt.Errorf("missing domain name")
-	}
-	domainName := args[0]
-	var disconnect bool
-	if len(args) > 1 {
-		switch strings.ToLower(args[1]) {
-		case "disconnect":
-			disconnect = true
-		case "connect":
-			disconnect = false
-		default:
-			return fmt.Errorf("invalid mode '%s'. expecting 'disconnect' or 'connect'", args[1])
-		}
-	}
-	_, err := processQuery(rri.NewTransitDomainQuery(domainName, disconnect))
-	histDomains.Put(domainName)
-	return err
-}
-
-func cmdCreateAuthInfo1(args []string) error {
-	if len(args) < 1 {
-		return fmt.Errorf("missing domain name")
-	}
-	if len(args) < 2 {
-		return fmt.Errorf("missing auth info secret")
-	}
-	var expire time.Time
-	if len(args) >= 3 {
-		var err error
-		expire, err = time.ParseInLocation("2006-01-02", args[2], time.Local)
-		if err != nil {
-			expire, err = time.ParseInLocation("20060102", args[2], time.Local)
-			if err != nil {
-				return fmt.Errorf("expiration date must be in format yyyy-mm-dd or yyyymmdd")
-			}
-		}
-
-	} else {
-		expire = time.Date(time.Now().Year(), time.Now().Month(), time.Now().Day()+7, 0, 0, 0, 0, time.Local)
-		console.Println("using default expiration of 1 week")
-	}
-
-	_, err := processQuery(rri.NewCreateAuthInfo1Query(args[0], args[1], expire))
-	return err
-}
-
-func cmdChangeProvider(args []string) error {
-	if len(args) < 1 {
-		return fmt.Errorf("missing domain name")
-	}
-	if len(args) < 2 {
-		return fmt.Errorf("missing auth info secret")
-	}
-
-	domainName, domainData, err := readDomainData(args, 2)
-	if err != nil {
-		return err
-	}
-
-	_, err = processQuery(rri.NewChangeProviderQuery(domainName, args[1], domainData))
-	histDomains.Put(domainName)
-	return err
-}
-
-func cmdQueueRead(args []string) error {
-	_, err := processQuery(rri.NewQueueReadQuery(""))
-	return err
-}
-
-func cmdQueueDelete(args []string) error {
-	if len(args) < 1 {
-		return fmt.Errorf("missing message id")
-	}
-
-	_, err := processQuery(rri.NewQueueDeleteQuery(args[0], ""))
-	return err
-}
-
-func cmdRaw(args []string) error {
-	var rawCommand string
-	if len(args) > 0 {
-		rawCommand = strings.ReplaceAll(strings.ReplaceAll(strings.ReplaceAll(args[0], "\\n", "\n"), "\\r", "\r"), "\\\\", "\\")
-
-	} else {
-		raw, ok, err := input.Text("")
-		if err != nil {
-			return err
-		}
-		if ok {
-			rawCommand = raw
-		}
-	}
-
-	if len(rawCommand) > 0 {
-		response, err := cleRRIClient.SendRaw(rawCommand)
-		if err != nil {
-			return err
-		}
-		console.Println(response)
-
-		if returnErrorOnFail {
-			responseObj, err := rri.ParseResponse(response)
-			if err != nil {
-				return fmt.Errorf("RRI server returned an invalid response")
-			}
-			if !responseObj.IsSuccessful() {
-				return fmt.Errorf("RRI returned result 'failed'")
-			}
-		}
-	}
-
-	return nil
-}
-
-func cmdFile(args []string) error {
-	if len(args) < 1 {
-		return fmt.Errorf("missing query file")
-	}
-
-	data, err := os.ReadFile(args[0])
-	if err != nil {
-		return err
-	}
-
-	isXMLFile := bytes.Contains(data, []byte("<"))
-	if isXMLFile {
-		println("Found xml file")
-	}
-
-	queries, err := parseQueriesKV(string(data))
-	if err != nil {
-		return err
-	}
-
-	skipAuthQueries := cleRRIClient.IsLoggedIn()
-
-	// find queries to execute first
-	executedQueryCount := 0
-	hasLoginLogoutQueries := false
-	for _, query := range queries {
-		if query.Action() == rri.ActionLogin || query.Action() == rri.ActionLogout {
-			hasLoginLogoutQueries = true
-			if !skipAuthQueries {
-				executedQueryCount++
-			}
-		} else {
-			executedQueryCount++
-		}
-	}
-
-	if skipAuthQueries && hasLoginLogoutQueries {
-		// TODO colored orange
-		console.Println("Currently logged in. Auth queries will be skipped")
-	}
-
-	for _, query := range queries {
-		if skipAuthQueries {
-			if query.Action() == rri.ActionLogin || query.Action() == rri.ActionLogout {
-				// skip authorization queries
-				console.Println("Skip query", query) // TODO colored orange
-				continue
-			}
-		}
-
-		// TODO colored in send color
-		console.Println("Exec query", query)
-		success, err := processQuery(query)
-		if err != nil {
-			return err
-		}
-		if !success {
-			break
-		}
-	}
-
-	return nil
-}
-
-func cmdXML(args []string) error {
-	cleRRIClient.XMLMode = !cleRRIClient.XMLMode
-	if cleRRIClient.XMLMode {
-		console.Println("XML mode on")
-	} else {
-		console.Println("XML mode off")
-	}
-	return nil
-}
-
-func cmdVerbose(args []string) error {
-	if cleRRIClient.RawQueryPrinter == nil {
-		cleRRIClient.RawQueryPrinter = rawQueryPrinter
-		cleRRIClient.InnerErrorPrinter = errorPrinter
-		console.Println("Verbose mode on")
-	} else {
-		cleRRIClient.RawQueryPrinter = nil
-		cleRRIClient.InnerErrorPrinter = nil
-		console.Println("Verbose mode off")
-	}
-	return nil
-}
-
-func rawQueryPrinter(msg string, isOutgoing bool) {
+func (s *Service) RawQueryPrinter(msg string, isOutgoing bool) {
 	if isOutgoing {
-		console.Printlnf("%s %s%q%s", signSend, colorSendRaw, rri.CensorRawMessage(msg), colorEnd)
+		console.Printlnf("%s %s%q%s", s.signSend, s.colorSendRaw, rri.CensorRawMessage(msg), s.colorEnd)
 	} else {
-		console.Printlnf("%s %s%q%s", signReceive, colorReceiveRaw, rri.CensorRawMessage(msg), colorEnd)
+		console.Printlnf("%s %s%q%s", s.signReceive, s.colorReceiveRaw, rri.CensorRawMessage(msg), s.colorEnd)
 	}
 }
 
-func errorPrinter(err error) {
-	console.Printlnf("%sERR: %s%s", colorInnerError, err.Error(), colorEnd)
+func (s *Service) ErrorPrinter(err error) {
+	console.Printlnf("%sERR: %s%s", s.colorInnerError, err.Error(), s.colorEnd)
 }
 
-func processQuery(query *rri.Query) (bool, error) {
-	rawResponse, err := cleRRIClient.SendRaw(query.EncodeKV())
+func (s *Service) processQuery(query *rri.Query) (bool, error) {
+	rawResponse, err := s.rriClient.SendRaw(query.EncodeKV())
 	if err != nil {
 		return false, err
 	}
@@ -932,22 +602,23 @@ func processQuery(query *rri.Query) (bool, error) {
 
 	var colorStr string
 	if response.IsSuccessful() {
-		colorStr = colorSuccessResponse
+		colorStr = s.colorSuccessResponse
 	} else {
-		colorStr = colorErrorResponseMessage
+		colorStr = s.colorErrorResponseMessage
 	}
 
 	console.Print(colorStr)
 	console.Println(rawResponse)
-	console.Print(colorEnd)
+	console.Print(s.colorEnd)
 
-	if returnErrorOnFail && !response.IsSuccessful() {
+	if s.ReturnErrorOnFail && !response.IsSuccessful() {
 		return false, fmt.Errorf("RRI returned result 'failed'")
 	}
+
 	return response.IsSuccessful(), nil
 }
 
-func readDomainData(args []string, dataOffset int) (string, rri.DomainData, error) {
+func (s *Service) readDomainData(args []string, dataOffset int) (string, rri.DomainData, error) {
 	if len(args) < 1 {
 		return "", rri.DomainData{}, fmt.Errorf("missing domain name")
 	}
@@ -968,15 +639,17 @@ func readDomainData(args []string, dataOffset int) (string, rri.DomainData, erro
 			handles[i] = rri.DenicHandle(handle)
 		} else {
 			console.Printf("%s Handle> ", handleNames[i])
-			str, err := commandline.ReadLineWithHistory(histHandles)
+			str, err := commandline.ReadLineWithHistory(s.completion.histHandles)
 			if err != nil {
 				return "", rri.DomainData{}, err
 			}
+
 			handle, err := rri.ParseDenicHandle(str)
 			if err != nil {
 				return "", rri.DomainData{}, fmt.Errorf("%q: %s", str, err.Error())
 			}
-			histHandles.Put(str)
+
+			s.completion.PutHandle(str)
 			handles[i] = rri.DenicHandle(handle)
 		}
 	}
@@ -1059,4 +732,89 @@ func contactTypeHist() commandline.LineHistory {
 	hist.Put("ORG")
 	hist.Put("PERSON")
 	return hist
+}
+
+func RetrieveEnvironment(envReader *env.Reader, host, environment, user, password *string, cmd *[]string) (env.Environment, error) {
+	var addressFromCommandLine string
+	if len(*host) > 0 {
+		addressFromCommandLine = *host
+		if !strings.Contains(addressFromCommandLine, ":") {
+			// did the user forget to specify a port? use default port
+			addressFromCommandLine += ":51131"
+		}
+
+	} else if len(*cmd) >= 1 && strings.Contains((*cmd)[0], ":") {
+		// consume first command part as address for backwards compatibility
+		addressFromCommandLine = (*cmd)[0]
+		*cmd = (*cmd)[1:]
+	}
+
+	var envi env.Environment
+	if len(*environment) > 0 {
+		err := envReader.CreateOrReadEnvironment(*environment, &envi)
+		if err != nil {
+			return env.Environment{}, err
+		}
+	} else if len(addressFromCommandLine) == 0 {
+		err := envReader.SelectEnvironment(&envi)
+		if err != nil {
+			return env.Environment{}, err
+		}
+	}
+
+	if len(addressFromCommandLine) > 0 {
+		envi.Address = addressFromCommandLine
+	}
+	if len(*user) > 0 {
+		envi.User = *user
+	}
+	if len(*password) > 0 {
+		envi.Password = *password
+	}
+
+	if len(envi.User) > 0 && len(envi.Password) == 0 {
+		// ask for missing user credentials
+		var err error
+		console.Printlnf("Please enter RRI password for user %q", envi.User)
+		console.Print("> ")
+		envi.Password, err = console.ReadPassword()
+		if err != nil {
+			return env.Environment{}, err
+		}
+	}
+
+	return envi, nil
+}
+
+func EnterEnvironment(envi any) error {
+	e, ok := envi.(*env.Environment)
+	if !ok {
+		panic(fmt.Sprintf("environment has unexpected type %T", envi))
+	}
+
+	var err error
+
+	console.Print("Address (Host:Port)> ")
+	e.Address, err = console.ReadLine()
+	if err != nil {
+		return err
+	}
+	if !strings.Contains(e.Address, ":") {
+		// did the user forget to specify a port? use default port
+		e.Address += ":51131"
+	}
+
+	console.Print("User> ")
+	e.User, err = console.ReadLine()
+	if err != nil {
+		return err
+	}
+
+	console.Print("Password> ")
+	e.Password, err = console.ReadPassword()
+	if err != nil {
+		return err
+	}
+
+	return nil
 }

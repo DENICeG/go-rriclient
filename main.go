@@ -51,9 +51,22 @@ func main() {
 	envReader.EnterEnvHandler = cli.EnterEnvironment
 	envReader.GetEnvFileTitle = env.GetEnvTitle
 
-	printVersion(argVersion, buildTime, gitCommit)
-	printEnv(argListEnv, envReader)
-	deleteEnv(argDeleteEnv, envReader)
+	exit := cli.PrintVersion(argVersion, buildTime, gitCommit, version)
+	shutdown(exit)
+
+	exit, err = cli.PrintEnv(argListEnv, envReader)
+	if err != nil {
+		logAndExit(err)
+	}
+
+	shutdown(exit)
+
+	exit, err = cli.DeleteEnv(argDeleteEnv, envReader)
+	if err != nil {
+		logAndExit(err)
+	}
+
+	shutdown(exit)
 
 	env, err := cli.RetrieveEnvironment(envReader, argHost, argEnvironment, argUser, argPassword, argCmd)
 	if err != nil {
@@ -110,47 +123,10 @@ func main() {
 	}
 }
 
-func deleteEnv(argDeleteEnv *string, envReader *env.Reader) {
-	if len(*argDeleteEnv) == 0 {
-		return
+func shutdown(shutdown bool) {
+	if shutdown {
+		os.Exit(0)
 	}
-
-	err := envReader.DeleteEnvironment(*argDeleteEnv)
-	if err != nil {
-		logAndExit(err)
-	}
-	console.Printlnf("environment %q has been deleted", *argDeleteEnv)
-	os.Exit(0)
-}
-
-func printEnv(argListEnv *bool, envReader *env.Reader) {
-	if !*argListEnv {
-		return
-	}
-
-	environments, err := envReader.ListEnvironments() //nolint
-	if err != nil {
-		logAndExit(err)
-	}
-
-	for _, env := range environments {
-		console.Printlnf("- %s", env)
-	}
-
-	os.Exit(0)
-}
-
-func printVersion(argVersion *bool, buildTime, gitCommit string) {
-	if !*argVersion {
-		return
-	}
-
-	console.Printlnf("Standalone RRI Client v%s", version)
-	if len(buildTime) > 0 && len(gitCommit) > 0 {
-		console.Printlnf("  built at %s from commit %s", buildTime, gitCommit)
-	}
-
-	os.Exit(0)
 }
 
 func logAndExit(err error) {

@@ -590,14 +590,9 @@ func (s *Service) ErrorPrinter(err error) {
 }
 
 func (s *Service) processQuery(query *rri.Query) (bool, error) {
-	rawResponse, err := s.rriClient.SendRaw(query.EncodeKV())
+	response, err := s.rriClient.SendQuery(query)
 	if err != nil {
-		return false, err
-	}
-
-	response, err := rri.ParseResponse(rawResponse)
-	if err != nil {
-		return false, err
+		return false, fmt.Errorf("failed to send query: %w", err)
 	}
 
 	var colorStr string
@@ -608,7 +603,7 @@ func (s *Service) processQuery(query *rri.Query) (bool, error) {
 	}
 
 	console.Print(colorStr)
-	console.Println(rawResponse)
+	console.Println(response.String())
 	console.Print(s.colorEnd)
 
 	if s.ReturnErrorOnFail && !response.IsSuccessful() {
@@ -817,4 +812,48 @@ func EnterEnvironment(envi any) error {
 	}
 
 	return nil
+}
+
+func DeleteEnv(argDeleteEnv *string, envReader *env.Reader) (bool, error) {
+	if len(*argDeleteEnv) == 0 {
+		return false, nil
+	}
+
+	err := envReader.DeleteEnvironment(*argDeleteEnv)
+	if err != nil {
+		return false, err
+	}
+
+	console.Printlnf("environment %q has been deleted", *argDeleteEnv)
+	return true, nil // should exit after deleting env
+}
+
+func PrintEnv(argListEnv *bool, envReader *env.Reader) (bool, error) {
+	if !*argListEnv {
+		return false, nil
+	}
+
+	environments, err := envReader.ListEnvironments() //nolint
+	if err != nil {
+		return false, err
+	}
+
+	for _, env := range environments {
+		console.Printlnf("- %s", env)
+	}
+
+	return true, nil // should exit after printing env
+}
+
+func PrintVersion(argVersion *bool, buildTime, gitCommit, version string) bool {
+	if !*argVersion {
+		return false
+	}
+
+	console.Printlnf("Standalone RRI Client v%s", version)
+	if len(buildTime) > 0 && len(gitCommit) > 0 {
+		console.Printlnf("  built at %s from commit %s", buildTime, gitCommit)
+	}
+
+	return true // should exit after printing version
 }

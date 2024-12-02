@@ -225,17 +225,44 @@ func (s *Service) HandleFile(args []string) error {
 		return err
 	}
 
-	isXMLFile := bytes.Contains(data, []byte("<"))
-	if isXMLFile {
-		println("Found xml file")
+	lines := parser.SplitLines(data)
+	queries := parser.SplitQueries(lines)
+
+	if isXML(data) {
+		for i, query := range queries {
+			resp, err := s.rriClient.SendRaw(query)
+			if err != nil {
+				return err
+			}
+			console.Println("----------------------------------------")
+			console.Println(fmt.Sprintf("Query #%v successful:", i+1))
+			console.Println("----------------------------------------")
+			console.Println(resp)
+
+		}
+
+		return nil
 	}
 
-	queries, err := parser.ParseQueriesKV(string(data))
+	err = s.executeKVQueries(queries)
 	if err != nil {
 		return err
 	}
 
+	return nil
+}
+
+func isXML(data []byte) bool {
+	return bytes.Contains(data, []byte("<"))
+}
+
+func (s *Service) executeKVQueries(queryStrings []string) error {
 	skipAuthQueries := s.rriClient.IsLoggedIn()
+
+	queries, err := parser.ParseQueriesKV(queryStrings)
+	if err != nil {
+		return err
+	}
 
 	// find queries to execute first
 	executedQueryCount := 0
@@ -259,18 +286,15 @@ func (s *Service) HandleFile(args []string) error {
 	for _, query := range queries {
 		if skipAuthQueries {
 			if query.Action() == rri.ActionLogin || query.Action() == rri.ActionLogout {
-				// skip authorization queries
-				console.Println("Skip query", query) // TODO colored orange
 				continue
 			}
 		}
 
-		// TODO colored in send color
-		console.Println("Exec query", query)
 		success, err := s.processQuery(query)
 		if err != nil {
 			return err
 		}
+
 		if !success {
 			break
 		}
@@ -278,6 +302,21 @@ func (s *Service) HandleFile(args []string) error {
 
 	return nil
 }
+
+// lines := parser.SplitLines(data)
+// queryStrings := parser.SplitQueries(lines)
+
+// if isXMLFile {
+// 	s.
+// 	return nil
+// }
+
+// err = s.executeKVQueries(queryStrings)
+// if err != nil {
+// 	return err
+// }
+
+// return nil
 
 func (s *Service) cmdXML(args []string) error {
 	s.rriClient.XMLMode = !s.rriClient.XMLMode

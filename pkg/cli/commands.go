@@ -229,19 +229,7 @@ func (s *Service) HandleFile(args []string) error {
 	queries := parser.SplitQueries(lines)
 
 	if isXML(data) {
-		for i, query := range queries {
-			resp, err := s.rriClient.SendRaw(query)
-			if err != nil {
-				return err
-			}
-			console.Println("----------------------------------------")
-			console.Println(fmt.Sprintf("Query #%v successful:", i+1))
-			console.Println("----------------------------------------")
-			console.Println(resp)
-
-		}
-
-		return nil
+		return s.executeXMLQueries(queries)
 	}
 
 	err = s.executeKVQueries(queries)
@@ -250,6 +238,28 @@ func (s *Service) HandleFile(args []string) error {
 	}
 
 	return nil
+}
+
+func (s *Service) executeXMLQueries(queries []string) error {
+	for i, query := range queries {
+		resp, err := s.rriClient.SendRaw(query)
+		if err != nil {
+			return err
+		}
+
+		s.printXMLResult(resp, i)
+	}
+
+	return nil
+}
+
+func (s *Service) printXMLResult(resp string, i int) {
+	isSuccess := strings.Contains(resp, "<tr:result>success</tr:result>")
+
+	console.Println("----------------------------------------")
+	console.Println(fmt.Sprintf("Query #%v has success result: %v", i+1, isSuccess))
+	console.Println("----------------------------------------")
+	console.Println(resp)
 }
 
 func isXML(data []byte) bool {

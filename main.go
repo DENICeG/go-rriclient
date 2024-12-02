@@ -1,7 +1,9 @@
 package main
 
 import (
+	"embed"
 	"fmt"
+	"io/fs"
 	"os"
 	"strings"
 
@@ -16,6 +18,11 @@ import (
 const (
 	// this field is not updated automatically and needs to be set before every release!
 	version = "1.11.0"
+)
+
+var (
+	//go:embed examples
+	embedFS embed.FS
 )
 
 func main() {
@@ -42,6 +49,13 @@ func main() {
 	)
 
 	kingpin.MustParse(app.Parse(os.Args[1:]))
+
+	dirInfo, err := embedFS.ReadDir("examples")
+	if err != nil {
+		logAndExit(err)
+	}
+
+	presets := loadPresets(dirInfo)
 
 	envReader, err := env.NewReader(".rri-client")
 	if err != nil {
@@ -89,7 +103,9 @@ func main() {
 
 	defer client.Close()
 
-	cliService := cli.New(client)
+	cliService := cli.New(client, presets)
+
+	cliService.CmdDisplayPresets([]string{})
 
 	if *argDumpCLIConfig {
 		console.Println("print colors and signs for testing:")
@@ -121,6 +137,24 @@ func main() {
 	if err != nil {
 		logAndExit(err)
 	}
+}
+
+func loadPresets(dirInfo []fs.DirEntry) map[string][]string {
+	m := make(map[string][]string)
+	for i, info := range dirInfo {
+		files, err := embedFS.ReadDir("examples/" + info.Name())
+		if err != nil {
+			logAndExit(err)
+		}
+		for _, file := range files {
+			if i == 0 {
+				m["kv"] = append(m["kv"], file.Name())
+				continue
+			}
+			m["xml"] = append(m["xml"], file.Name())
+		}
+	}
+	return m
 }
 
 func shutdown(shutdown bool) {

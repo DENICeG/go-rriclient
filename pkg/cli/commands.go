@@ -352,3 +352,16 @@ func (s *Service) cmdVerbose(args []string) error {
 
 	return nil
 }
+
+func (s *Service) CmdDisplayPresets(args []string) error {
+	console.Println("Choose on of the possible presets.")
+	counter := 0
+	for key, orderType := range s.presets {
+		console.Printlnf("%v", key)
+		for _, preset := range orderType {
+			console.Printlnf("\t%v %v", counter, preset)
+			counter++
+		}
+	}
+	return nil
+}

@@ -31,10 +31,11 @@ type Service struct {
 	colorEnd                   string
 	signSend                   string
 	signReceive                string
+	presets                    map[string][]string
 }
 
 // New returns a new Service instance.
-func New(client *rri.Client) *Service {
+func New(client *rri.Client, presets map[string][]string) *Service {
 	result := &Service{
 		rriClient:                  client,
 		completion:                 NewCompletion(),
@@ -50,6 +51,7 @@ func New(client *rri.Client) *Service {
 		colorEnd:                   "\033[0m",
 		signSend:                   "-->",
 		signReceive:                "<--",
+		presets:                    presets,
 	}
 
 	if !console.SupportsColors() {

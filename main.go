@@ -3,12 +3,12 @@ package main
 import (
 	"embed"
 	"fmt"
-	"io/fs"
 	"os"
 	"strings"
 
 	"github.com/DENICeG/go-rriclient/internal/env"
 	"github.com/DENICeG/go-rriclient/pkg/cli"
+	"github.com/DENICeG/go-rriclient/pkg/preset"
 	"github.com/DENICeG/go-rriclient/pkg/rri"
 
 	"github.com/alecthomas/kingpin/v2"
@@ -46,6 +46,7 @@ func main() {
 		argInsecure      = app.Flag("insecure", "Disable SSL Certificate checks").Bool()
 		argVersion       = app.Flag("version", "Display application version and exit").Bool()
 		argDumpCLIConfig = app.Flag("dump-cli-config", "Print all configured colors and signs for testing").Bool()
+		argPreset        = app.Flag("preset", "Dynamically load, edit and execute a query from a preset").Short('P').Bool()
 	)
 
 	kingpin.MustParse(app.Parse(os.Args[1:]))
@@ -55,7 +56,10 @@ func main() {
 		logAndExit(err)
 	}
 
-	presets := loadPresets(dirInfo)
+	presets, err := preset.Load(embedFS, dirInfo)
+	if err != nil {
+		logAndExit(err)
+	}
 
 	envReader, err := env.NewReader(".rri-client")
 	if err != nil {
@@ -103,9 +107,11 @@ func main() {
 
 	defer client.Close()
 
-	cliService := cli.New(client, presets)
+	cliService := cli.New(client, *presets)
 
-	cliService.CmdDisplayPresets([]string{})
+	if argPreset != nil && *argPreset == true {
+		cliService.HandlePreset([]string{})
+	}
 
 	if *argDumpCLIConfig {
 		console.Println("print colors and signs for testing:")
@@ -137,24 +143,6 @@ func main() {
 	if err != nil {
 		logAndExit(err)
 	}
-}
-
-func loadPresets(dirInfo []fs.DirEntry) map[string][]string {
-	m := make(map[string][]string)
-	for i, info := range dirInfo {
-		files, err := embedFS.ReadDir("examples/" + info.Name())
-		if err != nil {
-			logAndExit(err)
-		}
-		for _, file := range files {
-			if i == 0 {
-				m["kv"] = append(m["kv"], file.Name())
-				continue
-			}
-			m["xml"] = append(m["xml"], file.Name())
-		}
-	}
-	return m
 }
 
 func shutdown(shutdown bool) {

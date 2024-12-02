@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"fmt"
 	"os"
+	"strconv"
 	"strings"
 	"time"
 
@@ -313,32 +314,6 @@ func (s *Service) executeKVQueries(queryStrings []string) error {
 	return nil
 }
 
-// lines := parser.SplitLines(data)
-// queryStrings := parser.SplitQueries(lines)
-
-// if isXMLFile {
-// 	s.
-// 	return nil
-// }
-
-// err = s.executeKVQueries(queryStrings)
-// if err != nil {
-// 	return err
-// }
-
-// return nil
-
-func (s *Service) cmdXML(args []string) error {
-	s.rriClient.XMLMode = !s.rriClient.XMLMode
-	if s.rriClient.XMLMode {
-		console.Println("XML mode on")
-	} else {
-		console.Println("XML mode off")
-	}
-
-	return nil
-}
-
 func (s *Service) cmdVerbose(args []string) error {
 	if s.rriClient.RawQueryPrinter == nil {
 		s.rriClient.RawQueryPrinter = s.RawQueryPrinter
@@ -353,15 +328,33 @@ func (s *Service) cmdVerbose(args []string) error {
 	return nil
 }
 
-func (s *Service) CmdDisplayPresets(args []string) error {
+func (s *Service) HandlePreset(args []string) error {
 	console.Println("Choose on of the possible presets.")
-	counter := 0
-	for key, orderType := range s.presets {
-		console.Printlnf("%v", key)
-		for _, preset := range orderType {
-			console.Printlnf("\t%v %v", counter, preset)
-			counter++
-		}
+	s.listPresets()
+
+	console.Print("Preset number: ")
+	numberString, err := console.ReadLine()
+	if err != nil {
+		return err
 	}
+
+	chosenIndex, err := strconv.Atoi(numberString)
+	if err != nil {
+		return err
+	}
+
+	println(s.presets.Preset[chosenIndex].FileName)
+
 	return nil
+}
+
+func (s *Service) listPresets() {
+	console.Println("kv")
+
+	for i := 0; i < len(s.presets.Preset); i++ {
+		if i == s.presets.XMLStartIndex {
+			console.Println("xml")
+		}
+		console.Printlnf("\t%v %v", i, s.presets.Preset[i].FileName)
+	}
 }

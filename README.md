@@ -117,7 +117,6 @@ You can use the following commands in file mode and interactive mode:
 | `raw` | Enter a raw query and send to RRI. |
 | `raw {command}` | Send a command like `version: 3.0\naction: queue-read` |
 | `file {path}` | Process a query file as accepted by flag `--file`. |
-| `xml` | Toggle XML mode. **NOT implemented yet** |
 | `verbose` | Toggle verbose mode. |
 
 ## RRI Request Examples

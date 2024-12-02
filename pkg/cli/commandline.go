@@ -8,6 +8,7 @@ import (
 	"strings"
 
 	"github.com/DENICeG/go-rriclient/internal/env"
+	"github.com/DENICeG/go-rriclient/pkg/preset"
 	"github.com/DENICeG/go-rriclient/pkg/rri"
 
 	"github.com/sbreitf1/go-console"
@@ -31,11 +32,11 @@ type Service struct {
 	colorEnd                   string
 	signSend                   string
 	signReceive                string
-	presets                    map[string][]string
+	presets                    preset.Data
 }
 
 // New returns a new Service instance.
-func New(client *rri.Client, presets map[string][]string) *Service {
+func New(client *rri.Client, presets preset.Data) *Service {
 	result := &Service{
 		rriClient:                  client,
 		completion:                 NewCompletion(),
@@ -243,8 +244,8 @@ func (s *Service) prepareCLI() *commandline.Environment {
 	cli.RegisterCommand(commandline.NewCustomCommand("raw", nil, s.cmdRaw))
 	cli.RegisterCommand(commandline.NewCustomCommand("file", commandline.NewFixedArgCompletion(commandline.NewLocalFileSystemArgCompletion(true)), s.HandleFile))
 
-	cli.RegisterCommand(commandline.NewCustomCommand("xml", nil, s.cmdXML))
 	cli.RegisterCommand(commandline.NewCustomCommand("verbose", nil, s.cmdVerbose))
+	cli.RegisterCommand(commandline.NewCustomCommand("preset", nil, s.HandlePreset))
 
 	return cli
 }
@@ -292,8 +293,9 @@ func (s *Service) cmdHelp(args []string) error {
 		{Cmd: []string{"raw"}, Args: nil, Desc: "enter a raw query and send it"},
 		{Cmd: []string{"file"}, Args: []string{"path"}, Desc: "process a query file as accepted by flag --file"},
 		{},
-		{Cmd: []string{"xml"}, Args: nil, Desc: "toggle XML mode"},
 		{Cmd: []string{"verbose"}, Args: nil, Desc: "toggle verbose mode"},
+		{},
+		{Cmd: []string{"preset"}, Args: []string{"pat"}, Desc: "Execute a preset, that can be edited by the user"},
 	}
 
 	if len(s.customCommands) > 0 {

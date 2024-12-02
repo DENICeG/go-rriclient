@@ -193,10 +193,6 @@ func (client *Client) Logout() error {
 //
 // Only technical errors are returned. You need to check Response.Result to check for RRI error responses.
 func (client *Client) SendQuery(query *Query) (*Response, error) {
-	if client.XMLMode {
-		return nil, fmt.Errorf("XML mode not yet supported")
-	}
-
 	if !client.IsLoggedIn() && query.Action() != ActionLogin {
 		return nil, fmt.Errorf("need to log in before sending action %s", query.Action())
 	}

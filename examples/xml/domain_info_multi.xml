@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+
+<registry-request xmlns="http://registry.denic.de/global/5.0" xmlns:domain="http://registry.denic.de/domain/5.0">
+   <domain:info recursive="true">	
+		 <domain:handle>denic.de</domain:handle>
+   </domain:info>
+</registry-request>
+=-=
+<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+
+<registry-request xmlns="http://registry.denic.de/global/5.0" xmlns:domain="http://registry.denic.de/domain/5.0">
+   <domain:info recursive="true">	
+		 <domain:handle>denic.de</domain:handle>
+   </domain:info>
+</registry-request>

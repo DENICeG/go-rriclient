@@ -1,0 +1,24 @@
+version: 5.0
+action: create
+handle: DENIC-1000021-TEST-WRITE
+type: person
+name: Max Mustermann
+organisation: Musterfirma
+address: Musterstraße 42
+address: Beliebige Zusatzinformationen
+address: Maximal 255 Zeichen pro Zeile
+postalcode: 12345
+phone: +49.12345
+city: Musterstadt
+countrycode: DE
+email: max@mustermann.de
+
+[VerificationInformation]
+VerificationTimestamp: 2024-04-02T14:58:30+02:00
+TrustFramework: de_denic
+VerificationMethod: auth
+VerificationEvidence: idcard
+VerificationReference: abc#444
+VerifiedClaim: address
+VerifiedClaim: name
+VerificationResult: success

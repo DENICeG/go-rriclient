@@ -344,7 +344,20 @@ func (s *Service) HandlePreset(args []string) error {
 	}
 
 	println(s.presets.Preset[chosenIndex].FileName)
+	presetContent, err := s.embedFS.ReadFile("examples/" + s.presets.Preset[chosenIndex].Type + "/" + s.presets.Preset[chosenIndex].FileName)
+	if err != nil {
+		return err
+	}
+	result, _, err := input.Text(string(presetContent))
+	if err != nil {
+		return err
+	}
+	res, err := s.rriClient.SendRaw(result)
+	if err != nil {
+		return err
+	}
 
+	console.Println(res) //nolint
 	return nil
 }
 

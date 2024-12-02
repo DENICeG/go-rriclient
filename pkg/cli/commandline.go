@@ -1,6 +1,7 @@
 package cli
 
 import (
+	"embed"
 	"encoding/json"
 	"fmt"
 	"os"
@@ -33,10 +34,11 @@ type Service struct {
 	signSend                   string
 	signReceive                string
 	presets                    preset.Data
+	embedFS                    embed.FS
 }
 
 // New returns a new Service instance.
-func New(client *rri.Client, presets preset.Data) *Service {
+func New(client *rri.Client, presets preset.Data, embedFS embed.FS) *Service {
 	result := &Service{
 		rriClient:                  client,
 		completion:                 NewCompletion(),
@@ -53,6 +55,7 @@ func New(client *rri.Client, presets preset.Data) *Service {
 		signSend:                   "-->",
 		signReceive:                "<--",
 		presets:                    presets,
+		embedFS:                    embedFS,
 	}
 
 	if !console.SupportsColors() {

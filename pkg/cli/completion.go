@@ -1,6 +1,11 @@
 package cli
 
-import "github.com/sbreitf1/go-console/commandline"
+import (
+	"strings"
+
+	"github.com/DENICeG/go-rriclient/pkg/preset"
+	"github.com/sbreitf1/go-console/commandline"
+)
 
 type domainOrHandleCompletion struct {
 	histDomains *domainHistory
@@ -37,4 +42,29 @@ func (c *domainOrHandleCompletion) GetCompletionOptions(currentCommand []string,
 	}
 
 	return nil
+}
+
+// PresetCompletion implements the Completion interface for preset names.
+type PresetCompletion struct {
+	presets preset.Data
+}
+
+// NewPresetCompletion returns a new PresetCompletion instance.
+func NewPresetCompletion(presets preset.Data) *PresetCompletion {
+	return &PresetCompletion{presets: presets}
+}
+
+// GetCompletionOptions returns the completion options for the given command.
+func (p *PresetCompletion) GetCompletionOptions(currentCommand []string, entryIndex int) []commandline.CompletionOption {
+	currentWord := currentCommand[entryIndex]
+
+	var result []commandline.CompletionOption
+
+	for _, entry := range p.presets.Preset {
+		if strings.HasPrefix(strings.ToLower(entry.FileName), strings.ToLower(currentWord)) {
+			result = append(result, commandline.NewCompletionOption(entry.FileName, false))
+		}
+	}
+
+	return result
 }

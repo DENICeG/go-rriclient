@@ -107,7 +107,8 @@ func main() {
 
 	defer client.Close()
 
-	cliService := cli.New(client, *presets, embedFS)
+	presetCompletion := cli.NewPresetCompletion(*presets)
+	cliService := cli.New(client, *presets, presetCompletion, embedFS)
 
 	if argPreset != nil && *argPreset == true {
 		cliService.HandlePreset([]string{})

@@ -37,10 +37,11 @@ type Service struct {
 	signReceive                string
 	presets                    preset.Data
 	embedFS                    embed.FS
+	presetCompletion           *PresetCompletion
 }
 
 // New returns a new Service instance.
-func New(client *rri.Client, presets preset.Data, embedFS embed.FS) *Service {
+func New(client *rri.Client, presets preset.Data, presetCompletion *PresetCompletion, embedFS embed.FS) *Service {
 	result := &Service{
 		rriClient:                  client,
 		completion:                 NewCompletion(),
@@ -58,6 +59,7 @@ func New(client *rri.Client, presets preset.Data, embedFS embed.FS) *Service {
 		signReceive:                "<--",
 		presets:                    presets,
 		embedFS:                    embedFS,
+		presetCompletion:           presetCompletion,
 	}
 
 	if !console.SupportsColors() {
@@ -111,7 +113,7 @@ func (s *Service) Run(confDir string, cmd []string) error {
 		}
 	}
 
-	cli := s.prepareCLI()
+	cli := s.prepareCLI(s.presetCompletion)
 
 	if len(cmd) > 0 {
 		// exec command that has been passed via command line and return result
@@ -192,7 +194,7 @@ func readCustomCommands(dir string) ([]customCommand, error) {
 	return result, nil
 }
 
-func (s *Service) prepareCLI() *commandline.Environment {
+func (s *Service) prepareCLI(presetCompletion *PresetCompletion) *commandline.Environment {
 	cli := commandline.NewEnvironment()
 	cli.Prompt = func() string {
 		var prefix, user, host, suffix string
@@ -250,7 +252,7 @@ func (s *Service) prepareCLI() *commandline.Environment {
 	cli.RegisterCommand(commandline.NewCustomCommand("file", commandline.NewFixedArgCompletion(commandline.NewLocalFileSystemArgCompletion(true)), s.HandleFile))
 
 	cli.RegisterCommand(commandline.NewCustomCommand("verbose", nil, s.cmdVerbose))
-	cli.RegisterCommand(commandline.NewCustomCommand("preset", commandline.NewFixedArgCompletion(commandline.NewLocalFileSystemArgCompletion(true)), s.HandlePreset))
+	cli.RegisterCommand(commandline.NewCustomCommand("preset", s.presetCompletion.GetCompletionOptions, s.HandlePreset))
 
 	return cli
 }

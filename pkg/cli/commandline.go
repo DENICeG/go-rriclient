@@ -250,7 +250,7 @@ func (s *Service) prepareCLI() *commandline.Environment {
 	cli.RegisterCommand(commandline.NewCustomCommand("file", commandline.NewFixedArgCompletion(commandline.NewLocalFileSystemArgCompletion(true)), s.HandleFile))
 
 	cli.RegisterCommand(commandline.NewCustomCommand("verbose", nil, s.cmdVerbose))
-	cli.RegisterCommand(commandline.NewCustomCommand("preset", nil, s.HandlePreset))
+	cli.RegisterCommand(commandline.NewCustomCommand("preset", commandline.NewFixedArgCompletion(commandline.NewLocalFileSystemArgCompletion(true)), s.HandlePreset))
 
 	return cli
 }

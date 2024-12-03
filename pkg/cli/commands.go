@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"github.com/DENICeG/go-rriclient/pkg/parser"
+	"github.com/DENICeG/go-rriclient/pkg/preset"
 	"github.com/DENICeG/go-rriclient/pkg/rri"
 	"github.com/sbreitf1/go-console"
 	"github.com/sbreitf1/go-console/input"
@@ -328,23 +329,25 @@ func (s *Service) cmdVerbose(args []string) error {
 }
 
 func (s *Service) HandlePreset(args []string) error {
-	format, err := s.chosePresetType()
-	if err != nil {
-		return err
+	var chosenPreset *preset.Entry
+	var err error
+
+	if len(args) > 0 {
+		chosenPreset = s.presets.Get(args[0])
+		if chosenPreset == nil {
+			console.Println("Chosen preset not found")
+			return nil
+		}
 	}
 
-	ClearTerminal()
-
-	s.listPresets(format)
-	chosenIndex, err := s.chosePreset()
-	if err != nil {
-		return err
+	if chosenPreset == nil {
+		chosenPreset, err = s.manualPresetFlow()
+		if err != nil {
+			return err
+		}
 	}
 
-	ClearTerminal()
-
-	curPreset := s.presets.Preset[chosenIndex]
-	presetContent, err := s.embedFS.ReadFile("examples/" + curPreset.Type + "/" + curPreset.DirName + "/" + curPreset.FileName)
+	presetContent, err := s.embedFS.ReadFile("examples/" + chosenPreset.Type + "/" + chosenPreset.DirName + "/" + chosenPreset.FileName)
 	if err != nil {
 		return err
 	}
@@ -362,6 +365,27 @@ func (s *Service) HandlePreset(args []string) error {
 	console.Println(res) //nolint
 
 	return nil
+}
+
+func (s *Service) manualPresetFlow() (*preset.Entry, error) {
+	format, err := s.chosePresetType()
+	if err != nil {
+		return nil, err
+	}
+
+	ClearTerminal()
+
+	s.listPresets(format)
+	chosenIndex, err := s.chosePreset()
+	if err != nil {
+		return nil, err
+	}
+
+	ClearTerminal()
+
+	result := s.presets.Preset[chosenIndex]
+
+	return &result, nil
 }
 
 func (s *Service) chosePreset() (int, error) {

@@ -9,5 +9,6 @@ type Data struct {
 // Entry represents a single preset entry.
 type Entry struct {
 	Type     string
+	DirName  string
 	FileName string
 }

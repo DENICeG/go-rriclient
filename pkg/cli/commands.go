@@ -328,14 +328,36 @@ func (s *Service) cmdVerbose(args []string) error {
 }
 
 func (s *Service) HandlePreset(args []string) error {
-	console.Println("Choose on of the possible presets.")
-	s.listPresets()
 
+	format := ""
+	var err error
+	for {
+		console.Println("Choose preset: \n1: kv  \n2: xml")
+		format, err = console.ReadLine()
+		if err != nil {
+			return err
+		}
+		if format == "1" {
+			format = "kv"
+			break
+
+		} else if format == "2" {
+			format = "xml"
+			break
+		}
+	}
+
+	ClearTerminal()
+	s.listPresets(format)
+
+	console.Println()
 	console.Print("Preset number: ")
 	numberString, err := console.ReadLine()
 	if err != nil {
 		return err
 	}
+
+	ClearTerminal()
 
 	chosenIndex, err := strconv.Atoi(numberString)
 	if err != nil {
@@ -343,7 +365,8 @@ func (s *Service) HandlePreset(args []string) error {
 	}
 
 	println(s.presets.Preset[chosenIndex].FileName)
-	presetContent, err := s.embedFS.ReadFile("examples/" + s.presets.Preset[chosenIndex].Type + "/" + s.presets.Preset[chosenIndex].FileName)
+	curPreset := s.presets.Preset[chosenIndex]
+	presetContent, err := s.embedFS.ReadFile("examples/" + curPreset.Type + "/" + curPreset.DirName + "/" + curPreset.FileName)
 	if err != nil {
 		return err
 	}
@@ -360,13 +383,27 @@ func (s *Service) HandlePreset(args []string) error {
 	return nil
 }
 
-func (s *Service) listPresets() {
-	console.Println("kv")
+func (s *Service) listPresets(format string) {
+	if format == "kv" {
+		console.Print("kv")
+	}
+
+	var currentDirName string
 
 	for i := 0; i < len(s.presets.Preset); i++ {
-		if i == s.presets.XMLStartIndex {
-			console.Println("xml")
+		if format != s.presets.Preset[i].Type {
+			continue
 		}
-		console.Printlnf("\t%v %v", i, s.presets.Preset[i].FileName)
+
+		if i == s.presets.XMLStartIndex {
+			console.Print("xml")
+		}
+
+		if currentDirName != s.presets.Preset[i].DirName {
+			currentDirName = s.presets.Preset[i].DirName
+			console.Printf("\n\t%v: ", currentDirName)
+		}
+
+		console.Printf("\n\t\t%v %v", i, s.presets.Preset[i].FileName)
 	}
 }

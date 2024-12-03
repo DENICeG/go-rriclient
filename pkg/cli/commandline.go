@@ -5,7 +5,9 @@ import (
 	"encoding/json"
 	"fmt"
 	"os"
+	"os/exec"
 	"path/filepath"
+	"runtime"
 	"strings"
 
 	"github.com/DENICeG/go-rriclient/internal/env"
@@ -863,4 +865,23 @@ func PrintVersion(argVersion *bool, buildTime, gitCommit, version string) bool {
 	}
 
 	return true // should exit after printing version
+}
+
+func runCmd(name string, arg ...string) {
+	cmd := exec.Command(name, arg...)
+	cmd.Stdout = os.Stdout
+	cmd.Run()
+}
+
+func ClearTerminal() {
+	switch runtime.GOOS {
+	case "darwin":
+		runCmd("clear")
+	case "linux":
+		runCmd("clear")
+	case "windows":
+		runCmd("cmd", "/c", "cls")
+	default:
+		runCmd("clear")
+	}
 }

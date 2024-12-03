@@ -5,6 +5,7 @@ import (
 	"io/fs"
 )
 
+// Load loads all presets from the embedded binary
 func Load(embedFS embed.FS, dirInfo []fs.DirEntry) (*Data, error) {
 	result := &Data{
 		Preset: make(map[int]Entry),

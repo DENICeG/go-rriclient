@@ -328,59 +328,73 @@ func (s *Service) cmdVerbose(args []string) error {
 }
 
 func (s *Service) HandlePreset(args []string) error {
-
-	format := ""
-	var err error
-	for {
-		console.Println("Choose preset: \n1: kv  \n2: xml")
-		format, err = console.ReadLine()
-		if err != nil {
-			return err
-		}
-		if format == "1" {
-			format = "kv"
-			break
-
-		} else if format == "2" {
-			format = "xml"
-			break
-		}
+	format, err := s.chosePresetType()
+	if err != nil {
+		return err
 	}
 
 	ClearTerminal()
+
 	s.listPresets(format)
-
-	console.Println()
-	console.Print("Preset number: ")
-	numberString, err := console.ReadLine()
+	chosenIndex, err := s.chosePreset()
 	if err != nil {
 		return err
 	}
 
 	ClearTerminal()
 
-	chosenIndex, err := strconv.Atoi(numberString)
-	if err != nil {
-		return err
-	}
-
-	println(s.presets.Preset[chosenIndex].FileName)
 	curPreset := s.presets.Preset[chosenIndex]
 	presetContent, err := s.embedFS.ReadFile("examples/" + curPreset.Type + "/" + curPreset.DirName + "/" + curPreset.FileName)
 	if err != nil {
 		return err
 	}
+
 	result, _, err := input.Text(string(presetContent))
 	if err != nil {
 		return err
 	}
+
 	res, err := s.rriClient.SendRaw(result)
 	if err != nil {
 		return err
 	}
 
 	console.Println(res) //nolint
+
 	return nil
+}
+
+func (s *Service) chosePreset() (int, error) {
+	console.Println()
+	console.Print("Preset number: ")
+	numberString, err := console.ReadLine()
+	if err != nil {
+		return -1, err
+	}
+
+	return strconv.Atoi(numberString)
+}
+
+func (s *Service) chosePresetType() (string, error) {
+	format := ""
+	var err error
+
+	for {
+		console.Println("Choose preset: \n1: kv  \n2: xml")
+		format, err = console.ReadLine()
+		if err != nil {
+			return format, err
+		}
+
+		if format == "1" {
+			return "kv", nil
+
+		}
+
+		if format == "2" {
+			return "xml", nil
+		}
+	}
 }
 
 func (s *Service) listPresets(format string) {

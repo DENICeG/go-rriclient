@@ -479,7 +479,7 @@ func (s *Service) registerSwitchCommand(cle *commandline.Environment, name strin
 			}
 
 			// try to guess type from first parameter
-			if isDomainName(args[0]) {
+			if rri.IsDomainName(args[0]) {
 				if switches.Domain != nil {
 					return switches.Domain(args)
 				}
@@ -487,7 +487,8 @@ func (s *Service) registerSwitchCommand(cle *commandline.Environment, name strin
 					return switches.AuthInfo1(args)
 				}
 			}
-			if isHandle(args[0]) && switches.Handle != nil {
+
+			if rri.IsHandle(args[0]) && switches.Handle != nil {
 				return switches.Handle(args)
 			}
 
@@ -506,14 +507,6 @@ func (s *Service) registerSwitchCommand(cle *commandline.Environment, name strin
 
 			return fmt.Errorf("unknown command type. expect %s", str)
 		}))
-}
-
-func isDomainName(str string) bool {
-	return strings.HasSuffix(str, ".de")
-}
-
-func isHandle(str string) bool {
-	return strings.HasPrefix(str, "DENIC-")
 }
 
 func (s *Service) registerDomainCommand(cle *commandline.Environment, name string, commandHandler commandline.ExecCommandHandler, additionalCompletionHandlers ...commandline.ArgCompletion) {

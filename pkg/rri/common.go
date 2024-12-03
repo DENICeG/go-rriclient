@@ -90,3 +90,13 @@ func DocToString(doc *etree.Document) string {
 
 	return result
 }
+
+// IsDomainName checks if a string represents a domain name.
+func IsDomainName(str string) bool {
+	return strings.HasSuffix(str, ".de")
+}
+
+// IsHandle checks if a string represents a DENIC handle.
+func IsHandle(str string) bool {
+	return strings.HasPrefix(str, "DENIC-")
+}

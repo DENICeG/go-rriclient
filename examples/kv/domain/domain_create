@@ -1,0 +1,9 @@
+Version: 5.0
+Action: CREATE
+Domain: domain-example-nserver.de
+Holder: DENIC-1000022-EXAMPLE-PERSON
+Generalrequest: DENIC-1000022-EXAMPLE-GR
+Abusecontact: DENIC-1000022-EXAMPLE-ABUSE
+Nserver: ns1.denic.de
+Nserver: ns2.denic.de
+ctid: cba-987654321

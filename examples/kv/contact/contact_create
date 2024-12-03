@@ -1,0 +1,23 @@
+Version: 5.0
+Action: CREATE
+Handle: DENIC-1000022-EXAMPLE-PERSON
+Type: PERSON
+Name: John Doe
+Organisation: DENIC eG
+Address: Theodor-Stern-Kai 1
+PostalCode: 60596
+City: Frankfurt am Main
+CountryCode: DE
+EMail: john.doe@denic.de
+Phone: +49.69272350
+ctid: kv-7bf04fa8
+
+[VerificationInformation]
+VerifiedClaim: name
+VerifiedClaim: address
+VerificationResult: success
+VerificationReference: ABC123/45GHT
+VerificationTimestamp: 2023-11-11T15:36:21+02:00
+VerificationEvidence: idcard
+VerificationMethod: auth
+TrustFramework: de_denic

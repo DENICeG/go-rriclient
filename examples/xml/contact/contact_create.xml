@@ -1,0 +1,31 @@
+<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+
+<registry-request xmlns="http://registry.denic.de/global/5.0" xmlns:contact="http://registry.denic.de/contact/5.0" xmlns:verification="http://registry.denic.de/verification/5.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
+  <contact:create>
+    <contact:handle>DENIC-1000022-EXAMPLE-XML-PERSON</contact:handle>
+    <contact:type>PERSON</contact:type>
+    <contact:name>John Doe</contact:name>
+    <contact:organisation>DENIC eG</contact:organisation>
+    <contact:postal>
+      <contact:address>Theodor-Stern-Kai 1</contact:address>
+      <contact:postalCode>60596</contact:postalCode>
+      <contact:city>Frankfurt am Main</contact:city>
+      <contact:countryCode>DE</contact:countryCode>
+    </contact:postal>
+    <contact:email>john.doe@denic.de</contact:email>
+    <contact:phone>+49.69272350</contact:phone>
+    <verification:verificationInformation xmlns:verification="http://registry.denic.de/verification/5.0" xsi:type="verification:verificationInformationType">
+       <verification:verifiedClaims>
+        <verification:claim>name</verification:claim>
+        <verification:claim>address</verification:claim>
+      </verification:verifiedClaims>
+      <verification:verificationResult>success</verification:verificationResult>
+      <verification:verificationReference>ABC123/45GHT</verification:verificationReference>
+      <verification:verificationTimestamp>2023-11-11T15:36:21+02:00</verification:verificationTimestamp>
+      <verification:verificationEvidence>idcard</verification:verificationEvidence>
+      <verification:verificationMethod>auth</verification:verificationMethod>
+      <verification:trustFramework>de_denic</verification:trustFramework>
+    </verification:verificationInformation>
+  </contact:create>
+  <ctid>xml-74ba5119</ctid>
+</registry-request>

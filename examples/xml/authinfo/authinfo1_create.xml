@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<registry-request xmlns="http://registry.denic.de/global/5.0" xmlns:domain="http://registry.denic.de/domain/5.0"> 
+  <domain:createAuthInfo1 hash="4213d924230224fd719218b4acbd92f96ebe4344f3d5d1478dede1aa44e4cf4b" expire="20100815">
+    <domain:handle>de-example.de</domain:handle>
+  </domain:createAuthInfo1>
+  <ctid>987654321</ctid>
+</registry-request>

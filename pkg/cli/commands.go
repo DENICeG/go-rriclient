@@ -184,7 +184,6 @@ func (s *Service) cmdRaw(args []string) error {
 	var rawCommand string
 	if len(args) > 0 {
 		rawCommand = strings.ReplaceAll(strings.ReplaceAll(strings.ReplaceAll(args[0], "\\n", "\n"), "\\r", "\r"), "\\\\", "\\")
-
 	} else {
 		raw, ok, err := input.Text("")
 		if err != nil {

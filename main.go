@@ -11,8 +11,8 @@ import (
 	"github.com/DENICeG/go-rriclient/pkg/preset"
 	"github.com/DENICeG/go-rriclient/pkg/rri"
 
+	"github.com/DENICeG/go-console/v2"
 	"github.com/alecthomas/kingpin/v2"
-	"github.com/sbreitf1/go-console"
 )
 
 const (

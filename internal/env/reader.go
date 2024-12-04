@@ -9,8 +9,8 @@ import (
 	"sort"
 	"strings"
 
+	"github.com/DENICeG/go-console/v2"
 	"github.com/manifoldco/promptui"
-	"github.com/sbreitf1/go-console"
 	"github.com/sbreitf1/go-jcrypt"
 )
 

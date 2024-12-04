@@ -3,7 +3,7 @@ package cli
 import (
 	"slices"
 
-	"github.com/sbreitf1/go-console/commandline"
+	"github.com/DENICeG/go-console/v2/commandline"
 )
 
 type domainHistory struct {

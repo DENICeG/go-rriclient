@@ -3,8 +3,8 @@ package cli
 import (
 	"strings"
 
+	"github.com/DENICeG/go-console/v2/commandline"
 	"github.com/DENICeG/go-rriclient/pkg/preset"
-	"github.com/sbreitf1/go-console/commandline"
 )
 
 type domainOrHandleCompletion struct {

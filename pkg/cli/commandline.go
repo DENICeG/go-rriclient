@@ -3,7 +3,9 @@ package cli
 import (
 	"embed"
 	"encoding/json"
+	"errors"
 	"fmt"
+	"github.com/DENICeG/go-rriclient/pkg/highlight"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -14,8 +16,8 @@ import (
 	"github.com/DENICeG/go-rriclient/pkg/preset"
 	"github.com/DENICeG/go-rriclient/pkg/rri"
 
-	"github.com/sbreitf1/go-console"
-	"github.com/sbreitf1/go-console/commandline"
+	"github.com/DENICeG/go-console/v2"
+	"github.com/DENICeG/go-console/v2/commandline"
 )
 
 type Service struct {
@@ -126,7 +128,7 @@ func (s *Service) Run(confDir string, cmd []string) error {
 
 	// start interactive command line loop
 	if err := cli.Run(); err != nil {
-		if commandline.IsErrCtrlC(err) {
+		if errors.Is(err, commandline.ErrCtrlC) {
 			console.Println()
 			return nil
 		}
@@ -594,27 +596,23 @@ func (s *Service) ErrorPrinter(err error) {
 }
 
 func (s *Service) processQuery(query *rri.Query) (bool, error) {
-	response, err := s.rriClient.SendQuery(query)
+	res, err := s.rriClient.SendQuery(query)
 	if err != nil {
 		return false, fmt.Errorf("failed to send query: %w", err)
 	}
 
-	var colorStr string
-	if response.IsSuccessful() {
-		colorStr = s.colorSuccessResponse
-	} else {
-		colorStr = s.colorErrorResponseMessage
+	resString, err := highlight.Transform(res.String(), highlight.YAML)
+	if err != nil {
+		return false, fmt.Errorf("failed to transform query: %w", err)
 	}
 
-	console.Print(colorStr)
-	console.Println(response.String())
-	console.Print(s.colorEnd)
+	console.Println(resString)
 
-	if s.ReturnErrorOnFail && !response.IsSuccessful() {
+	if s.ReturnErrorOnFail && !res.IsSuccessful() {
 		return false, fmt.Errorf("RRI returned result 'failed'")
 	}
 
-	return response.IsSuccessful(), nil
+	return res.IsSuccessful(), nil
 }
 
 func (s *Service) readDomainData(args []string, dataOffset int) (string, rri.DomainData, error) {

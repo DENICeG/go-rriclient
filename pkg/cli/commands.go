@@ -3,16 +3,17 @@ package cli
 import (
 	"bytes"
 	"fmt"
+	"github.com/DENICeG/go-rriclient/pkg/highlight"
 	"os"
 	"strconv"
 	"strings"
 	"time"
 
+	"github.com/DENICeG/go-console/v2"
+	"github.com/DENICeG/go-console/v2/input"
 	"github.com/DENICeG/go-rriclient/pkg/parser"
 	"github.com/DENICeG/go-rriclient/pkg/preset"
 	"github.com/DENICeG/go-rriclient/pkg/rri"
-	"github.com/sbreitf1/go-console"
-	"github.com/sbreitf1/go-console/input"
 )
 
 func (s *Service) cmdLogin(args []string) error {
@@ -248,19 +249,28 @@ func (s *Service) executeXMLQueries(queries []string) error {
 			return err
 		}
 
-		s.printXMLResult(resp, i)
+		err = s.printXMLResult(resp, i, highlight.XML)
+		if err != nil {
+			return err
+		}
 	}
 
 	return nil
 }
 
-func (s *Service) printXMLResult(resp string, i int) {
+func (s *Service) printXMLResult(resp string, i int, format highlight.Format) error {
 	isSuccess := strings.Contains(resp, "<tr:result>success</tr:result>")
 
 	console.Println("----------------------------------------")
 	console.Println(fmt.Sprintf("Query #%v has success result: %v", i+1, isSuccess))
 	console.Println("----------------------------------------")
+
+	resp, err := highlight.Transform(resp, format)
+	if err != nil {
+		return err
+	}
 	console.Println(resp)
+	return nil
 }
 
 func isXML(data []byte) bool {
@@ -362,6 +372,12 @@ func (s *Service) HandlePreset(args []string) error {
 		return err
 	}
 
+	format := highlight.YAML
+	if strings.EqualFold(chosenPreset.Type, string(highlight.XML)) {
+		format = highlight.XML
+	}
+
+	res, err = highlight.Transform(res, format)
 	console.Println(res) //nolint
 
 	return nil

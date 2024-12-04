@@ -1,16 +1,20 @@
 module github.com/DENICeG/go-rriclient
 
-go 1.21.0
-
-toolchain go1.23.2
+go 1.23.2
 
 require (
+	github.com/DENICeG/go-console/v2 v2.0.3
+	github.com/alecthomas/chroma v0.10.0
 	github.com/alecthomas/kingpin/v2 v2.4.0
 	github.com/manifoldco/promptui v0.9.0
-	github.com/sbreitf1/go-console v0.12.0
 	github.com/sbreitf1/go-jcrypt v0.1.0
 	github.com/stretchr/testify v1.10.0
 	golang.org/x/net v0.31.0
+)
+
+require (
+	github.com/dlclark/regexp2 v1.11.4 // indirect
+	github.com/sbreitf1/go-console v0.12.0 // indirect
 )
 
 require (

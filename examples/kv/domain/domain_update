@@ -1,0 +1,7 @@
+Version: 5.0
+Action: UPDATE
+Domain: domain-example-nsentry.de
+Holder: DENIC-1000022-EXAMPLE-PERSON
+Generalrequest: DENIC-1000022-EXAMPLE-GR
+Abusecontact: DENIC-1000022-EXAMPLE-ABUSE
+Nsentry: domain-example-nsentry.de IN A 127.0.0.1

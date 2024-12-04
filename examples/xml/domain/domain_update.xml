@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<registry-request xmlns="http://registry.denic.de/global/5.0" xmlns:domain="http://registry.denic.de/domain/5.0" xmlns:dnsentry="http://registry.denic.de/dnsentry/5.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
+  <domain:update>
+    <domain:handle>domain-example-nsentry.de</domain:handle>
+    <domain:contact role="holder">DENIC-1000022-EXAMPLE-XML-PERSON</domain:contact>
+    <domain:contact role="abusecontact">DENIC-1000022-EXAMPLE-XML-GR</domain:contact>
+    <domain:contact role="generalrequest">DENIC-1000022-EXAMPLE-XML-ABUSE</domain:contact>
+    <dnsentry:dnsentry xsi:type="dnsentry:A">
+      <dnsentry:owner>domain-example-nsentry.de</dnsentry:owner>
+      <dnsentry:rdata>
+        <dnsentry:address>81.91.170.12</dnsentry:address>
+      </dnsentry:rdata>
+    </dnsentry:dnsentry>
+  </domain:update>
+  <ctid>xml-74ba5156</ctid>
+</registry-request>

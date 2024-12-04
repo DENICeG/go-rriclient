@@ -11,22 +11,22 @@ var (
 	ErrCloseConnection = fmt.Errorf("gracefully shutdown connection to client")
 )
 
-// QueryHandler is called for incoming RRI queryies by the server and expects a result as return value.
-// If an error is returned instead, it is written to log and the connection is closed immmediately.
+// QueryHandler is called for incoming RRI queries by the server and expects a result as return value.
+// If an error is returned instead, it is written to log and the connection is closed immediately.
 type QueryHandler func(*Session, *Query) (*Response, error)
 
 // Session is used to keep the state of an RRI connection.
 type Session struct {
-	values map[string]interface{}
+	values map[string]any
 }
 
 // Set sets a value for the current session across multiple queries.
-func (s *Session) Set(key string, value interface{}) {
+func (s *Session) Set(key string, value any) {
 	s.values[key] = value
 }
 
 // Get returns a value previously set for the current session.
-func (s *Session) Get(key string) (interface{}, bool) {
+func (s *Session) Get(key string) (any, bool) {
 	value, ok := s.values[key]
 	return value, ok
 }
@@ -64,8 +64,8 @@ func (s *Session) GetBool(key string) (bool, bool) {
 // Server represents a basic RRI client to receive RRI queries and send responses.
 type Server struct {
 	listener net.Listener
-	isClosed bool
 	Handler  QueryHandler
+	isClosed bool
 }
 
 // NewServer returns a new RRI server for the given TLS config listening on the given port.
@@ -75,7 +75,7 @@ func NewServer(listenAddress string, tlsConfig *tls.Config) (*Server, error) {
 		return nil, err
 	}
 
-	return &Server{listener, false, nil}, nil
+	return &Server{listener: listener, isClosed: false, Handler: nil}, nil
 }
 
 // Close gracefully shuts down the server.
@@ -96,17 +96,17 @@ func (srv *Server) Run() error {
 		}
 
 		go func() {
-			session := &Session{make(map[string]interface{})}
+			session := &Session{make(map[string]any)}
 
 			if err := func() error {
 				for {
-					msg, err := readMessage(conn)
+					msg, err := ReadMessage(conn)
 					if err != nil {
 						return err
 					}
 
 					if srv.Handler != nil {
-						query, err := ParseQuery(string(msg))
+						query, err := ParseQuery(msg)
 						if err != nil {
 							return err
 						}
@@ -116,9 +116,9 @@ func (srv *Server) Run() error {
 							return err
 						}
 
-						//TODO answer in same type as the query (KV or XML)
-						responseMsg := prepareMessage(response.EncodeKV())
-						if _, err := conn.Write([]byte(responseMsg)); err != nil {
+						// TODO answer in same type as the query (KV or XML)
+						responseMsg := PrepareMessage(response.EncodeKV())
+						if _, err := conn.Write(responseMsg); err != nil {
 							return err
 						}
 					} else {
@@ -126,7 +126,7 @@ func (srv *Server) Run() error {
 					}
 				}
 			}(); err != nil {
-				//TODO handle error
+				// TODO handle error
 			}
 
 			conn.Close()

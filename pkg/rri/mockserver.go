@@ -16,7 +16,7 @@ import (
 //
 // DO NOT USE IN PRODUCTION!
 func NewMockTLSConfig() (*tls.Config, error) {
-	privKey, err := rsa.GenerateKey(rand.Reader, 1024)
+	privKey, err := rsa.GenerateKey(rand.Reader, 2048)
 	if err != nil {
 		return nil, fmt.Errorf("failed to generate RSA key: %s", err)
 	}
@@ -62,9 +62,9 @@ type MockQueryHandler func(user string, session *Session, query *Query) (*Respon
 // MockServer represents a mock RRI server with mocked user authentication.
 type MockServer struct {
 	server  *Server
-	address string
 	users   map[string]string
 	Handler MockQueryHandler
+	address string
 }
 
 // Run starts the underlying RRI server.
@@ -132,7 +132,7 @@ func NewMockServer(port int) (*MockServer, error) {
 		return nil, err
 	}
 
-	return &MockServer{server, fmt.Sprintf("localhost:%d", port), make(map[string]string), nil}, nil
+	return &MockServer{server: server, address: fmt.Sprintf("localhost:%d", port), users: make(map[string]string), Handler: nil}, nil
 }
 
 // WithMockServer initializes and starts a mock server for the execution of f.
@@ -157,7 +157,7 @@ func WithMockServer(port int, f func(server *MockServer) error) error {
 	return runError
 }
 
-func mustWithMockServer(f func(server *MockServer)) {
+func MustWithMockServer(f func(server *MockServer)) {
 	if err := WithMockServer(31298, func(server *MockServer) error {
 		f(server)
 		return nil

@@ -31,11 +31,13 @@ func (l *QueryFieldList) Add(fieldName QueryFieldName, values ...string) {
 func (l *QueryFieldList) RemoveAll(fieldName QueryFieldName) {
 	fieldName = fieldName.Normalize()
 	newList := make([]QueryField, 0)
+
 	for _, entry := range *l {
 		if entry.Name != fieldName {
 			newList = append(newList, entry)
 		}
 	}
+
 	*l = newList
 }
 

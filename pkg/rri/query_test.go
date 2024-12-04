@@ -1,289 +1,291 @@
-package rri
+package rri_test
 
 import (
 	"testing"
 	"time"
+
+	"github.com/DENICeG/go-rriclient/pkg/rri"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
 
 func TestNewQueryNil(t *testing.T) {
-	var qry *Query
+	var qry *rri.Query
 	require.NotPanics(t, func() {
-		qry = NewQuery(LatestVersion, ActionLogout, nil)
+		qry = rri.NewQuery(rri.LatestVersion, rri.ActionLogout, nil, nil)
 	})
 	assert.Equal(t, 2, qry.Fields().Size())
 }
 
 func TestQueryToString(t *testing.T) {
-	assert.Equal(t, "LOGIN{\"DENIC-1000011-TEST\"}", NewLoginQuery("DENIC-1000011-TEST", "secret").String())
-	assert.Equal(t, "LOGOUT{}", NewLogoutQuery().String())
-	//TODO other actions
+	assert.Equal(t, "LOGIN{\"DENIC-1000011-TEST\"}", rri.NewLoginQuery("DENIC-1000011-TEST", "secret").String())
+	assert.Equal(t, "LOGOUT{}", rri.NewLogoutQuery().String())
+	// TODO other actions
 }
 
 func TestQueryEncodeKV(t *testing.T) {
-	query, err := ParseQuery("Version: 4.0\nAction: update\naddress: foo\nDomain: denic.de\nAddress: bar")
+	query, err := rri.ParseQuery("Version: 5.0\nAction: update\naddress: foo\nDomain: denic.de\nAddress: bar")
 	require.NoError(t, err)
 	require.NotNil(t, query)
-	assert.Equal(t, "version: 4.0\naction: update\naddress: foo\ndomain: denic.de\naddress: bar", query.EncodeKV())
+	assert.Equal(t, "version: 5.0\naction: update\naddress: foo\ndomain: denic.de\naddress: bar", query.EncodeKV())
 }
 
 func TestNewLoginQuery(t *testing.T) {
-	query := NewLoginQuery("DENIC-1000011-TEST", "secret")
+	query := rri.NewLoginQuery("DENIC-1000011-TEST", "secret")
 	require.NotNil(t, query)
-	assert.Equal(t, LatestVersion, query.Version())
-	assert.Equal(t, ActionLogin, query.Action())
+	assert.Equal(t, rri.LatestVersion, query.Version())
+	assert.Equal(t, rri.ActionLogin, query.Action())
 	require.Len(t, query.Fields(), 4)
-	assert.Equal(t, []string{string(LatestVersion)}, query.Field(QueryFieldNameVersion))
-	assert.Equal(t, []string{string(ActionLogin)}, query.Field(QueryFieldNameAction))
-	assert.Equal(t, []string{"DENIC-1000011-TEST"}, query.Field(QueryFieldNameUser))
-	assert.Equal(t, []string{"secret"}, query.Field(QueryFieldNamePassword))
+	assert.Equal(t, []string{string(rri.LatestVersion)}, query.Field(rri.QueryFieldNameVersion))
+	assert.Equal(t, []string{string(rri.ActionLogin)}, query.Field(rri.QueryFieldNameAction))
+	assert.Equal(t, []string{"DENIC-1000011-TEST"}, query.Field(rri.QueryFieldNameUser))
+	assert.Equal(t, []string{"secret"}, query.Field(rri.QueryFieldNamePassword))
 }
 
 func TestNewLogoutQuery(t *testing.T) {
-	query := NewLogoutQuery()
+	query := rri.NewLogoutQuery()
 	require.NotNil(t, query)
-	assert.Equal(t, LatestVersion, query.Version())
-	assert.Equal(t, ActionLogout, query.Action())
+	assert.Equal(t, rri.LatestVersion, query.Version())
+	assert.Equal(t, rri.ActionLogout, query.Action())
 	require.Len(t, query.Fields(), 2)
-	assert.Equal(t, []string{string(LatestVersion)}, query.Field(QueryFieldNameVersion))
-	assert.Equal(t, []string{string(ActionLogout)}, query.Field(QueryFieldNameAction))
+	assert.Equal(t, []string{string(rri.LatestVersion)}, query.Field(rri.QueryFieldNameVersion))
+	assert.Equal(t, []string{string(rri.ActionLogout)}, query.Field(rri.QueryFieldNameAction))
 }
 
 func TestNewCheckHandleQuery(t *testing.T) {
-	query := NewCheckHandleQuery(NewDenicHandle(1000011, "SOME-DUDE"))
+	query := rri.NewCheckHandleQuery(rri.NewDenicHandle(1000011, "SOME-DUDE"))
 	require.NotNil(t, query)
-	assert.Equal(t, LatestVersion, query.Version())
-	assert.Equal(t, ActionCheck, query.Action())
+	assert.Equal(t, rri.LatestVersion, query.Version())
+	assert.Equal(t, rri.ActionCheck, query.Action())
 	require.Len(t, query.Fields(), 3)
-	assert.Equal(t, []string{string(LatestVersion)}, query.Field(QueryFieldNameVersion))
-	assert.Equal(t, []string{string(ActionCheck)}, query.Field(QueryFieldNameAction))
-	assert.Equal(t, []string{"DENIC-1000011-SOME-DUDE"}, query.Field(QueryFieldNameHandle))
+	assert.Equal(t, []string{string(rri.LatestVersion)}, query.Field(rri.QueryFieldNameVersion))
+	assert.Equal(t, []string{string(rri.ActionCheck)}, query.Field(rri.QueryFieldNameAction))
+	assert.Equal(t, []string{"DENIC-1000011-SOME-DUDE"}, query.Field(rri.QueryFieldNameHandle))
 }
 
 func TestNewInfoHandleQuery(t *testing.T) {
-	query := NewInfoHandleQuery(NewDenicHandle(1000011, "SOME-DUDE"))
+	query := rri.NewInfoHandleQuery(rri.NewDenicHandle(1000011, "SOME-DUDE"))
 	require.NotNil(t, query)
-	assert.Equal(t, LatestVersion, query.Version())
-	assert.Equal(t, ActionInfo, query.Action())
+	assert.Equal(t, rri.LatestVersion, query.Version())
+	assert.Equal(t, rri.ActionInfo, query.Action())
 	require.Len(t, query.Fields(), 3)
-	assert.Equal(t, []string{string(LatestVersion)}, query.Field(QueryFieldNameVersion))
-	assert.Equal(t, []string{string(ActionInfo)}, query.Field(QueryFieldNameAction))
-	assert.Equal(t, []string{"DENIC-1000011-SOME-DUDE"}, query.Field(QueryFieldNameHandle))
+	assert.Equal(t, []string{string(rri.LatestVersion)}, query.Field(rri.QueryFieldNameVersion))
+	assert.Equal(t, []string{string(rri.ActionInfo)}, query.Field(rri.QueryFieldNameAction))
+	assert.Equal(t, []string{"DENIC-1000011-SOME-DUDE"}, query.Field(rri.QueryFieldNameHandle))
 }
 
 func TestPutDomainToQueryFields(t *testing.T) {
-	fieldsFromIDN := NewQueryFieldList()
-	putDomainToQueryFields(&fieldsFromIDN, "dönic.de")
+	fieldsFromIDN := rri.NewQueryFieldList()
+	rri.PutDomainToQueryFields(&fieldsFromIDN, "dönic.de")
 	require.Len(t, fieldsFromIDN, 2)
-	assert.Equal(t, []string{"dönic.de"}, fieldsFromIDN.Values(QueryFieldNameDomainIDN))
-	assert.Equal(t, []string{"xn--dnic-5qa.de"}, fieldsFromIDN.Values(QueryFieldNameDomainACE))
+	assert.Equal(t, []string{"dönic.de"}, fieldsFromIDN.Values(rri.QueryFieldNameDomainIDN))
+	assert.Equal(t, []string{"xn--dnic-5qa.de"}, fieldsFromIDN.Values(rri.QueryFieldNameDomainACE))
 
-	fieldsFromACE := NewQueryFieldList()
-	putDomainToQueryFields(&fieldsFromACE, "xn--dnic-5qa.de")
+	fieldsFromACE := rri.NewQueryFieldList()
+	rri.PutDomainToQueryFields(&fieldsFromACE, "xn--dnic-5qa.de")
 	require.Len(t, fieldsFromACE, 2)
-	assert.Equal(t, []string{"dönic.de"}, fieldsFromACE.Values(QueryFieldNameDomainIDN))
-	assert.Equal(t, []string{"xn--dnic-5qa.de"}, fieldsFromACE.Values(QueryFieldNameDomainACE))
+	assert.Equal(t, []string{"dönic.de"}, fieldsFromACE.Values(rri.QueryFieldNameDomainIDN))
+	assert.Equal(t, []string{"xn--dnic-5qa.de"}, fieldsFromACE.Values(rri.QueryFieldNameDomainACE))
 }
 
 func TestNewCreateDomainQuery(t *testing.T) {
-	query := NewCreateDomainQuery("denic.de", DomainData{
-		HolderHandles:         []DenicHandle{NewDenicHandle(1000011, "HOLDER-DUDE")},
-		GeneralRequestHandles: []DenicHandle{NewDenicHandle(1000011, "REQUEST-DUDE")},
-		AbuseContactHandles:   []DenicHandle{NewDenicHandle(1000011, "ABUSE-DUDE")},
+	query := rri.NewCreateDomainQuery("denic.de", rri.DomainData{
+		HolderHandles:         []rri.DenicHandle{rri.NewDenicHandle(1000011, "HOLDER-DUDE")},
+		GeneralRequestHandles: []rri.DenicHandle{rri.NewDenicHandle(1000011, "REQUEST-DUDE")},
+		AbuseContactHandles:   []rri.DenicHandle{rri.NewDenicHandle(1000011, "ABUSE-DUDE")},
 		NameServers:           []string{"ns1.denic.de", "ns2.denic.de"},
 	})
 	require.NotNil(t, query)
-	assert.Equal(t, LatestVersion, query.Version())
-	assert.Equal(t, ActionCreate, query.Action())
+	assert.Equal(t, rri.LatestVersion, query.Version())
+	assert.Equal(t, rri.ActionCreate, query.Action())
 	require.Len(t, query.Fields(), 9)
-	assert.Equal(t, []string{string(LatestVersion)}, query.Field(QueryFieldNameVersion))
-	assert.Equal(t, []string{string(ActionCreate)}, query.Field(QueryFieldNameAction))
-	assert.Equal(t, []string{"denic.de"}, query.Field(QueryFieldNameDomainIDN))
-	assert.Equal(t, []string{"denic.de"}, query.Field(QueryFieldNameDomainACE))
-	assert.Equal(t, []string{"DENIC-1000011-HOLDER-DUDE"}, query.Field(QueryFieldNameHolder))
-	assert.Equal(t, []string{"DENIC-1000011-REQUEST-DUDE"}, query.Field(QueryFieldNameGeneralRequest))
-	assert.Equal(t, []string{"DENIC-1000011-ABUSE-DUDE"}, query.Field(QueryFieldNameAbuseContact))
-	assert.Equal(t, []string{"ns1.denic.de", "ns2.denic.de"}, query.Field(QueryFieldNameNameServer))
+	assert.Equal(t, []string{string(rri.LatestVersion)}, query.Field(rri.QueryFieldNameVersion))
+	assert.Equal(t, []string{string(rri.ActionCreate)}, query.Field(rri.QueryFieldNameAction))
+	assert.Equal(t, []string{"denic.de"}, query.Field(rri.QueryFieldNameDomainIDN))
+	assert.Equal(t, []string{"denic.de"}, query.Field(rri.QueryFieldNameDomainACE))
+	assert.Equal(t, []string{"DENIC-1000011-HOLDER-DUDE"}, query.Field(rri.QueryFieldNameHolder))
+	assert.Equal(t, []string{"DENIC-1000011-REQUEST-DUDE"}, query.Field(rri.QueryFieldNameGeneralRequest))
+	assert.Equal(t, []string{"DENIC-1000011-ABUSE-DUDE"}, query.Field(rri.QueryFieldNameAbuseContact))
+	assert.Equal(t, []string{"ns1.denic.de", "ns2.denic.de"}, query.Field(rri.QueryFieldNameNameServer))
 }
 
 func TestNewUpdateDomainQuery(t *testing.T) {
-	query := NewUpdateDomainQuery("denic.de", DomainData{
-		HolderHandles:         []DenicHandle{NewDenicHandle(1000011, "HOLDER-DUDE")},
-		GeneralRequestHandles: []DenicHandle{NewDenicHandle(1000011, "REQUEST-DUDE")},
-		AbuseContactHandles:   []DenicHandle{NewDenicHandle(1000011, "ABUSE-DUDE")},
+	query := rri.NewUpdateDomainQuery("denic.de", rri.DomainData{
+		HolderHandles:         []rri.DenicHandle{rri.NewDenicHandle(1000011, "HOLDER-DUDE")},
+		GeneralRequestHandles: []rri.DenicHandle{rri.NewDenicHandle(1000011, "REQUEST-DUDE")},
+		AbuseContactHandles:   []rri.DenicHandle{rri.NewDenicHandle(1000011, "ABUSE-DUDE")},
 		NameServers:           []string{"ns1.denic.de", "ns2.denic.de"},
 	})
 	require.NotNil(t, query)
-	assert.Equal(t, LatestVersion, query.Version())
-	assert.Equal(t, ActionUpdate, query.Action())
+	assert.Equal(t, rri.LatestVersion, query.Version())
+	assert.Equal(t, rri.ActionUpdate, query.Action())
 	require.Len(t, query.Fields(), 9)
-	assert.Equal(t, []string{string(LatestVersion)}, query.Field(QueryFieldNameVersion))
-	assert.Equal(t, []string{string(ActionUpdate)}, query.Field(QueryFieldNameAction))
-	assert.Equal(t, []string{"denic.de"}, query.Field(QueryFieldNameDomainIDN))
-	assert.Equal(t, []string{"denic.de"}, query.Field(QueryFieldNameDomainACE))
-	assert.Equal(t, []string{"DENIC-1000011-HOLDER-DUDE"}, query.Field(QueryFieldNameHolder))
-	assert.Equal(t, []string{"DENIC-1000011-REQUEST-DUDE"}, query.Field(QueryFieldNameGeneralRequest))
-	assert.Equal(t, []string{"DENIC-1000011-ABUSE-DUDE"}, query.Field(QueryFieldNameAbuseContact))
-	assert.Equal(t, []string{"ns1.denic.de", "ns2.denic.de"}, query.Field(QueryFieldNameNameServer))
+	assert.Equal(t, []string{string(rri.LatestVersion)}, query.Field(rri.QueryFieldNameVersion))
+	assert.Equal(t, []string{string(rri.ActionUpdate)}, query.Field(rri.QueryFieldNameAction))
+	assert.Equal(t, []string{"denic.de"}, query.Field(rri.QueryFieldNameDomainIDN))
+	assert.Equal(t, []string{"denic.de"}, query.Field(rri.QueryFieldNameDomainACE))
+	assert.Equal(t, []string{"DENIC-1000011-HOLDER-DUDE"}, query.Field(rri.QueryFieldNameHolder))
+	assert.Equal(t, []string{"DENIC-1000011-REQUEST-DUDE"}, query.Field(rri.QueryFieldNameGeneralRequest))
+	assert.Equal(t, []string{"DENIC-1000011-ABUSE-DUDE"}, query.Field(rri.QueryFieldNameAbuseContact))
+	assert.Equal(t, []string{"ns1.denic.de", "ns2.denic.de"}, query.Field(rri.QueryFieldNameNameServer))
 }
 
 func TestNewChangeHolderQuery(t *testing.T) {
-	query := NewChangeHolderQuery("denic.de", DomainData{
-		HolderHandles:         []DenicHandle{NewDenicHandle(1000011, "HOLDER-DUDE")},
-		GeneralRequestHandles: []DenicHandle{NewDenicHandle(1000011, "REQUEST-DUDE")},
-		AbuseContactHandles:   []DenicHandle{NewDenicHandle(1000011, "ABUSE-DUDE")},
+	query := rri.NewChangeHolderQuery("denic.de", rri.DomainData{
+		HolderHandles:         []rri.DenicHandle{rri.NewDenicHandle(1000011, "HOLDER-DUDE")},
+		GeneralRequestHandles: []rri.DenicHandle{rri.NewDenicHandle(1000011, "REQUEST-DUDE")},
+		AbuseContactHandles:   []rri.DenicHandle{rri.NewDenicHandle(1000011, "ABUSE-DUDE")},
 		NameServers:           []string{"ns1.denic.de", "ns2.denic.de"},
 	})
 	require.NotNil(t, query)
-	assert.Equal(t, LatestVersion, query.Version())
-	assert.Equal(t, ActionChangeHolder, query.Action())
+	assert.Equal(t, rri.LatestVersion, query.Version())
+	assert.Equal(t, rri.ActionChangeHolder, query.Action())
 	require.Len(t, query.Fields(), 9)
-	assert.Equal(t, []string{string(LatestVersion)}, query.Field(QueryFieldNameVersion))
-	assert.Equal(t, []string{string(ActionChangeHolder)}, query.Field(QueryFieldNameAction))
-	assert.Equal(t, []string{"denic.de"}, query.Field(QueryFieldNameDomainIDN))
-	assert.Equal(t, []string{"denic.de"}, query.Field(QueryFieldNameDomainACE))
-	assert.Equal(t, []string{"DENIC-1000011-HOLDER-DUDE"}, query.Field(QueryFieldNameHolder))
-	assert.Equal(t, []string{"DENIC-1000011-REQUEST-DUDE"}, query.Field(QueryFieldNameGeneralRequest))
-	assert.Equal(t, []string{"DENIC-1000011-ABUSE-DUDE"}, query.Field(QueryFieldNameAbuseContact))
-	assert.Equal(t, []string{"ns1.denic.de", "ns2.denic.de"}, query.Field(QueryFieldNameNameServer))
+	assert.Equal(t, []string{string(rri.LatestVersion)}, query.Field(rri.QueryFieldNameVersion))
+	assert.Equal(t, []string{string(rri.ActionChangeHolder)}, query.Field(rri.QueryFieldNameAction))
+	assert.Equal(t, []string{"denic.de"}, query.Field(rri.QueryFieldNameDomainIDN))
+	assert.Equal(t, []string{"denic.de"}, query.Field(rri.QueryFieldNameDomainACE))
+	assert.Equal(t, []string{"DENIC-1000011-HOLDER-DUDE"}, query.Field(rri.QueryFieldNameHolder))
+	assert.Equal(t, []string{"DENIC-1000011-REQUEST-DUDE"}, query.Field(rri.QueryFieldNameGeneralRequest))
+	assert.Equal(t, []string{"DENIC-1000011-ABUSE-DUDE"}, query.Field(rri.QueryFieldNameAbuseContact))
+	assert.Equal(t, []string{"ns1.denic.de", "ns2.denic.de"}, query.Field(rri.QueryFieldNameNameServer))
 }
 
 func TestNewTransitDomainQuery(t *testing.T) {
-	query := NewTransitDomainQuery("dönic.de", false)
+	query := rri.NewTransitDomainQuery("dönic.de", false)
 	require.NotNil(t, query)
-	assert.Equal(t, LatestVersion, query.Version())
-	assert.Equal(t, ActionTransit, query.Action())
+	assert.Equal(t, rri.LatestVersion, query.Version())
+	assert.Equal(t, rri.ActionTransit, query.Action())
 	require.Len(t, query.Fields(), 5)
-	assert.Equal(t, []string{string(LatestVersion)}, query.Field(QueryFieldNameVersion))
-	assert.Equal(t, []string{string(ActionTransit)}, query.Field(QueryFieldNameAction))
-	assert.Equal(t, []string{"dönic.de"}, query.Field(QueryFieldNameDomainIDN))
-	assert.Equal(t, []string{"xn--dnic-5qa.de"}, query.Field(QueryFieldNameDomainACE))
-	assert.Equal(t, []string{"false"}, query.Field(QueryFieldNameDisconnect))
+	assert.Equal(t, []string{string(rri.LatestVersion)}, query.Field(rri.QueryFieldNameVersion))
+	assert.Equal(t, []string{string(rri.ActionTransit)}, query.Field(rri.QueryFieldNameAction))
+	assert.Equal(t, []string{"dönic.de"}, query.Field(rri.QueryFieldNameDomainIDN))
+	assert.Equal(t, []string{"xn--dnic-5qa.de"}, query.Field(rri.QueryFieldNameDomainACE))
+	assert.Equal(t, []string{"false"}, query.Field(rri.QueryFieldNameDisconnect))
 }
 
 func TestNewTransitDomainWithDisconnectQuery(t *testing.T) {
-	query := NewTransitDomainQuery("dönic.de", true)
+	query := rri.NewTransitDomainQuery("dönic.de", true)
 	require.NotNil(t, query)
-	assert.Equal(t, LatestVersion, query.Version())
-	assert.Equal(t, ActionTransit, query.Action())
+	assert.Equal(t, rri.LatestVersion, query.Version())
+	assert.Equal(t, rri.ActionTransit, query.Action())
 	require.Len(t, query.Fields(), 5)
-	assert.Equal(t, []string{string(LatestVersion)}, query.Field(QueryFieldNameVersion))
-	assert.Equal(t, []string{string(ActionTransit)}, query.Field(QueryFieldNameAction))
-	assert.Equal(t, []string{"dönic.de"}, query.Field(QueryFieldNameDomainIDN))
-	assert.Equal(t, []string{"xn--dnic-5qa.de"}, query.Field(QueryFieldNameDomainACE))
-	assert.Equal(t, []string{"true"}, query.Field(QueryFieldNameDisconnect))
+	assert.Equal(t, []string{string(rri.LatestVersion)}, query.Field(rri.QueryFieldNameVersion))
+	assert.Equal(t, []string{string(rri.ActionTransit)}, query.Field(rri.QueryFieldNameAction))
+	assert.Equal(t, []string{"dönic.de"}, query.Field(rri.QueryFieldNameDomainIDN))
+	assert.Equal(t, []string{"xn--dnic-5qa.de"}, query.Field(rri.QueryFieldNameDomainACE))
+	assert.Equal(t, []string{"true"}, query.Field(rri.QueryFieldNameDisconnect))
 }
 
 func TestNewCreateAuthInfo1Query(t *testing.T) {
-	query := NewCreateAuthInfo1Query("denic.de", "a-secret-auth-info", time.Date(2020, time.September, 25, 0, 0, 0, 0, time.Local))
+	query := rri.NewCreateAuthInfo1Query("denic.de", "a-secret-auth-info", time.Date(2020, time.September, 25, 0, 0, 0, 0, time.Local))
 	require.NotNil(t, query)
-	assert.Equal(t, LatestVersion, query.Version())
-	assert.Equal(t, ActionCreateAuthInfo1, query.Action())
+	assert.Equal(t, rri.LatestVersion, query.Version())
+	assert.Equal(t, rri.ActionCreateAuthInfo1, query.Action())
 	require.Len(t, query.Fields(), 6)
-	assert.Equal(t, []string{string(LatestVersion)}, query.Field(QueryFieldNameVersion))
-	assert.Equal(t, []string{string(ActionCreateAuthInfo1)}, query.Field(QueryFieldNameAction))
-	assert.Equal(t, []string{"denic.de"}, query.Field(QueryFieldNameDomainIDN))
-	assert.Equal(t, []string{"denic.de"}, query.Field(QueryFieldNameDomainACE))
-	assert.Equal(t, []string{"78152947f3751ab6baf0fb54c3c508d9b959f707999cbab855caaac231628c7f"}, query.Field(QueryFieldNameAuthInfoHash))
-	assert.Equal(t, []string{"20200925"}, query.Field(QueryFieldNameAuthInfoExpire))
+	assert.Equal(t, []string{string(rri.LatestVersion)}, query.Field(rri.QueryFieldNameVersion))
+	assert.Equal(t, []string{string(rri.ActionCreateAuthInfo1)}, query.Field(rri.QueryFieldNameAction))
+	assert.Equal(t, []string{"denic.de"}, query.Field(rri.QueryFieldNameDomainIDN))
+	assert.Equal(t, []string{"denic.de"}, query.Field(rri.QueryFieldNameDomainACE))
+	assert.Equal(t, []string{"78152947f3751ab6baf0fb54c3c508d9b959f707999cbab855caaac231628c7f"}, query.Field(rri.QueryFieldNameAuthInfoHash))
+	assert.Equal(t, []string{"20200925"}, query.Field(rri.QueryFieldNameAuthInfoExpire))
 }
 
 func TestNewQueueReadQuery(t *testing.T) {
-	query := NewQueueReadQuery("")
+	query := rri.NewQueueReadQuery("")
 	require.NotNil(t, query)
-	assert.Equal(t, LatestVersion, query.Version())
-	assert.Equal(t, ActionQueueRead, query.Action())
+	assert.Equal(t, rri.LatestVersion, query.Version())
+	assert.Equal(t, rri.ActionQueueRead, query.Action())
 	require.Len(t, query.Fields(), 2)
-	assert.Equal(t, []string{string(LatestVersion)}, query.Field(QueryFieldNameVersion))
-	assert.Equal(t, []string{string(ActionQueueRead)}, query.Field(QueryFieldNameAction))
+	assert.Equal(t, []string{string(rri.LatestVersion)}, query.Field(rri.QueryFieldNameVersion))
+	assert.Equal(t, []string{string(rri.ActionQueueRead)}, query.Field(rri.QueryFieldNameAction))
 }
 
 func TestNewQueueReadQueryWithType(t *testing.T) {
-	query := NewQueueReadQuery("authInfo2Delete")
+	query := rri.NewQueueReadQuery("authInfo2Delete")
 	require.NotNil(t, query)
-	assert.Equal(t, LatestVersion, query.Version())
-	assert.Equal(t, ActionQueueRead, query.Action())
+	assert.Equal(t, rri.LatestVersion, query.Version())
+	assert.Equal(t, rri.ActionQueueRead, query.Action())
 	require.Len(t, query.Fields(), 3)
-	assert.Equal(t, []string{string(LatestVersion)}, query.Field(QueryFieldNameVersion))
-	assert.Equal(t, []string{string(ActionQueueRead)}, query.Field(QueryFieldNameAction))
-	assert.Equal(t, []string{string("authInfo2Delete")}, query.Field(QueryFieldNameMsgType))
+	assert.Equal(t, []string{string(rri.LatestVersion)}, query.Field(rri.QueryFieldNameVersion))
+	assert.Equal(t, []string{string(rri.ActionQueueRead)}, query.Field(rri.QueryFieldNameAction))
+	assert.Equal(t, []string{string("authInfo2Delete")}, query.Field(rri.QueryFieldNameMsgType))
 }
 
 func TestNewQueueDeleteQuery(t *testing.T) {
-	query := NewQueueDeleteQuery("5c214b14-c919-11eb-a37b-0242ac130003", "")
+	query := rri.NewQueueDeleteQuery("5c214b14-c919-11eb-a37b-0242ac130003", "")
 	require.NotNil(t, query)
-	assert.Equal(t, LatestVersion, query.Version())
-	assert.Equal(t, ActionQueueDelete, query.Action())
+	assert.Equal(t, rri.LatestVersion, query.Version())
+	assert.Equal(t, rri.ActionQueueDelete, query.Action())
 	require.Len(t, query.Fields(), 3)
-	assert.Equal(t, []string{string(LatestVersion)}, query.Field(QueryFieldNameVersion))
-	assert.Equal(t, []string{string(ActionQueueDelete)}, query.Field(QueryFieldNameAction))
-	assert.Equal(t, []string{"5c214b14-c919-11eb-a37b-0242ac130003"}, query.Field(QueryFieldNameMsgID))
+	assert.Equal(t, []string{string(rri.LatestVersion)}, query.Field(rri.QueryFieldNameVersion))
+	assert.Equal(t, []string{string(rri.ActionQueueDelete)}, query.Field(rri.QueryFieldNameAction))
+	assert.Equal(t, []string{"5c214b14-c919-11eb-a37b-0242ac130003"}, query.Field(rri.QueryFieldNameMsgID))
 }
 
 func TestNewQueueDeleteQueryWithType(t *testing.T) {
-	query := NewQueueDeleteQuery("5c214b14-c919-11eb-a37b-0242ac130003", "expireWarning")
+	query := rri.NewQueueDeleteQuery("5c214b14-c919-11eb-a37b-0242ac130003", "expireWarning")
 	require.NotNil(t, query)
-	assert.Equal(t, LatestVersion, query.Version())
-	assert.Equal(t, ActionQueueDelete, query.Action())
+	assert.Equal(t, rri.LatestVersion, query.Version())
+	assert.Equal(t, rri.ActionQueueDelete, query.Action())
 	require.Len(t, query.Fields(), 4)
-	assert.Equal(t, []string{string(LatestVersion)}, query.Field(QueryFieldNameVersion))
-	assert.Equal(t, []string{string(ActionQueueDelete)}, query.Field(QueryFieldNameAction))
-	assert.Equal(t, []string{"5c214b14-c919-11eb-a37b-0242ac130003"}, query.Field(QueryFieldNameMsgID))
-	assert.Equal(t, []string{string("expireWarning")}, query.Field(QueryFieldNameMsgType))
+	assert.Equal(t, []string{string(rri.LatestVersion)}, query.Field(rri.QueryFieldNameVersion))
+	assert.Equal(t, []string{string(rri.ActionQueueDelete)}, query.Field(rri.QueryFieldNameAction))
+	assert.Equal(t, []string{"5c214b14-c919-11eb-a37b-0242ac130003"}, query.Field(rri.QueryFieldNameMsgID))
+	assert.Equal(t, []string{string("expireWarning")}, query.Field(rri.QueryFieldNameMsgType))
 }
 
 func TestQueryNormalization(t *testing.T) {
-	query, err := ParseQuery("Version:   4.0   \nAction: iNfO\ndIsCoNnEcT: tRuE")
+	query, err := rri.ParseQuery("Version:   5.0   \nAction: iNfO\ndIsCoNnEcT: tRuE")
 	require.NoError(t, err)
 	require.NotNil(t, query)
-	assert.Equal(t, LatestVersion, query.Version())
-	assert.Equal(t, ActionInfo, query.Action())
+	assert.Equal(t, rri.LatestVersion, query.Version())
+	assert.Equal(t, rri.ActionInfo, query.Action())
 	require.Len(t, query.Fields(), 3)
-	assert.Equal(t, []string{"4.0"}, query.Field(QueryFieldNameVersion))
-	assert.Equal(t, []string{"iNfO"}, query.Field(QueryFieldNameAction))
-	assert.Equal(t, []string{"tRuE"}, query.Field(QueryFieldNameDisconnect))
+	assert.Equal(t, []string{"5.0"}, query.Field(rri.QueryFieldNameVersion))
+	assert.Equal(t, []string{"iNfO"}, query.Field(rri.QueryFieldNameAction))
+	assert.Equal(t, []string{"tRuE"}, query.Field(rri.QueryFieldNameDisconnect))
 }
 
 func TestParseQueryCasing(t *testing.T) {
-	query, err := ParseQuery("Version: 4.0\nAction: login\nUser: DENIC-1000042-TEST\nPassword: very-secure")
+	query, err := rri.ParseQuery("Version: 5.0\nAction: login\nUser: DENIC-1000042-TEST\nPassword: very-secure")
 	require.NoError(t, err)
 	require.NotNil(t, query)
-	assert.Equal(t, LatestVersion, query.Version())
-	assert.Equal(t, ActionLogin, query.Action())
+	assert.Equal(t, rri.LatestVersion, query.Version())
+	assert.Equal(t, rri.ActionLogin, query.Action())
 	require.Len(t, query.Fields(), 4)
-	assert.Equal(t, []string{string(LatestVersion)}, query.Field(QueryFieldNameVersion))
-	assert.Equal(t, []string{"login"}, query.Field(QueryFieldNameAction))
+	assert.Equal(t, []string{string(rri.LatestVersion)}, query.Field(rri.QueryFieldNameVersion))
+	assert.Equal(t, []string{"login"}, query.Field(rri.QueryFieldNameAction))
 	assert.Equal(t, []string{"DENIC-1000042-TEST"}, query.Field("uSeR"))
-	assert.Equal(t, []string{"very-secure"}, query.Field(QueryFieldNamePassword))
+	assert.Equal(t, []string{"very-secure"}, query.Field(rri.QueryFieldNamePassword))
 }
 
 func TestParseQueryWhitespaces(t *testing.T) {
-	query, err := ParseQuery("  version: \t4.0  \n\n\naction:    LOGIN\n   user: DENIC-1000042-TEST\npassword: very-secure    \n")
+	query, err := rri.ParseQuery("  version: \t5.0  \n\n\naction:    LOGIN\n   user: DENIC-1000042-TEST\npassword: very-secure    \n")
 	require.NoError(t, err)
 	require.NotNil(t, query)
-	assert.Equal(t, LatestVersion, query.Version())
-	assert.Equal(t, ActionLogin, query.Action())
+	assert.Equal(t, rri.LatestVersion, query.Version())
+	assert.Equal(t, rri.ActionLogin, query.Action())
 	require.Len(t, query.Fields(), 4)
-	assert.Equal(t, []string{string(LatestVersion)}, query.Field(QueryFieldNameVersion))
-	assert.Equal(t, []string{string(ActionLogin)}, query.Field(QueryFieldNameAction))
-	assert.Equal(t, []string{"DENIC-1000042-TEST"}, query.Field(QueryFieldNameUser))
-	assert.Equal(t, []string{"very-secure"}, query.Field(QueryFieldNamePassword))
+	assert.Equal(t, []string{string(rri.LatestVersion)}, query.Field(rri.QueryFieldNameVersion))
+	assert.Equal(t, []string{string(rri.ActionLogin)}, query.Field(rri.QueryFieldNameAction))
+	assert.Equal(t, []string{"DENIC-1000042-TEST"}, query.Field(rri.QueryFieldNameUser))
+	assert.Equal(t, []string{"very-secure"}, query.Field(rri.QueryFieldNamePassword))
 }
 
 func TestParseQueryOrder(t *testing.T) {
-	query, err := ParseQuery("action: LOGIN\ncustom: 1\nversion: 4.0\nuser: DENIC-1000042-TEST\nstuff: foobar\npassword: very-secure\ncustom: 2")
+	query, err := rri.ParseQuery("action: LOGIN\ncustom: 1\nversion: 5.0\nuser: DENIC-1000042-TEST\nstuff: foobar\npassword: very-secure\ncustom: 2")
 	require.NoError(t, err)
 	require.NotNil(t, query)
-	assert.Equal(t, LatestVersion, query.Version())
-	assert.Equal(t, ActionLogin, query.Action())
+	assert.Equal(t, rri.LatestVersion, query.Version())
+	assert.Equal(t, rri.ActionLogin, query.Action())
 	require.Len(t, query.Fields(), 7)
-	assert.Equal(t, QueryField{QueryFieldName("action"), string(ActionLogin)}, query.Fields()[0])
-	assert.Equal(t, QueryField{QueryFieldName("custom"), "1"}, query.Fields()[1])
-	assert.Equal(t, QueryField{QueryFieldName("version"), string(LatestVersion)}, query.Fields()[2])
-	assert.Equal(t, QueryField{QueryFieldNameUser, "DENIC-1000042-TEST"}, query.Fields()[3])
-	assert.Equal(t, QueryField{QueryFieldName("stuff"), "foobar"}, query.Fields()[4])
-	assert.Equal(t, QueryField{QueryFieldNamePassword, "very-secure"}, query.Fields()[5])
-	assert.Equal(t, QueryField{QueryFieldName("custom"), "2"}, query.Fields()[6])
+	assert.Equal(t, rri.QueryField{rri.QueryFieldName("action"), string(rri.ActionLogin)}, query.Fields()[0])
+	assert.Equal(t, rri.QueryField{rri.QueryFieldName("custom"), "1"}, query.Fields()[1])
+	assert.Equal(t, rri.QueryField{rri.QueryFieldName("version"), string(rri.LatestVersion)}, query.Fields()[2])
+	assert.Equal(t, rri.QueryField{rri.QueryFieldNameUser, "DENIC-1000042-TEST"}, query.Fields()[3])
+	assert.Equal(t, rri.QueryField{rri.QueryFieldName("stuff"), "foobar"}, query.Fields()[4])
+	assert.Equal(t, rri.QueryField{rri.QueryFieldNamePassword, "very-secure"}, query.Fields()[5])
+	assert.Equal(t, rri.QueryField{rri.QueryFieldName("custom"), "2"}, query.Fields()[6])
 }

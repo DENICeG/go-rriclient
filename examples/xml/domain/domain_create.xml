@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<registry-request xmlns="http://registry.denic.de/global/5.0" xmlns:domain="http://registry.denic.de/domain/5.0" xmlns:dnsentry="http://registry.denic.de/dnsentry/5.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
+  <domain:create>
+    <domain:handle>domain-example-nserver.de</domain:handle>
+    <domain:contact role="holder">DENIC-1000022-EXAMPLE-XML-PERSON</domain:contact>
+    <domain:contact role="abusecontact">DENIC-1000022-EXAMPLE-XML-GR</domain:contact>
+    <domain:contact role="generalrequest">DENIC-1000022-EXAMPLE-XML-ABUSE</domain:contact>
+    <dnsentry:dnsentry xsi:type="dnsentry:NS">
+      <dnsentry:owner>domain-example-nserver.de</dnsentry:owner>
+      <dnsentry:rdata>
+        <dnsentry:nameserver>ns1.denic.de</dnsentry:nameserver>
+      </dnsentry:rdata>
+    </dnsentry:dnsentry>
+    <dnsentry:dnsentry xsi:type="dnsentry:NS">
+      <dnsentry:owner>domain-example-nserver.de</dnsentry:owner>
+      <dnsentry:rdata>
+        <dnsentry:nameserver>ns1.domain-example-nserver.de</dnsentry:nameserver>
+        <dnsentry:address>81.91.170.12</dnsentry:address>
+      </dnsentry:rdata>
+    </dnsentry:dnsentry>
+  </domain:create>
+  <ctid>xml-74ba5155</ctid>
+</registry-request>

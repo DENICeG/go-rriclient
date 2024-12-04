@@ -13,8 +13,13 @@ import (
 
 const (
 	// LatestVersion denotes the latest RRI version supported by the client.
-	LatestVersion Version = "4.0"
+	LatestVersion Version = "5.0"
 
+	// QueryEntityVerificationInformation denotes the query entity name for verification information.
+	QueryEntityVerificationInformation QueryFieldEntity = "VerificationInformation"
+
+	// QueryFieldNameEntity denotes the query field name for an entity.
+	QueryFieldNameEntity QueryFieldName = "entity"
 	// QueryFieldNameVersion denotes the query field name for version.
 	QueryFieldNameVersion QueryFieldName = "version"
 	// QueryFieldNameAction denotes the query field name for action.
@@ -65,6 +70,22 @@ const (
 	QueryFieldNameMsgID QueryFieldName = "msgid"
 	// QueryFieldNameMsgType denotes the query field name for a message type.
 	QueryFieldNameMsgType QueryFieldName = "msgtype"
+	// QueryFieldNamePhone denotes the query field name for phone.
+	QueryFieldNamePhone QueryFieldName = "phone"
+	// QueryFieldNameVerifiedClaim denotes the query field name for verified claim.
+	QueryFieldNameVerifiedClaim QueryFieldName = "verifiedclaim"
+	// QueryFieldNameVerificationResult denotes the query field name for verification result.
+	QueryFieldNameVerificationResult QueryFieldName = "verificationresult"
+	// QueryFieldNameVerificationReference denotes the query field name for verification reference.
+	QueryFieldNameVerificationReference QueryFieldName = "verificationreference"
+	// QueryFieldNameVerificationTimestamp denotes the query field name for verification timestamp.
+	QueryFieldNameVerificationTimestamp QueryFieldName = "verificationtimestamp"
+	// QueryFieldNameVerificationEvidence denotes the query field name for verification evidence.
+	QueryFieldNameVerificationEvidence QueryFieldName = "verificationevidence"
+	// QueryFieldNameVerificationMethod denotes the query field name for verification method.
+	QueryFieldNameVerificationMethod QueryFieldName = "verificationmethod"
+	// QueryFieldNameTrustFramework denotes the query field name for trust framework.
+	QueryFieldNameTrustFramework QueryFieldName = "trustframework"
 
 	// ActionLogin denotes the action value for login.
 	ActionLogin QueryAction = "LOGIN"
@@ -80,11 +101,11 @@ const (
 	ActionUpdate QueryAction = "UPDATE"
 	// ActionChangeHolder denotes the action value for change holder.
 	ActionChangeHolder QueryAction = "CHHOLDER"
-	// ActionDelete deontes the action value for delete.
+	// ActionDelete denotes the action value for delete.
 	ActionDelete QueryAction = "DELETE"
-	// ActionRestore deontes the action value for restore.
+	// ActionRestore denotes the action value for restore.
 	ActionRestore QueryAction = "RESTORE"
-	// ActionTransit deontes the action value for transit.
+	// ActionTransit denotes the action value for transit.
 	ActionTransit QueryAction = "TRANSIT"
 	// ActionCreateAuthInfo1 denotes the action value for create AuthInfo1.
 	ActionCreateAuthInfo1 QueryAction = "CREATE-AUTHINFO1"
@@ -129,6 +150,21 @@ func (q QueryFieldName) Normalize() QueryFieldName {
 	return QueryFieldName(strings.ToLower(string(q)))
 }
 
+// QueryFieldEntity represents an entity field of a query
+type QueryFieldEntity string
+
+func (q QueryFieldEntity) String() string {
+	if q == "" {
+		return ""
+	}
+	return fmt.Sprintf("[%s]", string(q))
+}
+
+// Normalize returns the normalized representation of the given QueryFieldEntity.
+func (q QueryFieldEntity) Normalize() QueryFieldEntity {
+	return QueryFieldEntity(strings.ToLower(string(q)))
+}
+
 // ContactType represents the type of a contact handle.
 type ContactType string
 
@@ -151,8 +187,8 @@ func ParseContactType(str string) (ContactType, error) {
 
 // DenicHandle represents a handle like DENIC-1000006-SOME-CODE
 type DenicHandle struct {
-	RegAccID    int
 	ContactCode string
+	RegAccID    int
 }
 
 func (h DenicHandle) String() string {
@@ -169,7 +205,7 @@ func (h DenicHandle) IsEmpty() bool {
 
 // NewDenicHandle assembles a new denic handle.
 func NewDenicHandle(regAccID int, contactCode string) DenicHandle {
-	return DenicHandle{regAccID, strings.ToUpper(contactCode)}
+	return DenicHandle{RegAccID: regAccID, ContactCode: strings.ToUpper(contactCode)}
 }
 
 // EmptyDenicHandle returns an empty denic handle.
@@ -208,7 +244,7 @@ type DomainData struct {
 	NameServers           []string
 }
 
-func (domainData *DomainData) putToQueryFields(fields *QueryFieldList) {
+func (domainData *DomainData) PutToQueryFields(fields *QueryFieldList) {
 	putHandlesToQueryFields := func(fieldName QueryFieldName, handles []DenicHandle) {
 		for _, h := range handles {
 			if !h.IsEmpty() {
@@ -233,9 +269,12 @@ type ContactData struct {
 	City         string
 	CountryCode  string
 	EMail        []string
+	Phone        string
+
+	VerificationInformation []VerificationInformation
 }
 
-func (contactData *ContactData) putToQueryFields(fields *QueryFieldList) {
+func (contactData *ContactData) PutToQueryFields(fields *QueryFieldList) {
 	fields.Add(QueryFieldNameType, string(contactData.Type.Normalize()))
 	fields.Add(QueryFieldNameName, contactData.Name)
 	fields.Add(QueryFieldNameOrganisation, splitLines(contactData.Organisation)...)
@@ -244,15 +283,40 @@ func (contactData *ContactData) putToQueryFields(fields *QueryFieldList) {
 	fields.Add(QueryFieldNameCity, contactData.City)
 	fields.Add(QueryFieldNameCountryCode, contactData.CountryCode)
 	fields.Add(QueryFieldNameEMail, contactData.EMail...)
+	fields.Add(QueryFieldNamePhone, contactData.Phone)
+
+	for _, verificationInfo := range contactData.VerificationInformation {
+		verificationInfo.PutToQueryFields(fields)
+	}
 }
 
 func splitLines(str string) []string {
 	return strings.Split(strings.ReplaceAll(strings.ReplaceAll(str, "\r\n", "\n"), "\r", "\n"), "\n")
 }
 
+// kvSection represents a section of Key-Value pairs.
+type kvSection struct {
+	header string
+	fields QueryFieldList
+}
+
 // Query represents a RRI request.
 type Query struct {
-	fields QueryFieldList
+	fields   QueryFieldList
+	sections []*kvSection
+}
+
+// GetSections returns all sections for a given key ignoring the key character casing.
+func (q *Query) GetSections(key string) []*kvSection {
+	var result []*kvSection
+
+	for _, s := range q.sections {
+		if strings.EqualFold(key, s.header) {
+			result = append(result, s)
+		}
+	}
+
+	return result
 }
 
 // Version returns the query version.
@@ -282,10 +346,32 @@ func (q *Query) EncodeKV() string {
 		if sb.Len() > 0 {
 			sb.WriteString("\n")
 		}
-		sb.WriteString(string(f.Name))
-		sb.WriteString(": ")
+
+		if f.Name != QueryFieldNameEntity {
+			sb.WriteString(string(f.Name))
+			sb.WriteString(": ")
+		}
+
 		sb.WriteString(f.Value)
 	}
+
+	for _, s := range q.sections {
+		sb.WriteString("\n")
+		sb.WriteString(fmt.Sprintf("[%s]", s.header))
+		for _, f := range s.fields {
+			if sb.Len() > 0 {
+				sb.WriteString("\n")
+			}
+
+			if f.Name != QueryFieldNameEntity {
+				sb.WriteString(string(f.Name))
+				sb.WriteString(": ")
+			}
+
+			sb.WriteString(f.Value)
+		}
+	}
+
 	return sb.String()
 }
 
@@ -305,14 +391,16 @@ func (q *Query) FirstField(fieldName QueryFieldName) string {
 }
 
 // NewQuery returns a query with the given parameters.
-func NewQuery(version Version, action QueryAction, fields QueryFieldList) *Query {
+func NewQuery(version Version, action QueryAction, fields QueryFieldList, sections []*kvSection) *Query {
 	newFields := NewQueryFieldList()
 	newFields.Add(QueryFieldNameVersion, string(version.Normalize()))
 	newFields.Add(QueryFieldNameAction, string(action.Normalize()))
+
 	if fields != nil {
 		fields.CopyTo(&newFields)
 	}
-	return &Query{newFields}
+
+	return &Query{fields: newFields, sections: sections}
 }
 
 // NewLoginQuery returns a login query for the given credentials.
@@ -320,47 +408,47 @@ func NewLoginQuery(username, password string) *Query {
 	fields := NewQueryFieldList()
 	fields.Add(QueryFieldNameUser, username)
 	fields.Add(QueryFieldNamePassword, password)
-	return NewQuery(LatestVersion, ActionLogin, fields)
+
+	return NewQuery(LatestVersion, ActionLogin, fields, nil)
 }
 
 // NewLogoutQuery returns a logout query.
 func NewLogoutQuery() *Query {
-	return NewQuery(LatestVersion, ActionLogout, nil)
+	return NewQuery(LatestVersion, ActionLogout, nil, nil)
 }
 
 // NewCreateContactQuery returns a check query.
 func NewCreateContactQuery(handle DenicHandle, contactData ContactData) *Query {
 	fields := NewQueryFieldList()
 	fields.Add(QueryFieldNameHandle, handle.String())
-	contactData.putToQueryFields(&fields)
-	return NewQuery(LatestVersion, ActionCreate, fields)
+	contactData.PutToQueryFields(&fields)
+	return NewQuery(LatestVersion, ActionCreate, fields, nil)
 }
 
 // NewCheckHandleQuery returns a check query for a contact or request contact handle.
 func NewCheckHandleQuery(handle DenicHandle) *Query {
 	fields := NewQueryFieldList()
 	fields.Add(QueryFieldNameHandle, handle.String())
-	return NewQuery(LatestVersion, ActionCheck, fields)
+	return NewQuery(LatestVersion, ActionCheck, fields, nil)
 }
 
 // NewInfoHandleQuery returns an info query for a contact or request contact handle.
 func NewInfoHandleQuery(handle DenicHandle) *Query {
 	fields := NewQueryFieldList()
 	fields.Add(QueryFieldNameHandle, handle.String())
-	return NewQuery(LatestVersion, ActionInfo, fields)
+	return NewQuery(LatestVersion, ActionInfo, fields, nil)
 }
 
-func putDomainToQueryFields(fields *QueryFieldList, domain string) {
+func PutDomainToQueryFields(fields *QueryFieldList, domain string) {
 	if strings.HasPrefix(strings.ToLower(domain), "xn--") {
 		fields.Add(QueryFieldNameDomainACE, domain)
 		if idn, err := idna.ToUnicode(domain); err == nil {
 			fields.Add(QueryFieldNameDomainIDN, idn)
 		}
-
 	} else {
 		fields.Add(QueryFieldNameDomainIDN, domain)
 		if ace, err := idna.ToASCII(domain); err == nil {
-			//TODO only add ace string if it differs from idn
+			// TODO only add ace string if it differs from idn
 			fields.Add(QueryFieldNameDomainACE, ace)
 		}
 	}
@@ -369,74 +457,74 @@ func putDomainToQueryFields(fields *QueryFieldList, domain string) {
 // NewCreateDomainQuery returns a query to create a domain.
 func NewCreateDomainQuery(domain string, domainData DomainData) *Query {
 	fields := NewQueryFieldList()
-	putDomainToQueryFields(&fields, domain)
-	domainData.putToQueryFields(&fields)
-	return NewQuery(LatestVersion, ActionCreate, fields)
+	PutDomainToQueryFields(&fields, domain)
+	domainData.PutToQueryFields(&fields)
+	return NewQuery(LatestVersion, ActionCreate, fields, nil)
 }
 
 // NewCheckDomainQuery returns a check query.
 func NewCheckDomainQuery(domain string) *Query {
 	fields := NewQueryFieldList()
-	putDomainToQueryFields(&fields, domain)
-	return NewQuery(LatestVersion, ActionCheck, fields)
+	PutDomainToQueryFields(&fields, domain)
+	return NewQuery(LatestVersion, ActionCheck, fields, nil)
 }
 
 // NewInfoDomainQuery returns an info query.
 func NewInfoDomainQuery(domain string) *Query {
 	fields := NewQueryFieldList()
-	putDomainToQueryFields(&fields, domain)
-	return NewQuery(LatestVersion, ActionInfo, fields)
+	PutDomainToQueryFields(&fields, domain)
+	return NewQuery(LatestVersion, ActionInfo, fields, nil)
 }
 
 // NewUpdateDomainQuery returns a query to update a domain.
 func NewUpdateDomainQuery(domain string, domainData DomainData) *Query {
 	fields := NewQueryFieldList()
-	putDomainToQueryFields(&fields, domain)
-	domainData.putToQueryFields(&fields)
-	return NewQuery(LatestVersion, ActionUpdate, fields)
+	PutDomainToQueryFields(&fields, domain)
+	domainData.PutToQueryFields(&fields)
+	return NewQuery(LatestVersion, ActionUpdate, fields, nil)
 }
 
 // NewChangeHolderQuery returns a query to update a domain.
 func NewChangeHolderQuery(domain string, domainData DomainData) *Query {
 	fields := NewQueryFieldList()
-	putDomainToQueryFields(&fields, domain)
-	domainData.putToQueryFields(&fields)
-	return NewQuery(LatestVersion, ActionChangeHolder, fields)
+	PutDomainToQueryFields(&fields, domain)
+	domainData.PutToQueryFields(&fields)
+	return NewQuery(LatestVersion, ActionChangeHolder, fields, nil)
 }
 
 // NewDeleteDomainQuery returns a delete query.
 func NewDeleteDomainQuery(domain string) *Query {
 	fields := NewQueryFieldList()
-	putDomainToQueryFields(&fields, domain)
-	return NewQuery(LatestVersion, ActionDelete, fields)
+	PutDomainToQueryFields(&fields, domain)
+	return NewQuery(LatestVersion, ActionDelete, fields, nil)
 }
 
 // NewRestoreDomainQuery returns a restore query.
 func NewRestoreDomainQuery(domain string) *Query {
 	fields := NewQueryFieldList()
-	putDomainToQueryFields(&fields, domain)
-	return NewQuery(LatestVersion, ActionRestore, fields)
+	PutDomainToQueryFields(&fields, domain)
+	return NewQuery(LatestVersion, ActionRestore, fields, nil)
 }
 
 // NewTransitDomainQuery returns a restore query.
 func NewTransitDomainQuery(domain string, disconnect bool) *Query {
 	fields := NewQueryFieldList()
-	putDomainToQueryFields(&fields, domain)
+	PutDomainToQueryFields(&fields, domain)
 	if disconnect {
 		fields.Add(QueryFieldNameDisconnect, "true")
 	} else {
 		fields.Add(QueryFieldNameDisconnect, "false")
 	}
-	return NewQuery(LatestVersion, ActionTransit, fields)
+	return NewQuery(LatestVersion, ActionTransit, fields, nil)
 }
 
 // NewCreateAuthInfo1Query returns a create AuthInfo1 query.
 func NewCreateAuthInfo1Query(domain, authInfo string, expireDay time.Time) *Query {
 	fields := NewQueryFieldList()
-	putDomainToQueryFields(&fields, domain)
+	PutDomainToQueryFields(&fields, domain)
 	fields.Add(QueryFieldNameAuthInfoHash, computeHashSHA256(authInfo))
 	fields.Add(QueryFieldNameAuthInfoExpire, expireDay.Format("20060102"))
-	return NewQuery(LatestVersion, ActionCreateAuthInfo1, fields)
+	return NewQuery(LatestVersion, ActionCreateAuthInfo1, fields, nil)
 }
 
 func computeHashSHA256(str string) string {
@@ -449,17 +537,17 @@ func computeHashSHA256(str string) string {
 // NewCreateAuthInfo2Query returns a create AuthInfo2 query.
 func NewCreateAuthInfo2Query(domain string) *Query {
 	fields := NewQueryFieldList()
-	putDomainToQueryFields(&fields, domain)
-	return NewQuery(LatestVersion, ActionCreateAuthInfo2, fields)
+	PutDomainToQueryFields(&fields, domain)
+	return NewQuery(LatestVersion, ActionCreateAuthInfo2, fields, nil)
 }
 
 // NewChangeProviderQuery returns a query to create a domain.
 func NewChangeProviderQuery(domain, authInfo string, domainData DomainData) *Query {
 	fields := NewQueryFieldList()
-	putDomainToQueryFields(&fields, domain)
-	domainData.putToQueryFields(&fields)
+	PutDomainToQueryFields(&fields, domain)
+	domainData.PutToQueryFields(&fields)
 	fields.Add(QueryFieldNameAuthInfo, authInfo)
-	return NewQuery(LatestVersion, ActionChangeProvider, fields)
+	return NewQuery(LatestVersion, ActionChangeProvider, fields, nil)
 }
 
 // NewQueueReadQuery returns a query to read from the registry message queue. Use msgType to filter for specific message types or use an empty string to process all message types.
@@ -468,7 +556,7 @@ func NewQueueReadQuery(msgType string) *Query {
 	if len(msgType) > 0 {
 		fields.Add(QueryFieldNameMsgType, msgType)
 	}
-	return NewQuery(LatestVersion, ActionQueueRead, fields)
+	return NewQuery(LatestVersion, ActionQueueRead, fields, nil)
 }
 
 // NewQueueReadQuery returns a query to read from the registry message queue. Use msgType to delete only specific message types or use an empty string to process all message types. This is required if you want to delete the oldest message of a specific type that is not the oldest in your full queue.
@@ -478,17 +566,33 @@ func NewQueueDeleteQuery(msgID, msgType string) *Query {
 	if len(msgType) > 0 {
 		fields.Add(QueryFieldNameMsgType, msgType)
 	}
-	return NewQuery(LatestVersion, ActionQueueDelete, fields)
+	return NewQuery(LatestVersion, ActionQueueDelete, fields, nil)
 }
 
 // ParseQueryKV parses a single key-value encoded query.
 func ParseQueryKV(str string) (*Query, error) {
 	lines := strings.Split(str, "\n")
 	fields := NewQueryFieldList()
+	var sections []*kvSection
+
+	var currentSection *kvSection
+
 	for _, line := range lines {
 		// trim spaces and ignore empty lines
 		line = strings.TrimSpace(line)
 		if len(line) == 0 {
+			continue
+		}
+
+		if strings.HasPrefix(line, "[") && strings.HasSuffix(line, "]") {
+			if currentSection != nil {
+				sections = append(sections, currentSection)
+				currentSection = nil
+			}
+
+			line = strings.TrimPrefix(line, "[")
+			line = strings.TrimSuffix(line, "]")
+			currentSection = &kvSection{header: line}
 			continue
 		}
 
@@ -500,13 +604,23 @@ func ParseQueryKV(str string) (*Query, error) {
 		key := strings.TrimSpace(parts[0])
 		value := strings.TrimSpace(parts[1])
 
+		if currentSection != nil {
+			currentSection.fields.Add(QueryFieldName(key), value)
+			continue
+		}
+
 		fields.Add(QueryFieldName(key), value)
+	}
+
+	if currentSection != nil {
+		sections = append(sections, currentSection)
 	}
 
 	versionValues := fields.Values(QueryFieldNameVersion)
 	if len(versionValues) == 0 {
 		return nil, fmt.Errorf("%s key is missing", QueryFieldNameVersion)
 	}
+
 	if len(versionValues) > 1 {
 		return nil, fmt.Errorf("multiple %s values", QueryFieldNameVersion)
 	}
@@ -515,15 +629,16 @@ func ParseQueryKV(str string) (*Query, error) {
 	if len(actionValues) == 0 {
 		return nil, fmt.Errorf("%s key is missing", QueryFieldNameAction)
 	}
+
 	if len(actionValues) > 1 {
 		return nil, fmt.Errorf("multiple %s values", QueryFieldNameAction)
 	}
 
-	return &Query{fields}, nil
+	return &Query{fields: fields, sections: sections}, nil
 }
 
 // ParseQuery tries to detect the query format (KV or XML) and returns the parsed query.
 func ParseQuery(str string) (*Query, error) {
-	//TODO detect type
+	// TODO detect type
 	return ParseQueryKV(str)
 }

@@ -1,0 +1,11 @@
+Version: 5.0
+Action: chprov
+ctid: cba-987654321
+Domain: de-example.de
+Holder: DENIC-1000002-HOLDER
+Generalrequest: DENIC-1000002-GENERAL
+Abusecontact: DENIC-1000002-ABUSE
+Nserver: ns1.beispiel-eins.de
+Nserver: ns2.beispiel-eins.de
+Dnskey: 257 3 8 AwEAAcoFUSyg1mkE5c33q8UbDiRZx5+/QtqFjVcyTEdv7YBYp9UnqrbXr7g4p8aDMI0ZuN4M8bxlPz+ItVfWO71rSkcxK1HwqmH4Pi1vSM3L6uYqZopEG9gJLqNpBBmzR29iSwR86TdnGUJ21Jfagc/+9xk3xmtdzNK3ROUcn/f8yiBN
+authinfo: secret

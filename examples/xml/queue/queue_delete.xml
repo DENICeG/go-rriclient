@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+
+<registry-request xmlns="http://registry.denic.de/global/5.0" xmlns:msg="http://registry.denic.de/msg/5.0">
+  <msg:delete msgid="e287e400-61b3-11ed-b311-8d543fea418a"/>
+</registry-request>

@@ -1,0 +1,33 @@
+<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+
+<registry-request xmlns="http://registry.denic.de/global/5.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:domain="http://registry.denic.de/domain/5.0" xmlns:dnsentry="http://registry.denic.de/dnsentry/5.0">
+  <domain:chprov>
+    <domain:handle>de-example.de</domain:handle>
+    <domain:contact role="holder">DENIC-1000002-MAX</domain:contact>
+    <domain:contact role="abusecontact">DENIC-1000002-ABUSE</domain:contact>
+    <domain:contact role="generalrequest">DENIC-1000002-GENERAL</domain:contact>
+    <dnsentry:dnsentry xsi:type="dnsentry:NS">
+    <dnsentry:owner>de-example.de</dnsentry:owner>
+    <dnsentry:rdata>
+      <dnsentry:nameserver>ns1.provider.de</dnsentry:nameserver>
+    </dnsentry:rdata>
+    </dnsentry:dnsentry>
+    <dnsentry:dnsentry xsi:type="dnsentry:NS">
+    <dnsentry:owner>de-example.de</dnsentry:owner>
+    <dnsentry:rdata>
+      <dnsentry:nameserver>ns2.provider.de</dnsentry:nameserver>
+    </dnsentry:rdata>
+    </dnsentry:dnsentry>
+    <domain:authInfo>secret</domain:authInfo>
+    <dnsentry:dnsentry xsi:type="dnsentry:DNSKEY">
+      <dnsentry:owner>de-example.de.</dnsentry:owner>
+        <dnsentry:rdata>
+          <dnsentry:flags>257</dnsentry:flags>
+          <dnsentry:protocol>3</dnsentry:protocol>
+          <dnsentry:algorithm>8</dnsentry:algorithm>
+          <dnsentry:publicKey>AwEAAajpN1rjU365IDVSd+duoMg4UF4S8zBSpJ4D/p2VSOKYVN7/0CkAV6pOhmdcoUMETA2LDPBWjEh4rrGiBN9ReRw/4udMgiEf3YyvsJEDpF6vtrWzqe+Cu9iu8QV//8ESlQgqK8TqVcR7e/FPd89R44S68GhZRFGw7h7sDrRnGIZf</dnsentry:publicKey>
+        </dnsentry:rdata>
+    </dnsentry:dnsentry>    
+  </domain:chprov>
+  <ctid>cba-987654321</ctid>
+</registry-request>

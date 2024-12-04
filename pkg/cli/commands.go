@@ -3,11 +3,12 @@ package cli
 import (
 	"bytes"
 	"fmt"
-	"github.com/DENICeG/go-rriclient/pkg/highlight"
 	"os"
 	"strconv"
 	"strings"
 	"time"
+
+	"github.com/DENICeG/go-rriclient/pkg/highlight"
 
 	"github.com/DENICeG/go-console/v2"
 	"github.com/DENICeG/go-console/v2/input"
@@ -269,7 +270,10 @@ func (s *Service) printXMLResult(resp string, i int, format highlight.Format) er
 	if err != nil {
 		return err
 	}
+
 	console.Println(resp)
+	// println(resp)
+
 	return nil
 }
 
@@ -378,9 +382,13 @@ func (s *Service) HandlePreset(args []string) error {
 	}
 
 	res, err = highlight.Transform(res, format)
+	if err != nil {
+		return err
+	}
+
 	console.Println(res) //nolint
 
-	return nil
+	return err
 }
 
 func (s *Service) manualPresetFlow() (*preset.Entry, error) {

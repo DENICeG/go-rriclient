@@ -18,6 +18,7 @@ require (
 )
 
 require (
+	github.com/alecthomas/chroma/v2 v2.14.0
 	github.com/alecthomas/units v0.0.0-20240927000941-0f3dac36c52b // indirect
 	github.com/beevik/etree v1.4.1
 	github.com/chzyer/readline v1.5.1 // indirect

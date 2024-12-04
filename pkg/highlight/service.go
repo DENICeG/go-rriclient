@@ -2,7 +2,8 @@ package highlight
 
 import (
 	"bytes"
-	"github.com/alecthomas/chroma/quick"
+
+	"github.com/alecthomas/chroma/v2/quick"
 )
 
 const (
@@ -20,7 +21,7 @@ func Transform(input string, format Format) (string, error) {
 	var buf []byte
 	buffer := bytes.NewBuffer(buf)
 
-	err := quick.Highlight(buffer, input, string(format), "terminal", "monokai")
+	err := quick.Highlight(buffer, input, string(format), "terminal16m", "monokai")
 	if err != nil {
 		return "", err
 	}

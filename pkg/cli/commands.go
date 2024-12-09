@@ -366,6 +366,17 @@ func (s *Service) HandlePreset(args []string) error {
 		return err
 	}
 
+	format := highlight.YAML
+	if strings.EqualFold(chosenPreset.Type, "xml") {
+		format = highlight.XML
+	}
+
+	// Highlight in edit mode doesn't work yet
+	// stringContent, err := highlight.Transform(string(presetContent), format)
+	// if err != nil {
+	// 	return err
+	// }
+
 	result, _, err := input.Text(string(presetContent))
 	if err != nil {
 		return err
@@ -374,11 +385,6 @@ func (s *Service) HandlePreset(args []string) error {
 	res, err := s.rriClient.SendRaw(result)
 	if err != nil {
 		return err
-	}
-
-	format := highlight.YAML
-	if strings.EqualFold(chosenPreset.Type, string(highlight.XML)) {
-		format = highlight.XML
 	}
 
 	res, err = highlight.Transform(res, format)

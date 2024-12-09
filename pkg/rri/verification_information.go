@@ -24,7 +24,7 @@ func (verificationInformation *VerificationInformation) PutToQueryFields(fields 
 
 	verifiedClaimSlice := make([]string, len(verificationInformation.VerifiedClaim))
 	for i := range verificationInformation.VerifiedClaim {
-		verifiedClaimSlice[i] = string(verificationInformation.VerifiedClaim[0])
+		verifiedClaimSlice[i] = string(verificationInformation.VerifiedClaim[i])
 	}
 
 	fields.Add(QueryFieldNameVerifiedClaim, verifiedClaimSlice...)

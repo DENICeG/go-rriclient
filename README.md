@@ -84,6 +84,7 @@ go-rriclient
 | `--user {username}` | `-u` | RRI username to log in. |
 | `--pass {password}` | `-p` | RRI password to log in. |
 | `--file {file}` | `-f` | File containing RRI queries to process. |
+| `--preset` | `-P` | Enter preset mode |
 | `--env {alias name}` | `-e` | Name of the environment to create or use. |
 | `--delete-env {alias name}` | | Delete an existing environment. |
 | `--list-env` | | Display a list of all environments. |
@@ -94,6 +95,9 @@ go-rriclient
 | `--dump-cli-config` | | Print out the application cli configuration and exit. |
 
 ## RRI Commands
+
+Note: These commands are deprecated and will be removed in a future version.
+Please use the preset command instead.
 
 You can use the following commands in file mode and interactive mode:
 
@@ -119,8 +123,14 @@ You can use the following commands in file mode and interactive mode:
 | `raw` | Enter a raw query and send to RRI. |
 | `raw {command}` | Send a command like `version: 3.0\naction: queue-read` |
 | `file {path}` | Process a query file as accepted by flag `--file`. |
-| `xml` | Toggle XML mode. **NOT implemented yet** |
+| `preset {path}` | Preview, edit and send a query file. |
 | `verbose` | Toggle verbose mode. |
+
+## Preset Mode
+
+The Preset Mode allows you to chose from predefined request templates to edit and fire the query.
+Preset mode supports tab completion.
+
 
 ## RRI Request Examples
 

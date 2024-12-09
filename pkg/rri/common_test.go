@@ -1,4 +1,4 @@
-package rri
+package rri_test
 
 import (
 	"bytes"
@@ -8,6 +8,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/DENICeG/go-rriclient/pkg/rri"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -28,42 +29,42 @@ func b64enc(data []byte) string {
 }
 
 func TestPrepareMessage(t *testing.T) {
-	// hardcoded RRI packet with size prefix and query "version: 4.0\naction: LOGIN\nuser: user\npassword: secret"
-	expected := b64("AAAANnZlcnNpb246IDQuMAphY3Rpb246IExPR0lOCnVzZXI6IHVzZXIKcGFzc3dvcmQ6IHNlY3JldA==")
-	assert.Equal(t, expected, prepareMessage("version: 4.0\naction: LOGIN\nuser: user\npassword: secret"))
+	// hardcoded RRI packet with size prefix and query "version: 5.0\naction: LOGIN\nuser: user\npassword: secret"
+	expected := b64("AAAANnZlcnNpb246IDUuMAphY3Rpb246IExPR0lOCnVzZXI6IHVzZXIKcGFzc3dvcmQ6IHNlY3JldA==")
+	assert.Equal(t, expected, rri.PrepareMessage("version: 5.0\naction: LOGIN\nuser: user\npassword: secret"))
 }
 
 func TestReadMessage(t *testing.T) {
-	expectedMsg := "version: 4.0\naction: LOGIN\nuser: user\npassword: secret"
-	r := bytes.NewReader(prepareMessage(expectedMsg))
-	msg, err := readMessage(r)
+	expectedMsg := "version: 5.0\naction: LOGIN\nuser: user\npassword: secret"
+	r := bytes.NewReader(rri.PrepareMessage(expectedMsg))
+	msg, err := rri.ReadMessage(r)
 	require.NoError(t, err)
 	assert.Equal(t, expectedMsg, msg)
 }
 
 func TestReadMessageEmpty(t *testing.T) {
-	_, err := readMessage(bytes.NewReader(prepareMessage("")))
+	_, err := rri.ReadMessage(bytes.NewReader(rri.PrepareMessage("")))
 	assert.Error(t, err)
 }
 
 func TestReadMessageTooLong(t *testing.T) {
-	_, err := readMessage(bytes.NewReader(prepareMessage(strings.Repeat("a", 70000))))
+	_, err := rri.ReadMessage(bytes.NewReader(rri.PrepareMessage(strings.Repeat("a", 70000))))
 	assert.Error(t, err)
 }
 
 func TestReadMessageNoData(t *testing.T) {
-	_, err := readMessage(bytes.NewReader([]byte{}))
+	_, err := rri.ReadMessage(bytes.NewReader([]byte{}))
 	assert.Error(t, err)
 }
 
 func TestReadMessageIncompleteSize(t *testing.T) {
-	_, err := readMessage(bytes.NewReader([]byte{0}))
+	_, err := rri.ReadMessage(bytes.NewReader([]byte{0}))
 	assert.Error(t, err)
 }
 
 func TestReadMessageIncompleteMessage(t *testing.T) {
 	msg := b64("AAAANnZlcnNp")
-	_, err := readMessage(bytes.NewReader(msg))
+	_, err := rri.ReadMessage(bytes.NewReader(msg))
 	assert.Error(t, err)
 }
 
@@ -77,17 +78,29 @@ func TestReadBytes(t *testing.T) {
 		}
 	}()
 
-	data, err := readBytes(r, 10)
+	data, err := rri.ReadBytes(r, 10)
 	require.NoError(t, err)
 	assert.Equal(t, []byte{0, 1, 2, 3, 4, 5, 6, 7, 8, 9}, data)
 }
 
 func TestCensorRawMessage(t *testing.T) {
-	assert.Equal(t, "version: 4.0\naction: info\ndomain: denic.de", CensorRawMessage("version: 4.0\naction: info\ndomain: denic.de"))
-	assert.Equal(t, "version: 4.0\naction: info\nno-password: foobar\ndomain: denic.de", CensorRawMessage("version: 4.0\naction: info\nno-password: foobar\ndomain: denic.de"))
-	assert.Equal(t, "version: 4.0\naction: info\npassword:\ndomain: denic.de", CensorRawMessage("version: 4.0\naction: info\npassword:\ndomain: denic.de"))
-	assert.Equal(t, "password: ******\nversion: 4.0\naction: LOGIN\nuser: DENIC-1000011-RRI", CensorRawMessage("password: secret-password\nversion: 4.0\naction: LOGIN\nuser: DENIC-1000011-RRI"))
-	assert.Equal(t, "version: 4.0\naction: LOGIN\npassword: ******\nuser: DENIC-1000011-RRI", CensorRawMessage("version: 4.0\naction: LOGIN\npassword: secret-password\nuser: DENIC-1000011-RRI"))
-	assert.Equal(t, "version: 4.0\naction: LOGIN\nuser: DENIC-1000011-RRI\npassword: ******", CensorRawMessage("version: 4.0\naction: LOGIN\nuser: DENIC-1000011-RRI\npassword: secret-password"))
-	assert.Equal(t, "password: ******\nversion: 4.0\npassword: ******\naction: LOGIN\nuser: DENIC-1000011-RRI\npassword: ******", CensorRawMessage("password: secret-password\nversion: 4.0\npassword: secret-password\naction: LOGIN\nuser: DENIC-1000011-RRI\npassword: secret-password"))
+	tt := []struct {
+		description string
+		input       string
+		expected    string
+	}{
+		{description: "no sensitive data", input: "version: 5.0\naction: info\ndomain: denic.de", expected: "version: 5.0\naction: info\ndomain: denic.de"},
+		{description: "no sensitive data - keyword", input: "version: 5.0\naction: info\nno-password: foobar\ndomain: denic.de", expected: "version: 5.0\naction: info\nno-password: foobar\ndomain: denic.de"},
+		{description: "empty password", input: "version: 5.0\naction: info\npassword:\ndomain: denic.de", expected: "version: 5.0\naction: info\npassword:\ndomain: denic.de"},
+		{description: "actual password", input: "password: secret-password\nversion: 5.0\naction: LOGIN\nuser: DENIC-1000011-RRI", expected: "password: ******\nversion: 5.0\naction: LOGIN\nuser: DENIC-1000011-RRI"},
+		{description: "actual password 2", input: "version: 5.0\naction: LOGIN\npassword: secret-password\nuser: DENIC-1000011-RRI", expected: "version: 5.0\naction: LOGIN\npassword: ******\nuser: DENIC-1000011-RRI"},
+		{description: "actual password 3", input: "version: 5.0\naction: LOGIN\nuser: DENIC-1000011-RRI\npassword: secret-password", expected: "version: 5.0\naction: LOGIN\nuser: DENIC-1000011-RRI\npassword: ******"},
+		{description: "actual password 4", input: "password: secret-password\nversion: 5.0\npassword: secret-password\naction: LOGIN\nuser: DENIC-1000011-RRI\npassword: secret-password", expected: "password: ******\nversion: 5.0\npassword: ******\naction: LOGIN\nuser: DENIC-1000011-RRI\npassword: ******"},
+	}
+
+	for _, tc := range tt {
+		t.Run(tc.description, func(t *testing.T) {
+			assert.Equal(t, tc.expected, rri.CensorRawMessage(tc.input))
+		})
+	}
 }

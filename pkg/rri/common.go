@@ -5,9 +5,12 @@ import (
 	"fmt"
 	"io"
 	"regexp"
+	"strings"
+
+	"github.com/beevik/etree"
 )
 
-func prepareMessage(msg string) []byte {
+func PrepareMessage(msg string) []byte {
 	// prepare data packet: 4 byte message length + actual message
 	data := []byte(msg)
 	buffer := make([]byte, 4+len(data))
@@ -16,20 +19,22 @@ func prepareMessage(msg string) []byte {
 	return buffer
 }
 
-func readMessage(r io.Reader) (string, error) {
-	lenBuffer, err := readBytes(r, 4)
+func ReadMessage(r io.Reader) (string, error) {
+	lenBuffer, err := ReadBytes(r, 4)
 	if err != nil {
 		return "", err
 	}
-	len := binary.BigEndian.Uint32(lenBuffer)
-	if len == 0 {
+
+	bytesRead := binary.BigEndian.Uint32(lenBuffer)
+	if bytesRead == 0 {
 		return "", fmt.Errorf("message is empty")
 	}
-	if len > 65536 || int(len) < 0 {
+
+	if bytesRead > 65536 || int(bytesRead) < 0 {
 		return "", fmt.Errorf("message too large")
 	}
 
-	buffer, err := readBytes(r, int(len))
+	buffer, err := ReadBytes(r, int(bytesRead))
 	if err != nil {
 		return "", err
 	}
@@ -37,37 +42,34 @@ func readMessage(r io.Reader) (string, error) {
 	return string(buffer), nil
 }
 
-func readBytes(r io.Reader, count int) ([]byte, error) {
+func ReadBytes(r io.Reader, count int) ([]byte, error) {
 	buffer := make([]byte, count)
 	received := 0
 
 	for received < count {
-		len, err := r.Read(buffer[received:])
+		bytesRead, err := r.Read(buffer[received:])
 		if err != nil {
 			return nil, err
 		}
-		if len == 0 {
+
+		if bytesRead == 0 {
 			return nil, fmt.Errorf("failed to read %d bytes from connection", count)
 		}
 
-		received += len
+		received += bytesRead
 	}
 
 	return buffer, nil
 }
 
-// IsXML returns whether the message seems to contain a XML encoded query or response.
-func IsXML(msg string) bool {
-	//TODO xml detection
-	return false
-}
-
 // CensorRawMessage replaces passwords in a raw query with '******'.
 func CensorRawMessage(msg string) string {
-	if IsXML(msg) {
-		//TODO censor xml
-		return msg
-
+	if strings.Contains(msg, "<xml") {
+		doc := etree.NewDocument()
+		err := doc.ReadFromString(msg)
+		if err == nil {
+			return DocToString(doc)
+		}
 	}
 
 	pattern := regexp.MustCompile("([\r\n]|^)(password:[ \t]+)([^\r\n]*)([\r\n]|$)")
@@ -75,4 +77,26 @@ func CensorRawMessage(msg string) string {
 		m := pattern.FindStringSubmatch(matchStr)
 		return m[1] + m[2] + "******" + m[4]
 	})
+}
+
+// DocToString converts an XML document to a string, replacing passwords with 'XXX'.
+func DocToString(doc *etree.Document) string {
+	results := doc.FindElements("//password")
+	for _, result := range results {
+		result.SetText("XXX")
+	}
+
+	result, _ := doc.WriteToString()
+
+	return result
+}
+
+// IsDomainName checks if a string represents a domain name.
+func IsDomainName(str string) bool {
+	return strings.HasSuffix(str, ".de")
+}
+
+// IsHandle checks if a string represents a DENIC handle.
+func IsHandle(str string) bool {
+	return strings.HasPrefix(str, "DENIC-")
 }

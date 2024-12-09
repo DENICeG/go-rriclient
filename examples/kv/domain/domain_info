@@ -1,0 +1,4 @@
+version: 5.0
+action: INFO
+domain: domain-example-1000022.de
+recursive: false

@@ -4,12 +4,13 @@ import (
 	"fmt"
 	"strconv"
 	"strings"
+	"time"
 )
 
 const (
 	// ResultSuccess denotes a successful result.
 	ResultSuccess Result = "success"
-	// ResultFailure dontes a failed result.
+	// ResultFailure denotes a failed result.
 	ResultFailure Result = "failure"
 
 	// ResponseFieldNameResult denotes the response field name for result.
@@ -45,13 +46,13 @@ func (r ResponseFieldName) Normalize() ResponseFieldName {
 
 // BusinessMessage represents a response message with id as returned in INFO and ERROR.
 type BusinessMessage struct {
-	id      int64
 	message string
+	id      int64
 }
 
 // NewBusinessMessage creates a new BusinessMessage with id and message.
 func NewBusinessMessage(id int64, msg string) BusinessMessage {
-	return BusinessMessage{id, msg}
+	return BusinessMessage{id: id, message: msg}
 }
 
 // ID returns the message id.
@@ -89,7 +90,7 @@ type Response struct {
 	entities []ResponseEntity
 }
 
-// IsSuccessful returns whether the response is successfull.
+// IsSuccessful returns whether the response is successful.
 func (r *Response) IsSuccessful() bool {
 	return r.Result() == ResultSuccess
 }
@@ -139,7 +140,7 @@ func (r *Response) STID() string {
 
 // String returns a human readable representation of the response.
 func (r *Response) String() string {
-	//TODO shortened, single line representation
+	// TODO shortened, single line representation
 	return r.EncodeKV()
 }
 
@@ -154,7 +155,7 @@ func (r *Response) EncodeKV() string {
 		sb.WriteString(": ")
 		sb.WriteString(f.Value)
 	}
-	//TODO encode entities
+	// TODO encode entities
 	return sb.String()
 }
 
@@ -301,11 +302,75 @@ func ParseBusinessMessageKV(str string) (BusinessMessage, error) {
 	if err != nil {
 		return BusinessMessage{}, err
 	}
-	return BusinessMessage{id, parts[1]}, nil
+	return BusinessMessage{id: id, message: parts[1]}, nil
 }
 
 // ParseResponse tries to detect the response format (KV or XML) and returns the parsed response.
 func ParseResponse(str string) (*Response, error) {
-	//TODO detect type
+	// TODO detect type
 	return ParseResponseKV(str)
+}
+
+// ExtractVerificationInformation extracts the VerificationInformation from the Response.
+func (r *Response) ExtractVerificationInformation() ([]*VerificationInformation, error) {
+	var verificationInformation []*VerificationInformation
+	for _, eachEntity := range r.Entities() {
+		if string(eachEntity.Name().Normalize()) == string(QueryEntityVerificationInformation.Normalize()) {
+			extractedVerificationInformation, extractErr := eachEntity.ExtractVerificationInformation()
+			if extractErr != nil {
+				return nil, extractErr
+			}
+			verificationInformation = append(verificationInformation, extractedVerificationInformation)
+		}
+	}
+	return verificationInformation, nil
+}
+
+// ExtractVerificationInformation extracts the VerificationInformation from a ResponseEntity.
+func (e *ResponseEntity) ExtractVerificationInformation() (*VerificationInformation, error) {
+	responseFieldClaims := e.Field(ResponseFieldName(QueryFieldNameVerifiedClaim))
+	verificationClaims := make([]VerificationClaim, len(responseFieldClaims))
+	for i := range responseFieldClaims {
+		stringClaim, claimErr := ParseVerificationClaim(responseFieldClaims[i])
+		if claimErr != nil {
+			return nil, claimErr
+		}
+		verificationClaims[i] = stringClaim
+	}
+
+	responseFieldTimestamp := e.FirstField(ResponseFieldName(QueryFieldNameVerificationTimestamp))
+	parsedTime, parsedTimeErr := time.Parse(VerificationInformationTimestampFormat, responseFieldTimestamp)
+	if parsedTimeErr != nil {
+		return nil, fmt.Errorf("error while parsing verification timestamp %v: %v", responseFieldTimestamp, parsedTimeErr)
+	}
+
+	verificationResult, verificationResultErr := ParseVerificationResult(e.FirstField(ResponseFieldName(QueryFieldNameVerificationResult)))
+	if verificationResultErr != nil {
+		return nil, verificationResultErr
+	}
+
+	verificationEvidence, verificationEvidenceErr := ParseVerificationEvidence(e.FirstField(ResponseFieldName(QueryFieldNameVerificationEvidence)))
+	if verificationEvidenceErr != nil {
+		return nil, verificationEvidenceErr
+	}
+
+	verificationMethod, verificationMethodErr := ParseVerificationMethod(e.FirstField(ResponseFieldName(QueryFieldNameVerificationMethod)))
+	if verificationMethodErr != nil {
+		return nil, verificationMethodErr
+	}
+
+	trustFramework, trustFrameworkErr := ParseTrustFramework(e.FirstField(ResponseFieldName(QueryFieldNameTrustFramework)))
+	if trustFrameworkErr != nil {
+		return nil, trustFrameworkErr
+	}
+
+	return &VerificationInformation{
+		VerifiedClaim:         verificationClaims,
+		VerificationResult:    verificationResult,
+		VerificationReference: e.FirstField(ResponseFieldName(QueryFieldNameVerificationReference)),
+		VerificationTimestamp: parsedTime,
+		VerificationEvidence:  verificationEvidence,
+		VerificationMethod:    verificationMethod,
+		TrustFramework:        trustFramework,
+	}, nil
 }

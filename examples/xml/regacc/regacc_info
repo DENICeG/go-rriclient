@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+
+<registry-request 
+	xmlns="http://registry.denic.de/global/5.0" 
+	xmlns:regacc="http://registry.denic.de/regacc/5.0"
+>
+  <regacc:info>
+    <regacc:handle>DENIC-1234</regacc:handle>
+  </regacc:info>
+</registry-request>

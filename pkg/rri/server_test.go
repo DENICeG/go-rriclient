@@ -1,4 +1,4 @@
-package rri
+package rri_test
 
 import (
 	"crypto/tls"
@@ -6,28 +6,29 @@ import (
 	"testing"
 	"time"
 
+	"github.com/DENICeG/go-rriclient/pkg/rri"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
 
 func TestServer(t *testing.T) {
 	port := 31298
-	tlsConfig, err := NewMockTLSConfig()
+	tlsConfig, err := rri.NewMockTLSConfig()
 	if err != nil {
 		panic(err)
 	}
-	server, err := NewServer(fmt.Sprintf(":%d", port), tlsConfig)
+	server, err := rri.NewServer(fmt.Sprintf(":%d", port), tlsConfig)
 	if err != nil {
 		panic(err)
 	}
 
 	queryCount := 0
-	var lastQuery *Query
+	var lastQuery *rri.Query
 
-	server.Handler = func(s *Session, q *Query) (*Response, error) {
+	server.Handler = func(s *rri.Session, q *rri.Query) (*rri.Response, error) {
 		queryCount++
 		lastQuery = q
-		return NewResponse(ResultSuccess, nil), nil
+		return rri.NewResponse(rri.ResultSuccess, nil), nil
 	}
 
 	go func() {
@@ -35,38 +36,34 @@ func TestServer(t *testing.T) {
 	}()
 	defer server.Close()
 
-	client := &Client{address: fmt.Sprintf("localhost:%d", port)}
-	client.tlsConfig = &tls.Config{
-		MinVersion:         tls.VersionTLS13,
-		InsecureSkipVerify: true,
-	}
-
-	client.connection, err = tls.Dial("tcp", client.address, client.tlsConfig)
+	address := fmt.Sprintf("localhost:%d", port)
+	client, err := rri.NewClient(address, &rri.ClientConfig{Insecure: true, MinTLSVersion: tls.VersionTLS13})
 	require.NoError(t, err)
-	client.connection.Write(prepareMessage("version: 4.0\naction: LOGIN\nuser: user\npassword: secret"))
+
+	client.Connection().Write(rri.PrepareMessage("version: 5.0\naction: LOGIN\nuser: user\npassword: secret"))
 
 	// let some time pass for the query to be processed
 	time.Sleep(50 * time.Millisecond)
 
 	require.Equal(t, 1, queryCount, "expected to receive exactly one query")
-	assert.Equal(t, ActionLogin, lastQuery.Action())
-	assert.Equal(t, "user", lastQuery.FirstField(QueryFieldNameUser))
-	assert.Equal(t, "secret", lastQuery.FirstField(QueryFieldNamePassword))
+	assert.Equal(t, rri.ActionLogin, lastQuery.Action())
+	assert.Equal(t, "user", lastQuery.FirstField(rri.QueryFieldNameUser))
+	assert.Equal(t, "secret", lastQuery.FirstField(rri.QueryFieldNamePassword))
 
-	msg, err := readMessage(client.connection)
+	msg, err := rri.ReadMessage(client.Connection())
 	require.NoError(t, err)
-	response, err := ParseResponse(msg)
+	response, err := rri.ParseResponse(msg)
 	require.NoError(t, err)
-	assert.Equal(t, ResultSuccess, response.Result())
+	assert.Equal(t, rri.ResultSuccess, response.Result())
 }
 
 func TestServerSession(t *testing.T) {
 	port := 31298
-	tlsConfig, err := NewMockTLSConfig()
+	tlsConfig, err := rri.NewMockTLSConfig()
 	if err != nil {
 		panic(err)
 	}
-	server, err := NewServer(fmt.Sprintf(":%d", port), tlsConfig)
+	server, err := rri.NewServer(fmt.Sprintf(":%d", port), tlsConfig)
 	if err != nil {
 		panic(err)
 	}
@@ -75,12 +72,12 @@ func TestServerSession(t *testing.T) {
 	loginQueryCount := 0
 	logoutQueryCount := 0
 
-	server.Handler = func(s *Session, q *Query) (*Response, error) {
-		if q.Action() == ActionLogin {
+	server.Handler = func(s *rri.Session, q *rri.Query) (*rri.Response, error) {
+		if q.Action() == rri.ActionLogin {
 			loginQueryCount++
 			_, ok := s.GetString("user")
 			assert.False(t, ok)
-			s.Set("user", q.FirstField(QueryFieldNameUser))
+			s.Set("user", q.FirstField(rri.QueryFieldNameUser))
 
 		} else {
 			logoutQueryCount++
@@ -89,7 +86,7 @@ func TestServerSession(t *testing.T) {
 			assert.Equal(t, expectedUser, user)
 		}
 
-		return NewResponse(ResultSuccess, nil), nil
+		return rri.NewResponse(rri.ResultSuccess, nil), nil
 	}
 
 	go func() {
@@ -97,7 +94,7 @@ func TestServerSession(t *testing.T) {
 	}()
 	defer server.Close()
 
-	client, err := NewClient(fmt.Sprintf("localhost:%d", port), &ClientConfig{Insecure: true})
+	client, err := rri.NewClient(fmt.Sprintf("localhost:%d", port), &rri.ClientConfig{Insecure: true})
 	require.NoError(t, err)
 	require.NoError(t, client.Login(expectedUser, "secret"))
 	require.NoError(t, client.Logout())
@@ -107,11 +104,11 @@ func TestServerSession(t *testing.T) {
 
 func TestServerConcurrentConnections(t *testing.T) {
 	port := 31298
-	tlsConfig, err := NewMockTLSConfig()
+	tlsConfig, err := rri.NewMockTLSConfig()
 	if err != nil {
 		panic(err)
 	}
-	server, err := NewServer(fmt.Sprintf(":%d", port), tlsConfig)
+	server, err := rri.NewServer(fmt.Sprintf(":%d", port), tlsConfig)
 	if err != nil {
 		panic(err)
 	}
@@ -119,13 +116,13 @@ func TestServerConcurrentConnections(t *testing.T) {
 	loggedIn := make(map[string]int)
 	loggedOut := make(map[string]int)
 
-	server.Handler = func(s *Session, q *Query) (*Response, error) {
-		if q.Action() == ActionLogin {
-			num := loggedIn[q.FirstField(QueryFieldNameUser)]
-			loggedIn[q.FirstField(QueryFieldNameUser)] = num + 1
+	server.Handler = func(s *rri.Session, q *rri.Query) (*rri.Response, error) {
+		if q.Action() == rri.ActionLogin {
+			num := loggedIn[q.FirstField(rri.QueryFieldNameUser)]
+			loggedIn[q.FirstField(rri.QueryFieldNameUser)] = num + 1
 			_, ok := s.GetString("user")
 			assert.False(t, ok)
-			s.Set("user", q.FirstField(QueryFieldNameUser))
+			s.Set("user", q.FirstField(rri.QueryFieldNameUser))
 
 		} else {
 			user, ok := s.GetString("user")
@@ -134,7 +131,7 @@ func TestServerConcurrentConnections(t *testing.T) {
 			loggedOut[user] = num + 1
 		}
 
-		return NewResponse(ResultSuccess, nil), nil
+		return rri.NewResponse(rri.ResultSuccess, nil), nil
 	}
 
 	go func() {
@@ -142,12 +139,12 @@ func TestServerConcurrentConnections(t *testing.T) {
 	}()
 	defer server.Close()
 
-	client1, err := NewClient(fmt.Sprintf("localhost:%d", port), &ClientConfig{Insecure: true})
+	client1, err := rri.NewClient(fmt.Sprintf("localhost:%d", port), &rri.ClientConfig{Insecure: true})
 	if err != nil {
 		panic(err)
 	}
 
-	client2, err := NewClient(fmt.Sprintf("localhost:%d", port), &ClientConfig{Insecure: true})
+	client2, err := rri.NewClient(fmt.Sprintf("localhost:%d", port), &rri.ClientConfig{Insecure: true})
 	if err != nil {
 		panic(err)
 	}

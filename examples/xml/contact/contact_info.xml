@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<registry-request xmlns="http://registry.denic.de/global/5.0" xmlns:contact="http://registry.denic.de/contact/5.0" xmlns:verification="http://registry.denic.de/verification/5.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
+  <contact:info>
+    <contact:handle>DENIC-1000022-EXAMPLE-XML-PERSON</contact:handle>
+  </contact:info>
+</registry-request>

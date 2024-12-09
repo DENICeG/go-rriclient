@@ -5,12 +5,13 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"github.com/DENICeG/go-rriclient/pkg/highlight"
 	"os"
 	"os/exec"
 	"path/filepath"
 	"runtime"
 	"strings"
+
+	"github.com/DENICeG/go-rriclient/pkg/highlight"
 
 	"github.com/DENICeG/go-rriclient/internal/env"
 	"github.com/DENICeG/go-rriclient/pkg/preset"
@@ -275,36 +276,28 @@ func (s *Service) cmdHelp(args []string) error {
 		{Cmd: []string{"create", "handle"}, Args: []string{"domain"}, Desc: "send a CREATE command for a specific handle"},
 		{Cmd: []string{"check", "handle"}, Args: []string{"domain"}, Desc: "send a CHECK command for a specific handle"},
 		{Cmd: []string{"info", "handle"}, Args: []string{"domain"}, Desc: "send an INFO command for a specific handle"},
-		// TODO contact-update
 		{},
 		{Cmd: []string{"create", "domain"}, Args: []string{"domain"}, Desc: "send a CREATE command for a new domain"},
 		{Cmd: []string{"check", "domain"}, Args: []string{"domain"}, Desc: "send a CHECK command for a specific domain"},
 		{Cmd: []string{"info", "domain"}, Args: []string{"domain"}, Desc: "send an INFO command for a specific domain"},
 		{Cmd: []string{"update", "domain"}, Args: []string{"domain"}, Desc: "send an UPDATE command for a specific domain"},
-		{Cmd: []string{"chholder", "domain"}, Args: []string{"domain"}, Desc: "send an CHHOLDER command for a specific domain"},
+		{Cmd: []string{"chholder"}, Args: []string{"domain"}, Desc: "send an CHHOLDER command for a specific domain"},
 		{},
 		{Cmd: []string{"delete"}, Args: []string{"domain"}, Desc: "send a DELETE command for a specific domain"},
 		{Cmd: []string{"restore"}, Args: []string{"domain"}, Desc: "send a RESTORE command for a specific domain"},
 		{Cmd: []string{"transit"}, Args: []string{"domain"}, Desc: "send a TRANSIT command for a specific domain"},
 		{Cmd: []string{"create", "authinfo1"}, Args: []string{"domain", "secret", "expire"}, Desc: "send a CREATE-AUTHINFO1 command for a specific domain"},
-		// TODO create-authinfo2
-		// TODO delete-authinfo1
 		{Cmd: []string{"chprov"}, Args: []string{"domain", "secret"}, Desc: "send a CHPROV command for a specific domain"},
 		{},
-		{Cmd: []string{"verify-queue-read"}, Args: nil, Desc: "send a VERIFY-QUEUE-READ command"},
-		{Cmd: []string{"verify-queue-delete"}, Args: []string{"msgid"}, Desc: "send a VERIFY-QUEUE-DELETE command for a specific vChecked message"},
-		// TODO verify
-		// -
-		// TODO queue-read
-		// TODO queue-delete
-		// TODO regacc-info
+		{Cmd: []string{"queue-read"}, Args: nil, Desc: "send a QUEUE-READ command"},
+		{Cmd: []string{"queue-delete"}, Args: []string{"msgid"}, Desc: "sends a QUEUE-DELETE command for a specific message id."},
 		{},
 		{Cmd: []string{"raw"}, Args: nil, Desc: "enter a raw query and send it"},
 		{Cmd: []string{"file"}, Args: []string{"path"}, Desc: "process a query file as accepted by flag --file"},
 		{},
 		{Cmd: []string{"verbose"}, Args: nil, Desc: "toggle verbose mode"},
 		{},
-		{Cmd: []string{"preset"}, Args: []string{"pat"}, Desc: "Execute a preset, that can be edited by the user"},
+		{Cmd: []string{"preset"}, Args: []string{"preset-name"}, Desc: "Execute a preset, that can be edited by the user"},
 	}
 
 	if len(s.customCommands) > 0 {

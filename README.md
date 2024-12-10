@@ -162,6 +162,13 @@ Thanks to [sebidude](https://github.com/sebidude) for the [protocol implementati
 
 # Changelog
 
+## v1.23.0 (2024-12-10)
+
+- added RRI v5 support
+- added new preset mode that allows to load, edit and execute example requests in kv and xml
+- added xml file support
+- added syntax highlighting to outputs
+
 ## v1.17.0 (2023-08-03)
 
 - removed all Verify-related fields and methods

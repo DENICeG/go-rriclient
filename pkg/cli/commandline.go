@@ -685,7 +685,7 @@ func readContactData(args []string) (rri.DenicHandle, rri.ContactData, error) {
 		return rri.EmptyDenicHandle(), rri.ContactData{}, fmt.Errorf("%q: %s", strContactType, err.Error())
 	}
 
-	inputDataLabels := []string{"Name", "Address", "Postal Code", "City", "Country Code", "E-Mail"}
+	inputDataLabels := []string{"Name", "Address", "Postal Code", "City", "Country Code", "Phone", "E-Mail"}
 	inputData := make([]string, 0)
 	for i := 0; ; i++ {
 		var label string
@@ -713,7 +713,8 @@ func readContactData(args []string) (rri.DenicHandle, rri.ContactData, error) {
 		PostalCode:  inputData[2],
 		City:        inputData[3],
 		CountryCode: inputData[4],
-		EMail:       inputData[5:],
+		Phone:       inputData[5],
+		EMail:       inputData[6:],
 	}, nil
 }
 

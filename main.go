@@ -137,6 +137,8 @@ func main() {
 		if err != nil {
 			logAndExit(err)
 		}
+
+		return
 	}
 
 	cliService.ReturnErrorOnFail = *argFail

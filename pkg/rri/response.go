@@ -155,7 +155,21 @@ func (r *Response) EncodeKV() string {
 		sb.WriteString(": ")
 		sb.WriteString(f.Value)
 	}
-	// TODO encode entities
+
+	for _, e := range r.entities {
+		if sb.Len() > 0 {
+			sb.WriteString("\n\n")
+		}
+
+		sb.WriteString(fmt.Sprintf("[%s]", strings.ToUpper(string(e.name))))
+		for _, f := range e.fields {
+			sb.WriteString("\n")
+			sb.WriteString(string(f.Name))
+			sb.WriteString(": ")
+			sb.WriteString(f.Value)
+		}
+	}
+
 	return sb.String()
 }
 
@@ -206,6 +220,7 @@ func NewResponse(result Result, fields ResponseFieldList) *Response {
 	if fields != nil {
 		fields.CopyTo(&newFields)
 	}
+
 	return &Response{newFields, nil}
 }
 

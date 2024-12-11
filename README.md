@@ -162,6 +162,10 @@ Thanks to [sebidude](https://github.com/sebidude) for the [protocol implementati
 
 # Changelog
 
+## v1.26.0 (2024-12-11)
+
+- added verification information for create handle command
+
 ## v1.25.0 (2024-12-11)
 
 - added syntax highlight to raw command output

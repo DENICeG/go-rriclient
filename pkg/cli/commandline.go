@@ -10,6 +10,7 @@ import (
 	"path/filepath"
 	"runtime"
 	"strings"
+	"time"
 
 	"github.com/DENICeG/go-rriclient/pkg/highlight"
 
@@ -687,6 +688,8 @@ func readContactData(args []string) (rri.DenicHandle, rri.ContactData, error) {
 
 	inputDataLabels := []string{"Name", "Address", "Postal Code", "City", "Country Code", "Phone", "E-Mail"}
 	inputData := make([]string, 0)
+	verificationInformation := []rri.VerificationInformation{}
+
 	for i := 0; ; i++ {
 		var label string
 		if i >= len(inputDataLabels) {
@@ -706,15 +709,98 @@ func readContactData(args []string) (rri.DenicHandle, rri.ContactData, error) {
 		inputData = append(inputData, str)
 	}
 
+	for {
+		info := rri.VerificationInformation{}
+
+		console.Print("VerificationInformation [yes, no]> ")
+		str, err := console.ReadLine()
+		if err != nil {
+			return rri.EmptyDenicHandle(), rri.ContactData{}, err
+		}
+
+		if strings.EqualFold(str, "no") {
+			break
+		}
+
+		for {
+			console.Print("VerifiedClaim> ")
+			str, err = console.ReadLine()
+			if err != nil {
+				return rri.EmptyDenicHandle(), rri.ContactData{}, err
+			}
+
+			if str == "" {
+				break
+			}
+
+			info.VerifiedClaim = append(info.VerifiedClaim, rri.VerificationClaim(str))
+		}
+
+		console.Print("VerificationResult [success, failed]> ")
+		str, err = console.ReadLine()
+		if err != nil {
+			return rri.EmptyDenicHandle(), rri.ContactData{}, err
+		}
+
+		info.VerificationResult = rri.VerificationResultSuccess
+		if strings.EqualFold(str, "failed") {
+			info.VerificationResult = rri.VerificationResultFailed
+		}
+
+		console.Print("VerificationReference> ")
+		str, err = console.ReadLine()
+		if err != nil {
+			return rri.EmptyDenicHandle(), rri.ContactData{}, err
+		}
+		info.VerificationReference = str
+
+		console.Print("VerificationTimestamp [YYYY-MM-DDTHH:MM:SS+HH:HH]> ")
+		str, err = console.ReadLine()
+		if err != nil {
+			return rri.EmptyDenicHandle(), rri.ContactData{}, err
+		}
+
+		time, err := time.Parse(time.RFC3339, str)
+		if err != nil {
+			return rri.EmptyDenicHandle(), rri.ContactData{}, err
+		}
+
+		info.VerificationTimestamp = time
+
+		console.Print("VerificationEvidence> ")
+		str, err = console.ReadLine()
+		if err != nil {
+			return rri.EmptyDenicHandle(), rri.ContactData{}, err
+		}
+		info.VerificationEvidence = rri.VerificationEvidence(str)
+
+		console.Print("VerificationMethod> ")
+		str, err = console.ReadLine()
+		if err != nil {
+			return rri.EmptyDenicHandle(), rri.ContactData{}, err
+		}
+		info.VerificationMethod = rri.VerificationMethod(str)
+
+		console.Print("TrustFramework> ")
+		str, err = console.ReadLine()
+		if err != nil {
+			return rri.EmptyDenicHandle(), rri.ContactData{}, err
+		}
+		info.TrustFramework = rri.TrustFramework(str)
+
+		verificationInformation = append(verificationInformation, info)
+	}
+
 	return handle, rri.ContactData{
-		Type:        contactType,
-		Name:        inputData[0],
-		Address:     inputData[1],
-		PostalCode:  inputData[2],
-		City:        inputData[3],
-		CountryCode: inputData[4],
-		Phone:       inputData[5],
-		EMail:       inputData[6:],
+		Type:                    contactType,
+		Name:                    inputData[0],
+		Address:                 inputData[1],
+		PostalCode:              inputData[2],
+		City:                    inputData[3],
+		CountryCode:             inputData[4],
+		Phone:                   inputData[5],
+		EMail:                   inputData[6:],
+		VerificationInformation: verificationInformation,
 	}, nil
 }
 

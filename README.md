@@ -162,7 +162,11 @@ Thanks to [sebidude](https://github.com/sebidude) for the [protocol implementati
 
 # Changelog
 
-## v1.23.0 (2024-12-11)
+## v1.25.0 (2024-12-11)
+
+- added syntax highlight to raw command output
+
+## v1.24.0 (2024-12-11)
 
 - added VerificationInformation output to rri commands in cli
 

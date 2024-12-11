@@ -192,6 +192,7 @@ func (s *Service) cmdRaw(args []string) error {
 		if err != nil {
 			return err
 		}
+
 		if ok {
 			rawCommand = raw
 		}
@@ -202,6 +203,19 @@ func (s *Service) cmdRaw(args []string) error {
 		if err != nil {
 			return err
 		}
+
+		if strings.Contains(response, "<") {
+			response, err = highlight.Transform(response, highlight.XML)
+			if err != nil {
+				return err
+			}
+		} else {
+			response, err = highlight.Transform(response, highlight.YAML)
+			if err != nil {
+				return err
+			}
+		}
+
 		console.Println(response)
 
 		if s.ReturnErrorOnFail {

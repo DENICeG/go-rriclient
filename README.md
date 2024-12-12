@@ -131,6 +131,20 @@ You can use the following commands in file mode and interactive mode:
 The Preset Mode allows you to chose from predefined request templates to edit and fire the query.
 Preset mode supports tab completion.
 
+You can use the preset in an interactive mode, where omit all parameters. The program will then proceed to guide and list you options.
+
+You can also pass a preset name to directly get into editing.
+
+Example: 
+
+> preset domain_info
+
+Example 2: 
+
+> preset domain_info.xml
+
+
+
 
 ## RRI Request Examples
 
